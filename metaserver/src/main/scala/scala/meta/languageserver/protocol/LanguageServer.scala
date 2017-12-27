@@ -1,4 +1,4 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import java.io.OutputStream
 import scala.collection.concurrent.TrieMap
@@ -16,7 +16,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 
 final class LanguageServer(
-    in: Observable[LSPMessage],
+    in: Observable[BaseProtocol],
     out: OutputStream,
     notifications: JsonNotificationService,
     requests: JsonRequestService,
@@ -58,7 +58,7 @@ final class LanguageServer(
         }
     }
 
-  def handleMessage(message: LSPMessage): Task[Response] =
+  def handleMessage(message: BaseProtocol): Task[Response] =
     LanguageServer.parseMessage(message) match {
       case Left(parseError) => Task.now(parseError)
       case Right(json) =>
@@ -84,7 +84,7 @@ final class LanguageServer(
 }
 
 object LanguageServer {
-  def parseMessage(message: LSPMessage): Either[Response, JsValue] =
+  def parseMessage(message: BaseProtocol): Either[Response, JsValue] =
     try {
       Right(Json.parse(message.content))
     } catch {
