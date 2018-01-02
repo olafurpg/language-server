@@ -1,6 +1,7 @@
-package langserver.utils
+package scala.meta.languageserver.protocol
 
 import java.nio.charset.StandardCharsets.US_ASCII
+
 import scodec._
 import scodec.bits._
 import scodec.codecs._

@@ -1,18 +1,20 @@
-package langserver.core
+package tests.protocol
 
 import java.nio.charset.StandardCharsets.US_ASCII
-import langserver.messages.RawLspMessage
-import langserver.messages.RawLspMessage._
+
+import scala.meta.languageserver.protocol.BaseProtocol
+import scala.meta.languageserver.protocol.BaseProtocol._
 import monix.execution.Scheduler
 import monix.reactive.Observable
-import org.scalatest.FunSuite
 import scodec.DecodeResult
 import scodec.bits._
+import tests.MegaSuite
+
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class LspMessageReaderSuite extends FunSuite {
+object ProtocolParserTest extends MegaSuite {
   implicit lazy val scheduler = Scheduler.singleThread("test")
 
   val bodyString = """{"jsonrpc":"2.0","method":"textDocument/hover","params":{"textDocument":{"uri":"file:///Users/tutysara/src/myprojects/java/BroadleafCommerce/common/src/main/java/test.java"},"position":{"line":2,"character":7}},"id":17}"""
@@ -23,10 +25,10 @@ class LspMessageReaderSuite extends FunSuite {
                   |Content-Type:Json-Rpc
                   |
                   |$bodyString""".stripMargin.replaceAll("\n", "\r\n")
-  val expect = RawLspMessage(None, ByteVector(bodyString.getBytes(US_ASCII)))
+  val expect = BaseProtocol(None, ByteVector(bodyString.getBytes(US_ASCII)))
 
-  def lspMessageExtractor: Observable[Array[Byte]] => Observable[List[RawLspMessage]] = obsBytes => {
-    val emptyDecodeResult: DecodeResult[List[RawLspMessage]] = DecodeResult(List[RawLspMessage](), BitVector.empty)
+  def lspMessageExtractor: Observable[Array[Byte]] => Observable[List[BaseProtocol]] = obsBytes => {
+    val emptyDecodeResult: DecodeResult[List[BaseProtocol]] = DecodeResult(List[BaseProtocol](), BitVector.empty)
       obsBytes
         .scan(emptyDecodeResult) { case (DecodeResult(messages, buf), newBytes) =>
           listCodec.decode(buf ++ BitVector(newBytes))

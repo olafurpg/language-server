@@ -86,7 +86,7 @@ final class LanguageServer(
 object LanguageServer {
   def parseMessage(message: BaseProtocol): Either[Response, JsValue] =
     try {
-      Right(Json.parse(message.content))
+      Right(Json.parse(message.content.toArray))
     } catch {
       case e: JsonParseException =>
         Left(Response.parseError(e.getMessage))

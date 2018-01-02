@@ -94,7 +94,6 @@ lazy val languageserver = project
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "org.codehaus.groovy" % "groovy" % "2.4.0",
-      "org.scodec" %% "scodec-core" % "1.10.3",
       "org.scalatest" %% "scalatest" % "3.0.1" % Test
     )
   )
@@ -126,6 +125,7 @@ lazy val metaserver = project
       "ch.epfl.scala" % "scalafix-cli" % V.scalafix cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
       "com.beachape" %% "enumeratum" % V.enumeratum,
+      "org.scodec" %% "scodec-core" % "1.10.3",
       "com.lihaoyi" %% "utest" % "0.6.0" % Test,
       "org.scalameta" %% "testkit" % V.scalameta % Test,
     )
