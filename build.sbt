@@ -125,6 +125,7 @@ lazy val metaserver = project
       "ch.epfl.scala" % "scalafix-cli" % V.scalafix cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
       "com.beachape" %% "enumeratum" % V.enumeratum,
+      "org.scodec" %% "scodec-core" % "1.10.3",
       "com.lihaoyi" %% "utest" % "0.6.0" % Test,
       "org.scalameta" %% "testkit" % V.scalameta % Test,
     )
