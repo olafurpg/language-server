@@ -8,6 +8,13 @@ sealed abstract class TextDocumentLookup {
       extends Exception(s"missing SemanticDB: $file")
   case class StaleSemanticdb(file: AbsolutePath)
       extends Exception(s"stale SemanticDB: $file")
+  final def isSuccess: Boolean =
+    this.isInstanceOf[TextDocumentLookup.Success]
+  final def toOption: Option[s.TextDocument] = this match {
+    case TextDocumentLookup.Success(document) =>
+      Some(document)
+    case _ => None
+  }
   final def get: s.TextDocument = this match {
     case TextDocumentLookup.Success(document) =>
       document
@@ -20,6 +27,13 @@ sealed abstract class TextDocumentLookup {
   }
 }
 object TextDocumentLookup {
+  def fromOption(
+      path: AbsolutePath,
+      doc: Option[s.TextDocument]
+  ): TextDocumentLookup = doc match {
+    case Some(value) => Success(value)
+    case None => NotFound(path)
+  }
   case class Success(document: s.TextDocument) extends TextDocumentLookup
   case class NotFound(file: AbsolutePath) extends TextDocumentLookup
   case class NoMatchingUri(file: AbsolutePath, documents: s.TextDocuments)

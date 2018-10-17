@@ -9,13 +9,19 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.{semanticdb => s}
 
-object Enrichments {
+object MtagsEnrichments {
   implicit class XtensionRange(range: s.Range) {
+    def isPoint: Boolean = {
+      range.startLine == range.endLine &&
+      range.startCharacter == range.endCharacter
+    }
     def encloses(other: s.Range): Boolean = {
       range.startLine <= other.startLine &&
-      range.endLine >= other.startLine &&
-      range.startCharacter <= other.startCharacter &&
-      range.endCharacter > other.startCharacter // end character is non-inclusive
+      range.endLine >= other.endLine &&
+      range.startCharacter <= other.startCharacter && {
+        range.endCharacter > other.endCharacter ||
+        other == range
+      }
     }
   }
   private def filenameToLanguage(filename: String): Language = {
@@ -29,6 +35,13 @@ object Enrichments {
     }
   }
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
+
+    def isScalaOrJava: Boolean = {
+      toLanguage match {
+        case Language.SCALA | Language.JAVA => true
+        case _ => false
+      }
+    }
     def toLanguage: Language = {
       file.toNIO.toLanguage
     }

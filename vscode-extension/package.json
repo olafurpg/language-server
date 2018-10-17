@@ -121,7 +121,7 @@
         },
         "metals.serverVersion": {
           "type": "string",
-          "default": "0.1.0",
+          "default": "SNAPSHOT",
           "description": "The version of the server artifact. Requires reloading the window. Change only if you know what you're doing"
         }
       }
@@ -133,14 +133,19 @@
         "title": "Restart server"
       },
       {
-        "command": "metals.clearIndexCache",
+        "command": "metals.workspace.sources.scan",
         "category": "Metals",
-        "title": "Clear index cache"
+        "title": "Rescan sources"
       },
       {
-        "command": "metals.sbtConnect",
+        "command": "metals.build.reconnect",
         "category": "Metals",
-        "title": "Connect to sbt server"
+        "title": "Reconnect to build server"
+      },
+      {
+        "command": "metals.build.import",
+        "category": "Metals",
+        "title": "Import build"
       }
     ]
   },

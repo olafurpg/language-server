@@ -1,12 +1,13 @@
-package a
+package example
 
-case class User(name: String, age: Int)
+import java.util.concurrent.Future
+import java.util._
 
-object a {
-  val x = "ba"
-  val y = List(1, x).length
-  def z = {
-    val localSymbol = "222" // can be renamed
-    localSymbol.length
+object Main {
+  def main(): Unit = {
+    val x = sourcecode.Line.generate
+    println(x.value)
+    Collections.singletonList(x)
+    println("Hello world!")
   }
 }

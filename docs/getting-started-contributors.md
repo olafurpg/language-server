@@ -54,6 +54,7 @@ To run the unit tests open an sbt shell and run `unit/test`
 
 ```
 sbt
+> sbt-metals/publishLocal                   # Run once for every change in sbt plugin
 > unit/test                                 # Run all unit tests
 > metals/testOnly -- tests.DefinitionSuite  # Only test goto definition
 ```

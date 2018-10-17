@@ -14,7 +14,9 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused-import"
     ),
-    addCompilerPlugin(MetalsPlugin.semanticdbScalac),
+    addCompilerPlugin(
+      "org.scalameta" % "semanticdb-scalac" % "4.0.0" cross CrossVersion.full
+    ),
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -55,10 +57,12 @@ inThisBuild(
     testFrameworks := List(),
     resolvers += Resolver.sonatypeRepo("releases"),
     // faster publishLocal:
-    publishArtifact in packageDoc := sys.env.contains("CI"),
-    publishArtifact in packageSrc := sys.env.contains("CI")
+    publishArtifact.in(packageDoc) := sys.env.contains("CI"),
+    publishArtifact.in(packageSrc) := sys.env.contains("CI")
   )
 )
+
+cancelable.in(Global) := true
 
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
@@ -70,7 +74,8 @@ commands += Command.command("save-expect") { s =>
 
 lazy val V = new {
   val scala210 = "2.10.7"
-  val scala212 = MetalsPlugin.scala212
+  val scala211 = "2.11.12"
+  val scala212 = "2.12.7"
   val scalameta = MetalsPlugin.semanticdbVersion
 }
 
@@ -86,12 +91,27 @@ lazy val mtags = project
 
 lazy val metals = project
   .settings(
+    fork.in(Compile, run) := true,
+    javaHome.in(Compile) := {
+      // force javac to fork by setting javaHome to workaround https://github.com/sbt/zinc/issues/520
+      Some(file(sys.props("java.home")).getParentFile)
+    },
+    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
     libraryDependencies ++= List(
+      "com.geirsson" %% "coursier-small" % "1.1.0", // needed due to bincompat with jvm-directories
+      "com.zaxxer" % "nuprocess" % "1.2.3",
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
+      "org.scala-lang.modules" %% "scala-xml" % "1.1.1", // required to avoid classpath problems via coursier-small
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+      "io.github.soc" % "directories" % "11",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
+      "com.outr" %% "scribe" % "2.6.0",
+      "ch.epfl.scala" % "bsp4j" % "1.1.0",
+      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
+      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "scalameta" % V.scalameta,
-      "org.scalameta" %% "symtab" % V.scalameta,
-      "org.scalameta" %% "lsp4s" % "0.2.1"
     )
   )
   .dependsOn(mtags)
@@ -140,6 +160,7 @@ lazy val unit = project
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
+      "org.scalameta" %% "symtab" % V.scalameta,
       "org.scalameta" % "metac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta,
       "com.lihaoyi" %% "utest" % "0.6.0",
@@ -149,6 +170,7 @@ lazy val unit = project
     compile.in(Compile) :=
       compile.in(Compile).dependsOn(compile.in(input, Test)).value,
     buildInfoKeys := Seq[BuildInfoKey](
+      "sourceroot" -> baseDirectory.in(ThisBuild).value,
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )
