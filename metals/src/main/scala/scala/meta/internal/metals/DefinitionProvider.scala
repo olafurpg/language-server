@@ -7,154 +7,170 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.TextDocumentLookup
-import scala.meta.internal.mtags.TextDocuments
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
-import scala.meta.io.RelativePath
 
-object DefinitionProvider {
-  val DependencySource = RelativePath(".metals").resolve("readonly")
+/**
+ * Implements goto definition that works even in code that doesn't parse.
+ *
+ * Uses token edit-distance to align identifiers in the current open
+ * buffer with symbol occurrences from the latest SemanticDB snapshot.
+ *
+ * The implementation logic for converting positions between the latest
+ * SemanticDB snapshot and current open buffer is quite hairy. We need
+ * to convert positions in both the "source" (where definition request
+ * is made) and the "destination" (location of the symbol definition).
+ * This requires using token edit distance twice:
+ *
+ * - source: dirty buffer -> snapshot
+ * - destination: snapshot -> dirty buffer
+ */
+final class DefinitionProvider(
+    workspace: AbsolutePath,
+    mtags: Mtags,
+    buffers: Buffers,
+    index: GlobalSymbolIndex,
+    semanticdbs: Semanticdbs
+)(implicit statusBar: StatusBar) {
 
   def definition(
       path: AbsolutePath,
-      position: TextDocumentPositionParams,
-      workspace: AbsolutePath,
-      mtags: Mtags,
-      buffers: Buffers,
-      index: GlobalSymbolIndex,
-      textDocuments: TextDocuments,
-      config: MetalsServerConfig
-  )(implicit statusBar: StatusBar): DefinitionResult = {
-    textDocuments.textDocument(path).toOption match {
+      params: TextDocumentPositionParams
+  ): DefinitionResult = {
+    semanticdbs.textDocument(path).toOption match {
       case None =>
-        scribe.warn(s"no semanticdb: $path")
         statusBar.addMessage("$(alert) No SemanticDB")
         DefinitionResult.empty
       case Some(doc) =>
-        val bufferInput = path.toInputFromBuffers(buffers)
-        val docInput = Input.VirtualFile(bufferInput.path, doc.text)
-        val editDistance = TokenEditDistance(docInput, bufferInput)
-        val originalPosition = editDistance.toOriginal(
-          position.getPosition.getLine,
-          position.getPosition.getCharacter
+        definitionFromSnapshot(path, params, doc)
+    }
+  }
+
+  private def definitionFromSnapshot(
+      source: AbsolutePath,
+      dirtyPosition: TextDocumentPositionParams,
+      snapshot: TextDocument
+  ): DefinitionResult = {
+    // Step 1: convert dirty buffer position to snapshot position in "source"
+    val bufferInput = source.toInputFromBuffers(buffers)
+    val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot.text)
+    val sourceDistance = TokenEditDistance(snapshotInput, bufferInput)
+    val snapshotPosition = sourceDistance.toOriginal(
+      dirtyPosition.getPosition.getLine,
+      dirtyPosition.getPosition.getCharacter
+    )
+
+    // Step 2: find matching symbol occurrence in SemanticDB snapshot
+    val occurrence = for {
+      queryPosition <- snapshotPosition.foldResult(
+        onPosition = pos => {
+          dirtyPosition.getPosition.setLine(pos.startLine)
+          dirtyPosition.getPosition.setCharacter(pos.startColumn)
+          Some(dirtyPosition.getPosition)
+        },
+        onUnchanged = () => Some(dirtyPosition.getPosition),
+        onNoMatch = () => None
+      )
+      occurrence <- snapshot.occurrences.find(_.encloses(queryPosition))
+    } yield occurrence
+
+    // Step 3: find symbol definition
+    val result: Option[DefinitionResult] = occurrence.flatMap { occ =>
+      val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)
+      if (isLocal) {
+        // symbol is local so it is defined within the source.
+        DefinitionDestination(
+          snapshot,
+          sourceDistance,
+          occ.symbol,
+          None,
+          dirtyPosition.getTextDocument.getUri
+        ).toResult
+      } else {
+        // symbol is global so it is defined in an external destination buffer.
+        DefinitionDestination.fromSymbol(occ.symbol).flatMap(_.toResult)
+      }
+    }
+
+    result.getOrElse(DefinitionResult.empty(occurrence.fold("")(_.symbol)))
+  }
+
+  private case class DefinitionDestination(
+      snapshot: TextDocument,
+      distance: TokenEditDistance,
+      symbol: String,
+      path: Option[AbsolutePath],
+      uri: String
+  ) {
+
+    /** Converts snapshot position to dirty buffer position in the destination file */
+    def toResult: Option[DefinitionResult] =
+      for {
+        location <- snapshot.definition(uri, symbol)
+        revisedPosition = distance.toRevised(
+          location.getRange.getStart.getLine,
+          location.getRange.getStart.getCharacter
         )
-        val queryPosition0 = originalPosition.foldResult(
-          onPosition = pos => {
-            position.getPosition.setLine(pos.startLine)
-            position.getPosition.setCharacter(pos.startColumn)
-            Some(position.getPosition)
+        result <- revisedPosition.foldResult(
+          pos => {
+            val start = location.getRange.getStart
+            start.setLine(pos.startLine)
+            start.setCharacter(pos.startColumn)
+            val end = location.getRange.getEnd
+            end.setLine(pos.endLine)
+            end.setCharacter(pos.endColumn)
+            Some(location)
           },
-          onUnchanged = () => Some(position.getPosition),
-          onNoMatch = () => None
+          () => Some(location),
+          () => None
         )
+      } yield {
+        DefinitionResult(
+          Collections.singletonList(result),
+          symbol,
+          path,
+          Some(snapshot)
+        )
+      }
+  }
 
-        val occurrence = for {
-          queryPosition <- queryPosition0
-          occurrence <- doc.occurrences.find(_.encloses(queryPosition))
-        } yield occurrence
-        val result = occurrence.flatMap { occ =>
-          val isLocal =
-            occ.symbol.isLocal ||
-              doc.occurrences.exists { localOccurrence =>
-                localOccurrence.role.isDefinition &&
-                localOccurrence.symbol == occ.symbol
-              }
-          // TODO(olafur): create case class!!
-          val ddoc: Option[
-            (
-                TextDocument,
-                TokenEditDistance,
-                String,
-                Option[AbsolutePath],
-                String
-            )
-          ] =
-            if (isLocal) {
-              Some(
-                (
-                  doc,
-                  editDistance,
-                  occ.symbol,
-                  None,
-                  position.getTextDocument.getUri
-                )
-              )
-            } else {
-              for {
-                defn <- index.definition(Symbol(occ.symbol))
-                defnDoc = textDocuments.textDocument(defn.path) match {
-                  case TextDocumentLookup.Success(d) => d
-                  case TextDocumentLookup.Stale(_, _, d) => d
-                  case _ =>
-                    // read file from disk instead of buffers because text on disk is more
-                    // likely to parse successfully.
-                    val defnRevisedInput = defn.path.toInput
-                    mtags.index(defn.path.toLanguage, defnRevisedInput)
-                }
-                defnPathInput = defn.path.toInputFromBuffers(buffers)
-                defnOriginalInput = Input.VirtualFile(
-                  defnPathInput.path,
-                  defnDoc.text
-                )
-                destinationFile = defn.path.toFileOnDisk(workspace, config)
-                defnEditDistance = TokenEditDistance(
-                  defnOriginalInput,
-                  defnPathInput,
-                )
-              } yield {
-                if (defnEditDistance eq TokenEditDistance.noMatch) {
-                  pprint.log(defnOriginalInput)
-                  pprint.log(defnPathInput)
-                }
-                (
-                  defnDoc,
-                  defnEditDistance,
-                  defn.definitionSymbol.value,
-                  Some(destinationFile),
-                  destinationFile.toURI.toString
-                )
-              }
-            }
-          for {
-            (defnDoc, distance, symbol, path, uri) <- ddoc
-            location <- defnDoc.definition(uri, symbol)
-            revisedPosition = distance.toRevised(
-              location.getRange.getStart.getLine,
-              location.getRange.getStart.getCharacter
-            )
-            result <- revisedPosition.foldResult(
-              pos => {
-                val start = location.getRange.getStart
-                start.setLine(pos.startLine)
-                start.setCharacter(pos.startColumn)
-                val end = location.getRange.getEnd
-                end.setLine(pos.endLine)
-                end.setCharacter(pos.endColumn)
-                Some(location)
-              },
-              () => Some(location),
-              () => None
-            )
-          } yield (result, symbol, path)
+  private object DefinitionDestination {
+    def fromSymbol(symbol: String): Option[DefinitionDestination] = {
+      for {
+        symbolDefinition <- index.definition(Symbol(symbol))
+        destinationDoc = semanticdbs.textDocument(symbolDefinition.path) match {
+          case TextDocumentLookup.Success(d) => d
+          case TextDocumentLookup.Stale(_, _, d) => d
+          case _ =>
+            // Compute SemanticDB on-the-fly with Mtags, we read text contents from
+            // disk instead of buffers because text on disk is more likely to
+            // parse successfully.
+            val defnRevisedInput = symbolDefinition.path.toInput
+            mtags.index(symbolDefinition.path.toLanguage, defnRevisedInput)
         }
-
-        result match {
-          case Some((location, symbol, definitionPath)) =>
-            DefinitionResult(
-              Collections.singletonList(location),
-              symbol,
-              definition = definitionPath
-            )
-          case None =>
-            DefinitionResult(
-              Collections.emptyList(),
-              occurrence.fold("")(_.symbol),
-              definition = None
-            )
-        }
+        defnPathInput = symbolDefinition.path.toInputFromBuffers(buffers)
+        defnOriginalInput = Input.VirtualFile(
+          defnPathInput.path,
+          destinationDoc.text
+        )
+        destinationPath = symbolDefinition.path.toFileOnDisk(workspace)
+        destinationDistance = TokenEditDistance(
+          defnOriginalInput,
+          defnPathInput
+        )
+      } yield {
+        DefinitionDestination(
+          destinationDoc,
+          destinationDistance,
+          symbolDefinition.definitionSymbol.value,
+          Some(destinationPath),
+          destinationPath.toURI.toString
+        )
+      }
     }
   }
 

@@ -1,6 +1,8 @@
 package docs
 
 import java.nio.file.Paths
+import scala.meta.internal.metals.BloopServers
+import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
   def main(args: Array[String]): Unit = {
@@ -11,7 +13,10 @@ object Docs {
       .withSiteVariables(
         Map(
           "VERSION" -> BuildInfo.version,
-          "SCALA_VERSION" -> scala.util.Properties.versionNumberString
+          "BLOOP_VERSION" -> BloopServers.bloopVersion,
+          "SCALAMETA_VERSION" -> V.scalametaVersion,
+          "SCALA211_VERSION" -> V.scala211,
+          "SCALA_VERSION" -> V.scala212
         )
       )
       .withOut(out)

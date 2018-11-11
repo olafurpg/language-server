@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.collection.concurrent.TrieMap
@@ -22,6 +21,12 @@ import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.MetalsStatusParams
 import scala.meta.io.AbsolutePath
 
+/**
+ * Fake LSP client that responds to notifications/requests initiated by the server.
+ *
+ * - Can customize how to respond to window/showMessageRequest
+ * - Aggregates published diagnostics and pretty-prints them as strings
+ */
 final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     extends MetalsLanguageClient {
   val diagnostics = TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
@@ -30,11 +35,19 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
   val statusMessage =
     new AtomicReference[MetalsStatusParams](MetalsStatusParams(""))
+  val logMessages = new ConcurrentLinkedQueue[MessageParams]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
     _: MetalsSlowTaskParams =>
       None
   }
 
+  def workspaceLogMessages: String = {
+    logMessages.asScala
+      .map { params =>
+        s"${params.getType}: ${params.getMessage}"
+      }
+      .mkString("\n")
+  }
   def workspaceShowMessages: String = {
     showMessages.asScala.map(_.getMessage).mkString("\n")
   }
@@ -88,18 +101,15 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       messageRequests.add(params.getMessage)
       if (params == ReimportSbtProject.params) {
         ReimportSbtProject.yes
-      } else if (params == ImportProjectViaBloop.params) {
-        ImportProjectViaBloop.yes
+      } else if (params == ImportBuildViaBloop.params) {
+        ImportBuildViaBloop.yes
       } else {
         throw new IllegalArgumentException(params.toString)
       }
     }
-  override def logMessage(params: MessageParams): Unit =
-    params.getType match {
-      case MessageType.Info => println(params.getMessage)
-      case MessageType.Warning => scribe.warn(params.getMessage)
-      case _ => scribe.error(params.getMessage)
-    }
+  override def logMessage(params: MessageParams): Unit = {
+    logMessages.add(params)
+  }
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {

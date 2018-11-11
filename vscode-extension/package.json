@@ -138,9 +138,9 @@
         "title": "Rescan sources"
       },
       {
-        "command": "metals.build.reconnect",
+        "command": "metals.build-server.connect",
         "category": "Metals",
-        "title": "Reconnect to build server"
+        "title": "Connect to build server"
       },
       {
         "command": "metals.build.import",

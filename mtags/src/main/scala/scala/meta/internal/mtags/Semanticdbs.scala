@@ -11,6 +11,10 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.RelativePath
 import SymbolOccurrenceOrdering._
 
+trait Semanticdbs {
+  def textDocument(path: AbsolutePath): TextDocumentLookup
+}
+
 object Semanticdbs {
   def loadTextDocuments(path: AbsolutePath): s.TextDocuments = {
     val in = Files.newInputStream(path.toNIO)

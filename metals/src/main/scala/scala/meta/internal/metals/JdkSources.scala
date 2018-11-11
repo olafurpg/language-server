@@ -3,6 +3,9 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import scala.meta.io.AbsolutePath
 
+/**
+ * Locates zip file on disk that contains the source code for the JDK.
+ */
 object JdkSources {
   def apply(): Option[AbsolutePath] = {
     for {

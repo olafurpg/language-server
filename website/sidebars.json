@@ -2,7 +2,12 @@
   "docs": {
     "Docusaurus": ["overview"],
     "Overview": ["overview"],
-    "Contributors": ["getting-started-contributors", "website"],
-    "Users": ["installation-users"]
+    "Contributors": [
+      "contributors/getting-started",
+      "contributors/updating-website",
+      "contributors/new-editor",
+      "contributors/new-build-tool"
+    ],
+    "Users": ["users/installation", "users/import-build"]
   }
 }

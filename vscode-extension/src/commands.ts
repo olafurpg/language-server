@@ -1,6 +1,6 @@
 "use strict";
 
 export namespace Commands {
-  export const TOGGLE_OUTPUT = "metals.toggle.output";
-  export const OPEN_PROBLEMS = "workbench.action.problems.focus";
+  export const TOGGLE_LOGS = "metals.logs.toggle";
+  export const FOCUS_DIAGNOSTICS = "metals.diagnostics.focus";
 }

@@ -23,13 +23,7 @@ import utest.ufansi.Attrs
  *
  */
 class BaseSuite extends TestSuite {
-  scribe.Logger.root
-    .clearHandlers()
-    .withHandler(
-      formatter = MetalsLogger.defaultFormat,
-      minimumLevel = Some(scribe.Level.Info)
-    )
-    .replace()
+  MetalsLogger.updateDefaultFormat()
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
@@ -50,12 +44,12 @@ class BaseSuite extends TestSuite {
   }
   def assertNotFile(path: AbsolutePath): Unit = {
     if (path.isFile) {
-      fail(s"file exists: $path")
+      fail(s"file exists: $path", stackBump = 1)
     }
   }
   def assertIsFile(path: AbsolutePath): Unit = {
     if (!path.isFile) {
-      fail(s"no such file: $path")
+      fail(s"no such file: $path", stackBump = 1)
     }
   }
   def assertNoDiff(
@@ -97,7 +91,7 @@ class BaseSuite extends TestSuite {
   def test(name: String)(fun: => Any): Unit = {
     myTests += FlatTest(name, () => fun)
   }
-  def testAsync(name: String, maxDuration: Duration = Duration("3s"))(
+  def testAsync(name: String, maxDuration: Duration = Duration("3min"))(
       run: => Future[Unit]
   ): Unit = {
     test(name) {
@@ -106,9 +100,9 @@ class BaseSuite extends TestSuite {
     }
   }
 
-  def fail(msg: String): Nothing = {
+  def fail(msg: String, stackBump: Int = 0): Nothing = {
     val ex = new TestFailedException(msg)
-    ex.setStackTrace(ex.getStackTrace.slice(1, 2))
+    ex.setStackTrace(ex.getStackTrace.slice(1 + stackBump, 2 + stackBump))
     throw ex
   }
 
@@ -122,4 +116,3 @@ class BaseSuite extends TestSuite {
     Tests(names, thunks)
   }
 }
-class TestFailedException(msg: String) extends Exception(msg)

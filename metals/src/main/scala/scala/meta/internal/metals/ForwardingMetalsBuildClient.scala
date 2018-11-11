@@ -4,10 +4,14 @@ import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
 
+/**
+ * A build client that forwards notifications from the build server to the language client.
+ */
 final class ForwardingMetalsBuildClient(
     languageClient: LanguageClient,
     diagnostics: Diagnostics
 ) extends MetalsBuildClient {
+
   private var buildServer: Option[b.BuildServer] = None
   def onBuildShowMessage(params: l.MessageParams): Unit =
     languageClient.showMessage(params)

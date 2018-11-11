@@ -1,12 +1,6 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildServer
-import ch.epfl.scala.bsp4j.CompileParams
-import ch.epfl.scala.bsp4j.CompileReport
-import ch.epfl.scala.bsp4j.DidChangeBuildTarget
-import ch.epfl.scala.bsp4j.PublishDiagnosticsParams
 import com.geirsson.coursiersmall
-import com.google.gson.JsonArray
 import java.io.InputStream
 import java.io.PrintStream
 import java.net.URLClassLoader
@@ -14,18 +8,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.scalasbt.ipcsocket.UnixDomainSocket
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.sys.process.Process
@@ -34,52 +23,59 @@ import scala.util.Random
 import scala.util.Success
 import scala.util.control.NonFatal
 
-final class BloopServer(
+/**
+ * Establishes a connection with a bloop server.
+ *
+ * Connects to a running bloop server instance if it is installed on the user
+ * machine and has compatible version (+v1.1.0). Ignores the installed bloop
+ * server instance if it is v1.0.0.
+ *
+ * Otherwise, if the user doesn't have bloop installed on the machine, uses
+ * Coursier to fetch the jars for ch.epfl.scala:bloop-frontend and start a new
+ * bloop server using classloading. A bloop server that starts via classloading
+ * stops when when the metals server stops. Only metals can access the classloaded server,
+ * the user cannot call it from a command-line interface.
+ *
+ * Eventually, this class may be superseded by "BSP connection protocol":
+ * https://github.com/scalacenter/bsp/blob/master/docs/bsp.md#bsp-connection-protocol
+ */
+final class BloopServers(
     sh: ScheduledExecutorService,
-    workspace: AbsolutePath
+    workspace: AbsolutePath,
+    client: MetalsBuildClient
 )(implicit ec: ExecutionContextExecutorService) {
 
-  def connect(buildClient: MetalsBuildClient): Future[BuildServerConnection] = {
+  def newServer(): Future[BuildServerConnection] = {
     for {
-      (bloop, bloobCancelable) <- establishLocalConnection(workspace)
+      (socket, cancelable) <- callBSP()
     } yield {
       val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
       val launcher = new Launcher.Builder[MetalsBuildServer]()
         .traceMessages(tracePrinter)
         .setRemoteInterface(classOf[MetalsBuildServer])
         .setExecutorService(ec)
-        .setInput(bloop.getInputStream)
-        .setOutput(bloop.getOutputStream)
-        .setLocalService(buildClient)
+        .setInput(socket.getInputStream)
+        .setOutput(socket.getOutputStream)
+        .setLocalService(client)
         .create()
       val listening = launcher.startListening()
       val remoteServer = launcher.getRemoteProxy
-      buildClient.onConnect(remoteServer)
+      client.onConnect(remoteServer)
       val cancelables = List(
         Cancelable(() => {
-          if (!bloop.isInputShutdown) bloop.shutdownInput()
-          if (!bloop.isOutputShutdown) bloop.shutdownOutput()
-          bloop.close()
+          if (!socket.isInputShutdown) socket.shutdownInput()
+          if (!socket.isOutputShutdown) socket.shutdownOutput()
+          socket.close()
         }),
-        bloobCancelable,
+        cancelable,
         Cancelable(() => listening.cancel(true))
       )
-      BuildServerConnection(workspace, buildClient, remoteServer, cancelables)
+      BuildServerConnection(workspace, client, remoteServer, cancelables)
     }
   }
 
-  private def newSocketFile(): AbsolutePath = {
-    val tmp = Files.createTempDirectory("bsp")
-    val id = java.lang.Long.toString(Random.nextLong(), Character.MAX_RADIX)
-    val socket = tmp.resolve(s"$id.socket")
-    socket.toFile.deleteOnExit()
-    AbsolutePath(socket)
-  }
-
-  private def establishLocalConnection(
-      workspace: AbsolutePath,
-  ): Future[(UnixDomainSocket, Cancelable)] = {
-    val socket = newSocketFile()
+  private def callBSP(): Future[(UnixDomainSocket, Cancelable)] = {
+    val socket = BloopServers.newSocketFile()
     val args = Array(
       "bsp",
       "--protocol",
@@ -87,7 +83,7 @@ final class BloopServer(
       "--socket",
       socket.toString
     )
-    val cancelable = callBloop(args, workspace)
+    val cancelable = callBloopMain(args)
     for {
       confirmation <- waitForFileToBeCreated(socket)
     } yield {
@@ -101,10 +97,7 @@ final class BloopServer(
     }
   }
 
-  private def callBloop(
-      args: Array[String],
-      workspace: AbsolutePath
-  ): Cancelable = {
+  private def callBloopMain(args: Array[String]): Cancelable = {
     val logger = MetalsLogger.newBspLogger(workspace)
     if (bloopCommandLineIsInstalled(workspace)) {
       val bspProcess = Process(
@@ -123,25 +116,26 @@ final class BloopServer(
           val cancelMain = Promise[java.lang.Boolean]()
           val job = ec.submit(new Runnable {
             override def run(): Unit = {
-              reflectivelyCallBloop(
-                workspace,
+              callBloopReflectiveMain(
                 classloaders,
                 args,
-                cancelMain.future.toJavaCompletable
+                cancelMain.future.asJava
               )
             }
           })
           new MutableCancelable()
             .add(Cancelable(() => job.cancel(true)))
-            .add(Cancelable(() => cancelMain.success(true)))
+            .add(Cancelable(() => cancelMain.trySuccess(true)))
         case None =>
           Cancelable.empty
       }
     }
   }
 
-  private def reflectivelyCallBloop(
-      workspace: AbsolutePath,
+  /**
+   * Uses runtime reflection to invoke the `reflectiveMain` function in bloop.
+   */
+  private def callBloopReflectiveMain(
       classLoader: ClassLoader,
       args: Array[String],
       cancelMain: CompletableFuture[java.lang.Boolean]
@@ -159,7 +153,7 @@ final class BloopServer(
     )
     val ps = System.out
     val exitCode = reflectiveMain.invoke(
-      null,
+      null, // static method has no caller object.
       args,
       workspace.toNIO,
       new InputStream { override def read(): Int = -1 },
@@ -179,7 +173,7 @@ final class BloopServer(
       // users are on an older version.
       val isOldVersion =
         output.startsWith("bloop 1.0") ||
-          output.contains(bloopVersion) ||
+          output.contains(BloopServers.bloopVersion) ||
           output.startsWith("bloop 0")
       !isOldVersion
     } catch {
@@ -192,7 +186,7 @@ final class BloopServer(
       extends Exception(s"no connection: $file")
 
   private def waitForFileToBeCreated(
-      socket: AbsolutePath,
+      socket: AbsolutePath
   ): Future[Confirmation] = {
     val retryDelayMillis: Long = 200
     val maxRetries: Int = 40
@@ -219,7 +213,7 @@ final class BloopServer(
   }
 
   lazy val bloopJars: Option[ClassLoader] = {
-    try Some(newBloopClassloader())
+    try Some(BloopServers.newBloopClassloader())
     catch {
       case NonFatal(e) =>
         scribe.error("Failed to classload bloop, compilation will not work", e)
@@ -227,6 +221,10 @@ final class BloopServer(
     }
   }
 
+}
+
+object BloopServers {
+  def bloopVersion: String = System.getProperty("bloop.version", "121807cc")
   private def newBloopClassloader(): ClassLoader = {
     val settings = new coursiersmall.Settings()
       .withDependencies(
@@ -248,68 +246,11 @@ final class BloopServer(
       new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, null)
     classloader
   }
-
-  def bloopVersion: String = System.getProperty("bloop.version", "121807cc")
-}
-
-object BloopServer {
-  def compile(bloopServer: BloopServer, targets: List[String])(
-      implicit ec: ExecutionContextExecutorService
-  ): Future[Unit] = {
-    val client = new MetalsBuildClient {
-      override def onBuildShowMessage(params: MessageParams): Unit =
-        pprint.log(params)
-      override def onBuildLogMessage(
-          params: MessageParams
-      ): Unit = pprint.log(params)
-      override def onBuildPublishDiagnostics(
-          params: PublishDiagnosticsParams
-      ): Unit = pprint.log(params)
-      override def onBuildTargetDidChange(
-          params: DidChangeBuildTarget
-      ): Unit = pprint.log(params)
-      override def onBuildTargetCompileReport(params: CompileReport): Unit =
-        pprint.log(params)
-      override def onConnect(remoteServer: BuildServer): Unit =
-        pprint.log(remoteServer)
-    }
-    for {
-      bloop <- bloopServer.connect(client)
-      _ <- bloop.initialize()
-      buildTargets <- bloop.server.workspaceBuildTargets().toScala
-      ids = buildTargets.getTargets.asScala
-        .filter(target => targets.contains(target.getDisplayName))
-      names = ids.map(_.getDisplayName).mkString(" ")
-      _ = scribe.info(s"compiling: $names")
-      params = new CompileParams(ids.map(_.getId).asJava)
-      _ = params.setArguments(new JsonArray)
-      _ <- bloop.server.buildTargetCompile(params).toScala
-      _ <- bloop.shutdown()
-    } yield {
-      scribe.info("done!")
-    }
-  }
-  def main(args: Array[String]): Unit = {
-    args.toList match {
-      case directory :: "compile" :: targets =>
-        val sh = Executors.newSingleThreadScheduledExecutor()
-        val ex = Executors.newCachedThreadPool()
-        implicit val ec = ExecutionContext.fromExecutorService(ex)
-        val workspace = AbsolutePath(directory)
-        val server = new BloopServer(sh, workspace)
-        try {
-          val future = compile(server, targets)
-          Await.result(future, Duration("1min"))
-        } finally {
-          sh.shutdown()
-          ex.shutdown()
-        }
-        println("goodbye!")
-      case els =>
-        System.err.println(
-          s"expected '<workspace> compile [..targets]'. obtained $els"
-        )
-        System.exit(1)
-    }
+  private def newSocketFile(): AbsolutePath = {
+    val tmp = Files.createTempDirectory("bsp")
+    val id = java.lang.Long.toString(Random.nextLong(), Character.MAX_RADIX)
+    val socket = tmp.resolve(s"$id.socket")
+    socket.toFile.deleteOnExit()
+    AbsolutePath(socket)
   }
 }

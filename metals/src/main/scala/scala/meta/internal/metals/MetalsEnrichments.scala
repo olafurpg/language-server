@@ -1,12 +1,13 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util
@@ -17,10 +18,8 @@ import org.eclipse.{lsp4j => l}
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -29,22 +28,32 @@ import scala.meta.io.AbsolutePath
 import scala.util.Try
 import scala.{meta => m}
 
+/**
+ * One stop shop for all extension methods that are used in the metals build.
+ *
+ * Usage: {{{
+ *   import scala.meta.internal.metals.MetalsEnrichments._
+ *   List(1).asJava
+ *   Future(1).asJava
+ *   // ...
+ * }}}
+ *
+ * Includes the following converters from the standard library: {{{
+ *  import scala.compat.java8.FutureConverters._
+ *  import scala.collection.JavaConverters._
+ * }}}
+ *
+ * If this doesn't scale because we have too many unrelated extension methods
+ * then we can split this up, but for now it's really convenient to have to
+ * remember only one import.
+ */
 object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
-  implicit class FutureOps[T](future: Future[T]) {
-    def toJava: CompletionStage[T] = FutureConverters.toJava(future)
-    def toJavaCompletable: CompletableFuture[T] = toJava.toCompletableFuture
-    def toJavaUnitCompletable(
-        implicit ec: ExecutionContext
-    ): CompletableFuture[Unit] =
-      future.ignoreValue.toJavaCompletable
-  }
-
-  implicit class CompletionStageOps[T](future: CompletionStage[T]) {
-    def toScala: Future[T] = FutureConverters.toScala(future)
-  }
-
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
+
+    /**
+     * Reads BSP `BuildTarget.data` field into a `ScalaBuildTarget`.
+     */
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       for {
         data <- Option(buildTarget.getData)
@@ -57,6 +66,7 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
         ).toOption
       } yield info
     }
+
   }
 
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
@@ -71,27 +81,36 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     }
   }
 
-  implicit class XtensionScalaFuture[A](fut: Future[A]) {
+  implicit class XtensionJavaFuture[T](future: CompletionStage[T]) {
+    def asScala: Future[T] = FutureConverters.toScala(future)
+  }
+
+  implicit class XtensionScalaFuture[A](future: Future[A]) {
+    def asJava: CompletableFuture[A] =
+      FutureConverters.toJava(future).toCompletableFuture
+    def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
+      future.ignoreValue.asJava
+
+    /**
+     * Registers this future to be tracked by the client status bar.
+     */
     def trackInStatusBar(
         message: String,
         maxDots: Int = Int.MaxValue
     )(implicit statusBar: StatusBar): Future[A] = {
-      statusBar.addFuture(message, fut, maxDots = maxDots)
-      fut
+      statusBar.addFuture(message, future, maxDots = maxDots)
+      future
     }
     def ignoreValue(implicit ec: ExecutionContext): Future[Unit] =
-      fut.map(_ => ())
+      future.map(_ => ())
     def logError(
         doingWhat: String
     )(implicit ec: ExecutionContext): Future[A] = {
-      fut.recover {
+      future.recover {
         case e =>
           scribe.error(s"Unexpected error while $doingWhat", e)
           throw e
       }
-    }
-    def get(duration: Duration = Duration("10s")): A = {
-      Await.result(fut, duration)
     }
   }
 
@@ -124,43 +143,73 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   }
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
+
+    /**
+     * Resolve each path segment individually to prevent jjkjjk
+     */
+    def resolveZipPath(zipPath: Path): AbsolutePath = {
+      zipPath.iterator().asScala.foldLeft(path) {
+        case (accum, filename) =>
+          accum.resolve(filename.toString)
+      }
+    }
     def isDependencySource(workspace: AbsolutePath): Boolean =
       workspace.toNIO.getFileSystem == path.toNIO.getFileSystem &&
         path.toNIO.startsWith(
-          workspace.resolve(DefinitionProvider.DependencySource).toNIO
+          workspace.resolve(Directories.readonly).toNIO
         )
-    def toFileOnDisk(
-        workspace: AbsolutePath,
-        config: MetalsServerConfig
-    ): AbsolutePath = {
+
+    /**
+     * Writes zip file contents to disk under $workspace/.metals/readonly.
+     */
+    def toFileOnDisk(workspace: AbsolutePath): AbsolutePath = {
       if (path.toNIO.getFileSystem == workspace.toNIO.getFileSystem) {
         path
       } else {
-        val dependencySource =
-          workspace.resolve(DefinitionProvider.DependencySource)
-        Files.createDirectories(dependencySource.toNIO)
-        val out =
-          dependencySource.toNIO.resolve(path.toNIO.getFileName.toString)
-        Files.copy(path.toNIO, out, StandardCopyOption.REPLACE_EXISTING)
-        out.toFile.setReadOnly()
+        val readonly = workspace.resolve(Directories.readonly)
+        val out = readonly.resolveZipPath(path.toNIO).toNIO
+        Files.createDirectories(out.getParent)
+        if (Files.exists(out)) {
+          // Can't REPLACE_EXISTING for readonly files.
+          Files.delete(out)
+        }
+        try {
+          Files.copy(path.toNIO, out, StandardCopyOption.REPLACE_EXISTING)
+          out.toFile.setReadOnly()
+        } catch {
+          case _: FileAlreadyExistsException =>
+            () // ignore
+        }
         AbsolutePath(out)
       }
     }
+
     def toTextDocumentIdentifier: TextDocumentIdentifier = {
       new TextDocumentIdentifier(path.toURI.toString)
     }
+
     def readText: String = {
       FileIO.slurp(path, StandardCharsets.UTF_8)
     }
+
     def isJar: Boolean = {
       val filename = path.toNIO.getFileName.toString
       filename.endsWith(".jar")
     }
-    def isSbtOrScala: Boolean = {
-      val filename = path.toNIO.getFileName.toString
-      filename.endsWith(".sbt") ||
-      filename.endsWith(".scala")
+
+    def isSbtRelated(workspace: AbsolutePath): Boolean = {
+      val isToplevel = Set(workspace.toNIO, workspace.toNIO.resolve("project"))
+      isToplevel(path.toNIO.getParent) && {
+        val filename = path.toNIO.getFileName.toString
+        filename.endsWith("build.properties") ||
+        filename.endsWith(".sbt") ||
+        filename.endsWith(".scala")
+      }
     }
+
+    /**
+     * Reads file contents from editor buffer with fallback to disk.
+     */
     def toInputFromBuffers(buffers: Buffers): Input.VirtualFile = {
       buffers.get(path) match {
         case Some(text) => Input.VirtualFile(path.toString(), text)
@@ -171,6 +220,10 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
   implicit class XtensionStringUriProtocol(value: String) {
 
+    /** Returns true if this is a Scala.js or Scala Native target
+     *
+     * FIXME: https://github.com/scalacenter/bloop/issues/700
+     */
     def isNonJVMPlatformOption: Boolean = {
       def isCompilerPlugin(name: String, organization: String): Boolean = {
         value.startsWith("-Xplugin:") &&
@@ -188,7 +241,18 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
-    def toInput: Input = Input.VirtualFile(textDocument.uri, textDocument.text)
+
+    /** Returns true if the symbol is defined in this document */
+    def definesSymbol(symbol: String): Boolean = {
+      textDocument.occurrences.exists { localOccurrence =>
+        localOccurrence.role.isDefinition &&
+        localOccurrence.symbol == symbol
+      }
+    }
+
+    def toInput: Input = {
+      Input.VirtualFile(textDocument.uri, textDocument.text)
+    }
     def definition(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)
@@ -212,22 +276,6 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   implicit class XtensionRangeBsp(range: b.Range) {
     def toLSP: l.Range =
       new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
-  }
-
-  implicit class XtensionRangeLanguageProtocol(range: l.Range) {
-    def toLineColumn: String = {
-      val sb = new StringBuilder()
-        .append(range.getStart.getLine)
-        .append(":")
-        .append(range.getStart.getCharacter)
-      if (range.getEnd != range.getStart) {
-        sb.append("-")
-          .append(range.getEnd.getLine)
-          .append(":")
-          .append(range.getEnd.getCharacter)
-      }
-      sb.toString()
-    }
   }
 
   implicit class XtensionRangeBuildProtocol(range: s.Range) {
@@ -271,15 +319,18 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
     def isJVM: Boolean = {
+      // FIXME: https://github.com/scalacenter/bloop/issues/700
       !item.getOptions.asScala.exists(_.isNonJVMPlatformOption)
     }
 
+    /** Returns the value of a -P:semanticdb:$option:$value compiler flag. */
     def semanticdbFlag(name: String): Option[String] = {
       val flag = s"-P:semanticdb:$name:"
       item.getOptions.asScala
         .find(_.startsWith(flag))
         .map(_.stripPrefix(flag))
     }
+
   }
 
 }

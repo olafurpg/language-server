@@ -1,11 +1,13 @@
 package example
 
 import org.scalatest.FunSuite
+import cats._
+import cats.implicits._
 
 class UserTest extends FunSuite {
-  Main.main() // a
+  Some(1)
   test("basic") {
-    val basic = 42
+    val basic = Main.number
     assert(basic == 42)
   }
 }

@@ -7,6 +7,11 @@ import scala.meta.internal.metals.SbtChecksum
 import scala.meta.testkit.StringFS
 
 object SbtChecksumSuite extends BaseSuite {
+  def checksum(layout: String): Option[String] = {
+    val root = StringFS.fromString(layout)
+    val obtained = SbtChecksum.current(root)
+    obtained
+  }
   def check(name: String, layout: String, expected: Option[String]): Unit = {
     test(name) {
       val root = StringFS.fromString(layout)
@@ -93,5 +98,26 @@ object SbtChecksumSuite extends BaseSuite {
     """.stripMargin,
     Some(project)
   )
+
+  test("build.properties") {
+    val v1 = checksum(
+      """
+        |/build.sbt
+        |lazy val x = 2
+        |/project/build.properties
+        |sbt.version=1.0
+        |""".stripMargin
+    ).get
+    val v2 = checksum(
+      """
+        |/build.sbt
+        |lazy val x = 2
+        |/project/build.properties
+        |sbt.version=2.0
+        |""".stripMargin
+    ).get
+    assertNotEquals(v1, solo, "build.properties should affect checksum")
+    assertNotEquals(v1, v2, "build.properties should affect checksum")
+  }
 
 }

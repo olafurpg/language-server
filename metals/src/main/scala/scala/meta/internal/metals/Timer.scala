@@ -1,8 +1,13 @@
 package scala.meta.internal.metals
+import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 
 class Timer(time: Time) {
   val startNanos: Long = time.nanos()
+  def isLogWorthy: Boolean =
+    elapsedMillis > 100
+  def isHumanVisible: Boolean =
+    elapsedMillis > 200
   def elapsedNanos: Long = {
     val now = time.nanos()
     now - startNanos
@@ -19,12 +24,13 @@ class Timer(time: Time) {
 }
 
 object Timer {
-  def readableNanos(n: Long): String = {
-    val seconds = TimeUnit.NANOSECONDS.toSeconds(n)
-    if (seconds > 0) readableSeconds(seconds)
+  def readableNanos(nanos: Long): String = {
+    val seconds = TimeUnit.NANOSECONDS.toSeconds(nanos)
+    if (seconds > 5) readableSeconds(seconds)
     else {
-      val ms = TimeUnit.NANOSECONDS.toMillis(n)
-      s"${ms}ms"
+      val ms = TimeUnit.NANOSECONDS.toMillis(nanos).toDouble
+      val partialSeconds = ms / 1000
+      new DecimalFormat("#.##s").format(partialSeconds)
     }
   }
   def readableSeconds(n: Long): String = {

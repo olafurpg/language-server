@@ -33,6 +33,10 @@ export async function activate(context: ExtensionContext) {
     .get("serverVersion");
 
   const javaArgs = [
+    `-Dmetals.extensions=true`,
+    `-Xss4m`,
+    `-Xms1G`,
+    `-Xmx4G`,
     `-XX:+UseG1GC`,
     `-XX:+UseStringDeduplication`,
     "-jar",
@@ -74,12 +78,8 @@ export async function activate(context: ExtensionContext) {
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: ["scala"],
+    documentSelector: [{ scheme: "file", language: "scala" }],
     synchronize: {
-      fileEvents: [
-        workspace.createFileSystemWatcher("**/*.{scala,sbt,java}"),
-        workspace.createFileSystemWatcher("**/project/build.properties")
-      ],
       configurationSection: "metals"
     },
     revealOutputChannelOn: RevealOutputChannelOn.Never
@@ -111,7 +111,7 @@ export async function activate(context: ExtensionContext) {
   context.subscriptions.push(client.start());
 
   client.onReady().then(_ => {
-    ["build.import", "build.reconnect", "workspace.sources.scan"].forEach(
+    ["build.import", "build-server.connect", "workspace.sources.scan"].forEach(
       command => {
         const cancel = commands.registerCommand("metals." + command, async () =>
           client.sendRequest(ExecuteCommandRequest.type, { command: command })
@@ -124,7 +124,7 @@ export async function activate(context: ExtensionContext) {
     // this command twice in case the channel has been focused through another
     // button. There is no `isFocused` API to check if a channel is focused.
     var channelOpen = false;
-    commands.registerCommand(Commands.TOGGLE_OUTPUT, () => {
+    commands.registerCommand(Commands.TOGGLE_LOGS, () => {
       if (channelOpen) {
         client.outputChannel.hide();
         channelOpen = false;
@@ -134,10 +134,14 @@ export async function activate(context: ExtensionContext) {
       }
     });
 
+    commands.registerCommand(Commands.FOCUS_DIAGNOSTICS, () => {
+      commands.executeCommand("workbench.action.problems.focus");
+    });
+
     // The server updates the client with a brief text message about what
     // it is currently doing, for example "Compiling..".
     const item = window.createStatusBarItem(StatusBarAlignment.Right, 100);
-    item.command = Commands.TOGGLE_OUTPUT;
+    item.command = Commands.TOGGLE_LOGS;
     item.hide();
     client.onNotification(MetalsStatus.type, params => {
       item.text = params.text;
@@ -151,6 +155,17 @@ export async function activate(context: ExtensionContext) {
       }
       if (params.command) {
         item.command = params.command;
+        commands.getCommands().then(values => {
+          if (values.indexOf(params.command) < 0) {
+            commands.registerCommand(params.command, () => {
+              client.sendRequest(ExecuteCommandRequest.type, {
+                command: params.command
+              });
+            });
+          }
+        });
+      } else {
+        item.command = undefined;
       }
     });
 

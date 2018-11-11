@@ -13,7 +13,7 @@ final case class SemanticdbClasspath(
     classpath: Classpath = Classpath(Nil),
     charset: Charset = StandardCharsets.UTF_8,
     fingerprints: Md5Fingerprints = Md5Fingerprints.empty
-) extends TextDocuments {
+) extends Semanticdbs {
   val loader = new ClasspathLoader()
   loader.addClasspath(classpath)
 

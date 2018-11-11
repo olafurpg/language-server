@@ -5,23 +5,15 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
-import scala.collection.concurrent.TrieMap
-import scala.meta.io.AbsolutePath
-import MetalsEnrichments._
-import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentLinkedQueue
-import scala.meta.internal.mtags.Md5Fingerprints
-import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.mtags.TextDocumentLookup
-import scala.meta.internal.mtags.TextDocuments
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.collection.concurrent.TrieMap
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
-final class BuildTargets(
-    buffers: Buffers,
-    charset: Charset,
-    workspace: AbsolutePath,
-    fingerprints: Md5Fingerprints
-) extends TextDocuments {
+/**
+ * In-memory cache for looking up build server metadata.
+ */
+final class BuildTargets() {
   private val sourceDirectoriesToBuildTarget =
     TrieMap.empty[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]]
   private val buildTargetInfo =
@@ -35,6 +27,9 @@ final class BuildTargets(
     buildTargetInfo.clear()
     scalacTargetInfo.clear()
   }
+
+  def sourceDirectories: Iterable[AbsolutePath] =
+    sourceDirectoriesToBuildTarget.keys
 
   def addSourceDirectory(
       directory: AbsolutePath,
@@ -70,17 +65,6 @@ final class BuildTargets(
     scalacTargetInfo.get(buildTarget)
 
   /**
-   * Returns the source files and directories for this build target.
-   */
-  def sources(buildTarget: BuildTargetIdentifier): List[AbsolutePath] = {
-    for {
-      open <- buffers.open
-      target <- inverseSources(open)
-      if target == buildTarget
-    } yield open
-  }.toList
-
-  /**
    * Returns the first build target containing this source file.
    */
   def inverseSources(
@@ -96,50 +80,6 @@ final class BuildTargets(
         .find(x => scalacOptions(x).exists(_.isJVM))
         .orElse(buildTargets.headOption)
     } yield target
-  }
-
-  /**
-   * Returns the SemanticDB document for this source file.
-   */
-  override def textDocument(file: AbsolutePath): TextDocumentLookup = {
-    if (!file.toLanguage.isScala ||
-      file.toNIO.getFileSystem != workspace.toNIO.getFileSystem) {
-      TextDocumentLookup.NotFound(file)
-    } else {
-      semanticdbTargetroot(file) match {
-        case Some(targetroot) =>
-          Semanticdbs.loadTextDocument(
-            file,
-            workspace,
-            charset,
-            fingerprints,
-            semanticdbRelativePath => {
-              val semanticdbpath = targetroot.resolve(semanticdbRelativePath)
-              if (semanticdbpath.isFile) Some(semanticdbpath)
-              else None
-            }
-          )
-        case None =>
-          TextDocumentLookup.NotFound(file)
-      }
-    }
-  }
-
-  /**
-   * Returns the directory containing SemanticDB files for this Scala source file.
-   */
-  private def semanticdbTargetroot(
-      scalaPath: AbsolutePath
-  ): Option[AbsolutePath] = {
-    for {
-      buildTarget <- inverseSources(scalaPath)
-      scalacOptions <- scalacTargetInfo.get(buildTarget)
-    } yield {
-      scalacOptions
-        .semanticdbFlag("targetroot")
-        .map(AbsolutePath(_))
-        .getOrElse(scalacOptions.getClassDirectory.toAbsolutePath)
-    }
   }
 
 }

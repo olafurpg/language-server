@@ -12,7 +12,7 @@ package scala.meta.sbt {
 
     override def globalSettings = Seq(
       commands ++= Seq(
-        semanticdbEnable,
+        semanticdbEnable
       )
     )
 

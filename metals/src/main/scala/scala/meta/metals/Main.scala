@@ -2,12 +2,15 @@ package scala.meta.metals
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
-
 import org.eclipse.lsp4j.jsonrpc.Launcher
-
+import org.eclipse.lsp4j.services.LanguageClient
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.{GlobalTrace, MetalsLanguageClient, MetalsLanguageServer}
+import scala.meta.internal.metals.GlobalTrace
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.NoExtensionLanguageClient
 import scala.util.control.NonFatal
 
 object Main {
@@ -22,18 +25,31 @@ object Main {
       charset = StandardCharsets.UTF_8
     )
     try {
-      val launcher = new Launcher.Builder[MetalsLanguageClient]()
+      val remoteInterface =
+        if (MetalsServerConfig.isExtensionsEnabled) {
+          classOf[MetalsLanguageClient]
+        } else {
+          classOf[LanguageClient]
+        }
+      val launcher = new Launcher.Builder[LanguageClient]()
         .traceMessages(tracePrinter)
         .setExecutorService(exec)
         .setInput(systemIn)
         .setOutput(systemOut)
-        .setRemoteInterface(classOf[MetalsLanguageClient])
+        .setRemoteInterface(remoteInterface)
         .setLocalService(server)
         .create()
       scribe.info(
         s"starting server in working directory ${PathIO.workingDirectory}"
       )
-      server.connectToLanguageClient(launcher.getRemoteProxy)
+      val underlyingClient = launcher.getRemoteProxy
+      val client =
+        if (MetalsServerConfig.isExtensionsEnabled) {
+          underlyingClient.asInstanceOf[MetalsLanguageClient]
+        } else {
+          new NoExtensionLanguageClient(underlyingClient)
+        }
+      server.connectToLanguageClient(client)
       launcher.startListening().get()
     } catch {
       case NonFatal(e) =>

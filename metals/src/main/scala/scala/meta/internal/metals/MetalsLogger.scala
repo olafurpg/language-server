@@ -6,6 +6,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scribe._
 import scribe.format._
+import scribe.modify.LogModifier
 import scribe.writer.FileWriter
 
 object MetalsLogger {
@@ -15,7 +16,11 @@ object MetalsLogger {
   def updateDefaultFormat(): Unit = {
     Logger.root
       .clearHandlers()
-      .withHandler(formatter = defaultFormat)
+      .withHandler(
+        formatter = defaultFormat,
+        minimumLevel = Some(scribe.Level.Info),
+        modifiers = List(MetalsFilter)
+      )
       .replace()
   }
 
@@ -35,14 +40,30 @@ object MetalsLogger {
       .withHandler(
         writer = newFileWriter(logfile),
         formatter = defaultFormat,
-        minimumLevel = Some(Level.Info)
+        minimumLevel = Some(Level.Info),
+        modifiers = List(MetalsFilter)
       )
       .withHandler(
         writer = LanguageClientLogger,
         formatter = debugFormat,
-        minimumLevel = Some(Level.Info)
+        minimumLevel = Some(Level.Info),
+        modifiers = List(MetalsFilter)
       )
       .replace()
+  }
+
+  object MetalsFilter extends LogModifier {
+    override def id = "MetalsFilter"
+    override def priority: Priority = Priority.Normal
+    override def apply[M](record: LogRecord[M]): Option[LogRecord[M]] = {
+      // FIXME: filter on `org.flywaydb` instead of `scribe.sl4j` https://github.com/outr/scribe/issues/100
+      if (record.className.startsWith("scribe.slf4j") && record.level < scribe.Level.Warn.value) {
+        None
+      } else {
+        Some(record)
+      }
+    }
+
   }
 
   def setupLspLogger(

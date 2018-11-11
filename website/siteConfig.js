@@ -2,12 +2,13 @@
 // site configuration options.
 
 const repoUrl = "https://github.com/scalameta/metals";
+const baseUrl = "/metals/";
 
 const siteConfig = {
   title: "Metals",
-  tagline: "Work in Progress Language Server for Scala",
+  tagline: "Work-in-progress language server for Scala",
   url: "http://scalameta.org",
-  baseUrl: "/metals/",
+  baseUrl: baseUrl,
 
   // Used for publishing and more
   projectName: "Metals",
@@ -39,6 +40,8 @@ const siteConfig = {
   },
 
   customDocsPath: "website/target/docs",
+
+  stylesheets: [baseUrl + "css/custom.css"],
 
   // This copyright info is used in /core/Footer.js and blog rss/atom feeds.
   copyright: `Copyright © ${new Date().getFullYear()} Metals`,

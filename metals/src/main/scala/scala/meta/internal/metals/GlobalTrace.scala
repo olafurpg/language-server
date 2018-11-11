@@ -8,6 +8,9 @@ import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 
+/**
+ * Manages JSON-RPC tracing of incoming/outgoing messages via BSP and LSP.
+ */
 object GlobalTrace {
 
   /** Returns a printer to trace JSON messages if the user opts into it. */

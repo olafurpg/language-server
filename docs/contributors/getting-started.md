@@ -1,19 +1,11 @@
 ---
-id: getting-started-contributors
+id: getting-started
 title: Contributing to Metals
 ---
 
-> ⚠ ️ This project is under development so there is nothing to try out yet.
-> These instructions are intended for people who want to contribute to the
-> Metals codebase.
-
-If anything isn't clear, please open an issue or
-[ask on gitter](https://gitter.im/scalameta/metals).
-
-This project follows
+Whenever you are stuck or unsure, please open an issue or
+[ask on Gitter](https://gitter.im/scalameta/metals). This project follows
 [Scalameta's contribution guidelines](https://github.com/scalameta/scalameta/blob/master/CONTRIBUTING.md).
-Please read them for information about how to create good bug reports and submit
-pull requests.
 
 ## Project structure
 
@@ -33,8 +25,6 @@ repository:
 - [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB,
   parsing, tokenization
 - [scalameta/scalafmt](https://github.com/scalameta/scalafmt/): code formatting
-- [scalameta/lsp4s](https://github.com/scalameta/lsp4s/): LSP data structures
-  and JSON-RPC
 - [scalacenter/scalafix](https://github.com/scalacenter/scalafix/): code
   refactoring and linting
 - [scala/scala](https://github.com/scala/scala/): presentation compiler
@@ -52,11 +42,14 @@ You will need the following applications installed:
 
 To run the unit tests open an sbt shell and run `unit/test`
 
-```
+```sh
 sbt
-> sbt-metals/publishLocal                   # Run once for every change in sbt plugin
-> unit/test                                 # Run all unit tests
-> metals/testOnly -- tests.DefinitionSuite  # Only test goto definition
+# Run once for every change in sbt plugin
+> sbt-metals/publishLocal
+# Fast (recommended), only specfic test suite
+> metals/testOnly -- tests.DefinitionSuite
+# Slow (not recommended) run all tests
+> unit/test
 ```
 
 ## VS Code extension
@@ -64,6 +57,7 @@ sbt
 Install the extension dependencies
 
 ```sh
+sbt publishLocal    # Publish the Metals server locally with version number SNAPSHOT
 cd vscode-extension
 npm install
 ```
@@ -78,8 +72,15 @@ Next, install the Scala syntax package
 [`scala-lang.scala`](https://marketplace.visualstudio.com/items?itemName=scala-lang.scala).
 This plugin is required to start the extension.
 
-Now you can start the plugin debugging mode via `Debug > Start debuggin` or
-pressing `F5`.
+Now you can start the plugin debugging mode via `Debug > Start debugging` or
+pressing `F5`. Open the `test-workspace` directory and try to edit some file
+like "User.scala".
 
-> ⚠ It is normal that the plugin fails to start because it tries to start the
-> Metals language server, which does not exist at this moment.
+To see all logs from the Metals server:
+
+```sh
+tail -f .metals/metals.log
+```
+
+To see the LSP logs to the user open "Output" (macOS `Shift + Cmd + U`) and
+select the "Metals" channel.

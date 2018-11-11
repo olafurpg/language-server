@@ -22,7 +22,6 @@ export namespace MetalsStatus {
     "metals/status"
   );
 }
-
 export namespace MetalsDidFocus {
   export const type = new NotificationType<string, void>(
     "metals/didFocusTextDocument"

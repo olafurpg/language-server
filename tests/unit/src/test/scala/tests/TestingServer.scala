@@ -22,13 +22,18 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
-import org.eclipse.lsp4j.services.LanguageClient
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Debug
-import scala.meta.internal.metals.{Buffers, MetalsLanguageClient, MetalsLanguageServer}
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.{
+  Buffers,
+  MetalsLanguageClient,
+  MetalsLanguageServer
+}
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
@@ -39,7 +44,20 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.semanticdb.Scala._
 
-class TestingServer(
+/**
+ * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
+ *
+ * - manages text synchronization, example didSave writes file contents to disk.
+ * - pretty-prints results of textDocument/definition for readable multiline string diffing.
+ *
+ * This class is great for testing because we get `Future[T]` values back from JSON-RPC
+ * notifications like didOpen and didSave so that we can run callbacks once asynchronous background
+ * jobs complete (example: BSP compilation, source indexing). It is not possible to test the
+ * language server the same way from a real editor client like VS Code because JSON-RPC
+ * notifications are `Any => Unit`, they cannot respond.
+ */
+final class TestingServer(
+    workspace: AbsolutePath,
     client: MetalsLanguageClient,
     root: AbsolutePath,
     buffers: Buffers
@@ -52,6 +70,7 @@ class TestingServer(
     redirectSystemOut = false
   )
   server.connectToLanguageClient(client)
+  private val readonlySources = TrieMap.empty[String, AbsolutePath]
 
   private def write(layout: String): Unit = {
     StringFS.fromString(layout, root = root)
@@ -64,15 +83,20 @@ class TestingServer(
     val params = new InitializeParams
     params.setRootUri(root.toURI.toString)
     for {
-      _ <- server.initialize(params).toScala
-      _ <- server.initialized(new InitializedParams).toScala
+      _ <- server.initialize(params).asScala
+      _ <- server.initialized(new InitializedParams).asScala
     } yield ()
   }
   private def toPath(filename: String): AbsolutePath = {
     val path = RelativePath(filename)
-    val abspath = root.resolve(path)
-    require(abspath.isFile, s"no such file: $abspath")
-    abspath
+    List(
+      root,
+      root.resolve(Directories.readonly)
+    ).map(_.resolve(path))
+      .find(_.isFile)
+      .getOrElse {
+        throw new IllegalArgumentException(s"no such file: $filename")
+      }
   }
 
   def executeCommand(command: String): Future[Unit] = {
@@ -81,7 +105,10 @@ class TestingServer(
       .executeCommand(
         new ExecuteCommandParams(command, Collections.emptyList())
       )
-      .toScala
+      .asScala
+  }
+  def didFocus(filename: String): Future[Unit] = {
+    server.didFocus(toPath(filename).toURI.toString).asScala
   }
   def didSave(filename: String)(fn: String => String): Future[Unit] = {
     Debug.printEnclosing()
@@ -94,7 +121,7 @@ class TestingServer(
     )
     val first = server.didSave(
       new DidSaveTextDocumentParams(
-        new TextDocumentIdentifier(abspath.toURI.toString),
+        new TextDocumentIdentifier(abspath.toURI.toString)
       )
     )
     Thread.sleep(50) // mimic delay for file watching
@@ -108,7 +135,7 @@ class TestingServer(
         )
       )
     )
-    Future.sequence(List(first.toScala, second.toScala)).ignoreValue
+    Future.sequence(List(first.asScala, second.asScala)).ignoreValue
   }
 
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
@@ -123,7 +150,7 @@ class TestingServer(
           Collections.singletonList(new TextDocumentContentChangeEvent(newText))
         )
       )
-      .toScala
+      .asScala
   }
 
   def didOpen(filename: String): Future[Unit] = {
@@ -138,7 +165,7 @@ class TestingServer(
           new TextDocumentItem(uri, extension, 0, text)
         )
       )
-      .toScala
+      .asScala
   }
 
   private def toSemanticdbTextDocument(path: AbsolutePath): s.TextDocument = {
@@ -150,6 +177,11 @@ class TestingServer(
       val start = range.getStart
       val params = new TextDocumentPositionParams(identifier, start)
       val definition = server.definitionResult(params)
+      definition.definition.foreach { path =>
+        if (path.isDependencySource(workspace)) {
+          readonlySources(path.toNIO.getFileName.toString) = path
+        }
+      }
       val locations = definition.locations.asScala.toList
       val symbols = locations.map { location =>
         val isSameFile = identifier.getUri == location.getUri
@@ -181,6 +213,7 @@ class TestingServer(
     )
   }
 
+  val Docstring = " *\\/?\\*.*".r
   def workspaceDefinitions: String = {
     buffers.open.toSeq
       .sortBy(_.toURI.toString)

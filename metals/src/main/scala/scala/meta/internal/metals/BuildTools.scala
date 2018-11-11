@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import scala.meta.io.AbsolutePath
 
 final class BuildTools(workspace: AbsolutePath) {
+  // Naive implementations to detect which build tool is being used,
+  // but can be improved with any custom logic.
   def isBloop: Boolean = workspace.resolve(".bloop").isDirectory
   def isSbt: Boolean = workspace.resolve("build.sbt").isFile
   def isMill: Boolean = workspace.resolve("build.sc").isFile

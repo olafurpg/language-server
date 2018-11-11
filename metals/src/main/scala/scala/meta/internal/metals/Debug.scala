@@ -1,5 +1,8 @@
 package scala.meta.internal.metals
 
+/**
+ * Small utilities that are helpful for println debugging.
+ */
 object Debug {
   def printStack(): Unit = {
     val e = new Exception()

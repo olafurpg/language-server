@@ -6,6 +6,9 @@ import scribe.Level
 import scribe.LogRecord
 import scribe.writer.Writer
 
+/**
+ * Scribe logging handler that forwards logging messages to the LSP editor client.
+ */
 object LanguageClientLogger extends Writer {
   var languageClient: Option[MetalsLanguageClient] = None
   override def write[M](record: LogRecord[M], output: String): Unit = {

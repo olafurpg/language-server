@@ -5,9 +5,13 @@ import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
 
-// NOTE: does not extend b.BuildClient to avoid unnecessary converting between
-// identical bsp/lsp data structures and also ignore unused endpoints like
-// build/registerFileWatcher.
+/**
+ * A BSP client interface that uses lsp4j data structures where applicable.
+ *
+ * Does not extend bsp4j BuildClient to avoid unnecessary converting between
+ * identical bsp/lsp data structures and also ignore unused endpoints like
+ * build/registerFileWatcher.
+ */
 trait MetalsBuildClient {
 
   @JsonNotification("build/showMessage")

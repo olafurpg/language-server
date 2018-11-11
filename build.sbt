@@ -92,12 +92,10 @@ lazy val mtags = project
 lazy val metals = project
   .settings(
     fork.in(Compile, run) := true,
-    javaHome.in(Compile) := {
-      // force javac to fork by setting javaHome to workaround https://github.com/sbt/zinc/issues/520
-      Some(file(sys.props("java.home")).getParentFile)
-    },
     resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
     libraryDependencies ++= List(
+      "org.flywaydb" % "flyway-core" % "5.2.1",
+      "com.h2database" % "h2" % "1.4.197",
       "com.geirsson" %% "coursier-small" % "1.1.0", // needed due to bincompat with jvm-directories
       "com.zaxxer" % "nuprocess" % "1.2.3",
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
@@ -106,15 +104,23 @@ lazy val metals = project
       "io.github.soc" % "directories" % "11",
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "com.outr" %% "scribe" % "2.6.0",
+      "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
       "ch.epfl.scala" % "bsp4j" % "1.1.0",
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full,
-      "org.scalameta" %% "scalameta" % V.scalameta,
+      "org.scalameta" %% "scalameta" % V.scalameta
+    ),
+    buildInfoPackage := "scala.meta.internal.metals",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "scalametaVersion" -> V.scalameta,
+      "scala211" -> V.scala211,
+      "scala212" -> V.scala212
     )
   )
   .dependsOn(mtags)
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
   .settings(
@@ -132,8 +138,8 @@ lazy val `sbt-metals` = project
     scriptedBufferLog := !sys.env.contains("CI"),
     scriptedLaunchOpts ++= Seq(
       "-Xmx1024M",
-      s"-Dplugin.version=${version.value}",
-    ),
+      s"-Dplugin.version=${version.value}"
+    )
   )
   .enablePlugins(ScriptedPlugin)
   .disablePlugins(ScalafixPlugin)
@@ -163,7 +169,7 @@ lazy val unit = project
       "org.scalameta" %% "symtab" % V.scalameta,
       "org.scalameta" % "metac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta,
-      "com.lihaoyi" %% "utest" % "0.6.0",
+      "com.lihaoyi" %% "utest" % "0.6.0"
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
@@ -187,7 +193,7 @@ lazy val bench = project
       // for measuring memory usage
       "org.spire-math" %% "clouseau" % "0.2.2",
       "org.openjdk.jol" % "jol-core" % "0.9"
-    ),
+    )
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)
@@ -199,10 +205,10 @@ lazy val docs = project
     moduleName := "metals-docs",
     mainClass.in(Compile) := Some("docs.Docs"),
     libraryDependencies ++= List(
-      "com.geirsson" % "mdoc" % "0.5.1" cross CrossVersion.full
+      "com.geirsson" % "mdoc" % "0.5.3" cross CrossVersion.full
     ),
     buildInfoKeys := Seq[BuildInfoKey](
-      version,
+      version
     ),
     buildInfoPackage := "docs"
   )

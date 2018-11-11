@@ -4,12 +4,14 @@ import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import com.google.gson.JsonArray
+import com.sun.xml.internal.ws.util.CompletedFuture
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
+import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -20,19 +22,21 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.util.control.NonFatal
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
-    config: MetalsServerConfig = MetalsServerConfig.default,
     buffers: Buffers = Buffers(),
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
@@ -47,6 +51,8 @@ class MetalsLanguageServer(
   private val index = newSymbolIndex()
   private var buildServer = Option.empty[BuildServerConnection]
   private val openTextDocument = new AtomicReference[AbsolutePath]()
+  private val savedFiles = new ActiveFiles(time)
+  private val openedFiles = new ActiveFiles(time)
 
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = cancelables.cancel()
@@ -56,11 +62,15 @@ class MetalsLanguageServer(
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
   private var buildTargets: BuildTargets = _
-  private var compilers: Compilers = _
+  private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
+  private var interactiveSemanticdbs: InteractiveSemanticdbs = _
   private var buildTools: BuildTools = _
-  private var textDocuments: AggregateTextDocuments = _
+  private var semanticdbs: Semanticdbs = _
   private var buildClient: MetalsBuildClient = _
-  private var bloopServer: BloopServer = _
+  private var bloopServers: BloopServers = _
+  private var definitionProvider: DefinitionProvider = _
+  private var initializeParams: InitializeParams = _
+  var tables: Tables = _
   private implicit var statusBar: StatusBar = _
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
@@ -69,37 +79,88 @@ class MetalsLanguageServer(
     LanguageClientLogger.languageClient = Some(client)
   }
 
+  def register[T <: Cancelable](cancelable: T): T = {
+    cancelables.add(cancelable)
+    cancelable
+  }
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
+    tables = register(Tables.forWorkspace(workspace, time))
     buildTools = new BuildTools(workspace)
-    buildTargets = new BuildTargets(buffers, charset, workspace, fingerprints)
-    compilers = new Compilers(workspace, buildTargets, charset)
-    diagnostics = new Diagnostics(buildTargets, languageClient)
-    buildClient = new ForwardingMetalsBuildClient(languageClient, diagnostics)
-    bloopInstall =
-      new BloopInstall(workspace, languageClient, cancelables, sh, time)
-    bloopServer = new BloopServer(sh, workspace)
-    MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-    textDocuments = AggregateTextDocuments(
-      List(
+    buildTargets = new BuildTargets()
+    fileSystemSemanticdbs =
+      new FileSystemSemanticdbs(buildTargets, charset, workspace, fingerprints)
+    interactiveSemanticdbs = register(
+      new InteractiveSemanticdbs(
+        workspace,
         buildTargets,
-        compilers
+        charset,
+        languageClient,
+        tables
       )
     )
-    cancelables.add(compilers)
+    diagnostics = new Diagnostics(buildTargets, languageClient)
+    buildClient = new ForwardingMetalsBuildClient(languageClient, diagnostics)
+    bloopInstall = register(
+      new BloopInstall(workspace, languageClient, sh, time, tables)
+    )
+    bloopServers = new BloopServers(sh, workspace, buildClient)
+    MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+    semanticdbs = AggregateSemanticdbs(
+      List(
+        fileSystemSemanticdbs,
+        interactiveSemanticdbs
+      )
+    )
+    definitionProvider =
+      new DefinitionProvider(workspace, mtags, buffers, index, semanticdbs)
+
+    cancelables
+      .add(interactiveSemanticdbs)
+      .add(bloopInstall)
+      .add(tables)
   }
 
   @JsonRequest("initialize")
   def initialize(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] =
-    CompletableFuture.completedFuture {
+    Future {
+      initializeParams = params
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
       capabilities.setDefinitionProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       new InitializeResult(capabilities)
+    }.logError("initialize")
+      .transform(identity, e => {
+        cancel()
+        e
+      })
+      .asJava
+
+  private def registerFileWatchers(): Unit = {
+    if (initializeParams.getCapabilities.getWorkspace.getDidChangeWatchedFiles.getDynamicRegistration) {
+      languageClient.registerCapability(
+        new RegistrationParams(
+          List(
+            new Registration(
+              "1",
+              "workspace/didChangeWatchedFiles",
+              new DidChangeWatchedFilesRegistrationOptions(
+                List(
+                  new FileSystemWatcher("**/*.{scala,sbt,java}"),
+                  new FileSystemWatcher("**/project/build.properties")
+                ).asJava
+              )
+            )
+          ).asJava
+        )
+      )
+    } else {
+      scribe.warn("Client does not support workspace/didChangeWatchedFiles")
     }
+  }
 
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
@@ -108,15 +169,16 @@ class MetalsLanguageServer(
       .sequence(
         List[Future[Unit]](
           quickConnectToBuildServer().ignoreValue,
-          indexWorkspaceScalaSources(),
-          slowConnectToBuildServer(forceImport = false).ignoreValue
+          slowConnectToBuildServer(forceImport = false).ignoreValue,
+          Future(registerFileWatchers())
         )
       )
-      .toJavaUnitCompletable
+      .asJavaUnit
   }
 
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
+    LanguageClientLogger.languageClient = None
     cancelables.cancel()
     sh.shutdownNow()
     for {
@@ -125,7 +187,7 @@ class MetalsLanguageServer(
         case None => Future.successful(())
       }
     } yield ()
-  }.toJavaCompletable
+  }.asJava
 
   @JsonNotification("exit")
   def exit(): Unit = {
@@ -135,6 +197,7 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    openedFiles.add(path)
     openTextDocument.set(path)
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -142,11 +205,28 @@ class MetalsLanguageServer(
     buffers.put(path, params.getTextDocument.getText)
     if (path.isDependencySource(workspace)) {
       CompletableFutures.computeAsync { _ =>
-        compilers.textDocument(path)
+        interactiveSemanticdbs.textDocument(path)
         ()
       }
     } else {
-      compileSourceFiles(List(path)).toJavaCompletable
+      compileSourceFiles(List(path)).asJava
+    }
+  }
+
+  @JsonNotification("metals/didFocusTextDocument")
+  def didFocus(uri: String): CompletableFuture[Unit] = {
+    val path = uri.toAbsolutePath
+    if (openedFiles.isRecentlyActive(path))
+      CompletableFuture.completedFuture(())
+    else {
+      Future
+        .sequence(
+          List(
+            Future(interactiveSemanticdbs.didFocus(path)),
+            compileSourceFiles(List(path))
+          )
+        )
+        .asJavaUnit
     }
   }
 
@@ -166,17 +246,14 @@ class MetalsLanguageServer(
 
   @JsonNotification("textDocument/didClose")
   def didClose(params: DidCloseTextDocumentParams): Unit = {
-    buffers.remove(params.getTextDocument.getUri.toAbsolutePath)
-  }
-
-  @JsonNotification("metals/didFocusTextDocument")
-  def didFocus(uri: String): CompletableFuture[Unit] = {
-    compileSourceFiles(List(uri.toAbsolutePath)).toJavaCompletable
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    buffers.remove(path)
   }
 
   @JsonNotification("textDocument/didSave")
   def didSave(params: DidSaveTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    savedFiles.add(path)
     buffers.remove(path)
     onChange(List(path))
   }
@@ -190,7 +267,11 @@ class MetalsLanguageServer(
   def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
   ): CompletableFuture[Unit] = {
-    onChange(params.getChanges.asScala.map(_.getUri.toAbsolutePath))
+    val paths = params.getChanges.asScala.iterator
+      .map(_.getUri.toAbsolutePath)
+      .filterNot(savedFiles.isRecentlyActive) // de-duplicate didSave and didChangeWatchedFiles events.
+      .toSeq
+    onChange(paths)
   }
 
   private def onChange(paths: Seq[AbsolutePath]): CompletableFuture[Unit] = {
@@ -202,7 +283,7 @@ class MetalsLanguageServer(
         )
       )
       .ignoreValue
-      .toJavaCompletable
+      .asJava
   }
 
   @JsonRequest("textDocument/definition")
@@ -216,12 +297,16 @@ class MetalsLanguageServer(
   @JsonRequest("workspace/executeCommand")
   def executeCommand(params: ExecuteCommandParams): CompletableFuture[Unit] =
     params.getCommand match {
-      case Commands.SCAN_WORSPACE_SOURCES =>
-        indexWorkspaceScalaSources().toJavaCompletable
-      case Commands.IMPORT_BUILD =>
-        slowConnectToBuildServer(forceImport = true).toJavaUnitCompletable
-      case Commands.RECONNECT_BUILD =>
-        quickConnectToBuildServer().toJavaUnitCompletable
+      case ServerCommands.ScanWorkspaceSources =>
+        Future {
+          buildTargets.sourceDirectories.foreach(indexSourceDirectory)
+        }.asJavaUnit
+      case ServerCommands.ImportBuild =>
+        slowConnectToBuildServer(forceImport = true).asJavaUnit
+      case ServerCommands.ConnectBuildServer =>
+        quickConnectToBuildServer().asJavaUnit
+      case ServerCommands.OpenBrowser(url) =>
+        CompletableFuture.completedFuture(Urls.openBrowser(url))
       case els =>
         scribe.error(s"Unknown command '$els'")
         CompletableFuture.completedFuture(())
@@ -231,17 +316,17 @@ class MetalsLanguageServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
     for {
-      result <- BuildServerConnection.reimportIfChanged(
+      result <- bloopInstall.reimportIfChanged(
         buildTools,
         workspace,
         languageClient,
-        bloopInstall,
         forceImport
       )
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
         else if (result.isFailed) {
           if (workspace.resolve(".bloop").isDirectory) {
+            // TODO(olafur) try to connect but gracefully error
             languageClient.showMessage(Messages.ImportProjectPartiallyFailed)
             // Connect nevertheless, many build import failures are caused
             // by resolution errors in one weird module while other modules
@@ -264,19 +349,23 @@ class MetalsLanguageServer(
     if (!buildTools.isBloop) {
       Future.successful(BuildChange.None)
     } else {
-      for {
-        build <- timed("connected to build server") {
-          bloopServer.connect(buildClient)
+      val importingBuild = for {
+        _ <- buildServer match {
+          case Some(old) => old.shutdown()
+          case None => Future.successful(())
         }
+        build <- timed("connected to build server")(bloopServers.newServer())
         _ = {
           cancelables.add(build)
-          buildServer.foreach(_.shutdown())
           buildServer = Some(build)
         }
         _ <- build.initialize()
         _ <- installWorkspaceBuildTargets(build)
-          .trackInStatusBar("$(sync) importing workspace")
-        _ = statusBar.addMessage("$(rocket) Imported workspace!")
+      } yield ()
+
+      for {
+        _ <- importingBuild.trackInStatusBar("$(sync) Importing build")
+        _ = statusBar.addMessage("$(rocket) Imported build!")
         _ <- compileSourceFiles(buffers.open.toSeq)
       } yield BuildChange.Reconnected
     }
@@ -296,17 +385,21 @@ class MetalsLanguageServer(
    * Visit every file and directory in the workspace and register
    * toplevel definitions for scala source files.
    */
-  private def indexWorkspaceScalaSources(): Future[Unit] = Future {
+  private def indexSourceDirectory(
+      sourceDirectory: AbsolutePath
+  ): Future[Unit] = Future {
     Files.walkFileTree(
-      workspace.toNIO,
+      sourceDirectory.toNIO,
       new SimpleFileVisitor[Path] {
         override def visitFile(
             file: Path,
             attrs: BasicFileAttributes
         ): FileVisitResult = {
           val path = AbsolutePath(file)
-          if (path.toLanguage.isScala) {
-            index.addSourceFile(path, None)
+          path.toLanguage match {
+            case Language.SCALA | Language.JAVA =>
+              index.addSourceFile(path, Some(sourceDirectory))
+            case _ =>
           }
           super.visitFile(file, attrs)
         }
@@ -327,10 +420,19 @@ class MetalsLanguageServer(
     )
   }
 
-  private def timed[T](didWhat: String)(thunk: => Future[T]): Future[T] = {
+  private def timed[T](didWhat: String, reportStatus: Boolean = false)(
+      thunk: => Future[T]
+  ): Future[T] = {
     val elapsed = new Timer(time)
     val result = thunk
-    result.onComplete(_ => scribe.info(s"time: $didWhat in $elapsed"))
+    result.onComplete { e =>
+      if (elapsed.isLogWorthy) {
+        scribe.info(s"time: $didWhat in $elapsed")
+      }
+      if (reportStatus && elapsed.isHumanVisible && e.isSuccess) {
+        statusBar.addMessage(s"$$(check) $didWhat in $elapsed")
+      }
+    }
     result
   }
 
@@ -341,20 +443,23 @@ class MetalsLanguageServer(
       build: BuildServerConnection
   ): Future[Unit] = timed("imported workspace") {
     for {
-      workspaceBuildTargets <- build.server.workspaceBuildTargets().toScala
-      _ = buildTargets.addWorkspaceBuildTargets(workspaceBuildTargets)
-      _ = compilers.reset()
+      workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
+      _ = {
+        buildTargets.reset()
+        interactiveSemanticdbs.reset()
+        buildTargets.addWorkspaceBuildTargets(workspaceBuildTargets)
+      }
       ids = workspaceBuildTargets.getTargets.map(_.getId)
       scalacOptions <- build.server
         .buildTargetScalacOptions(new ScalacOptionsParams(ids))
-        .toScala
+        .asScala
       _ = {
         buildTargets.addScalacOptions(scalacOptions)
         JdkSources().foreach(zip => index.addSourceJar(zip))
       }
       dependencySources <- build.server
         .buildTargetDependencySources(new DependencySourcesParams(ids))
-        .toScala
+        .asScala
     } yield {
       for {
         item <- dependencySources.getItems.asScala
@@ -363,15 +468,13 @@ class MetalsLanguageServer(
         try {
           val path = sourceUri.toAbsolutePath
           if (path.isJar) {
-            // TODO(olafur): use `buildTarget/sources` once bloop upgrades to BSP v2
+            // NOTE(olafur): here we rely on an implementation detail of the bloop BSP server,
+            // once we upgrade to BSP v2 we can use buildTarget/sources instead of
+            // buildTarget/dependencySources.
             index.addSourceJar(path)
           } else if (path.isDirectory) {
             buildTargets.addSourceDirectory(path, item.getTarget)
-            FileIO
-              .listAllFilesRecursively(path)
-              .iterator
-              .filter(_.toLanguage.isJava)
-              .foreach(javaFile => index.addSourceFile(javaFile, Some(path)))
+            indexSourceDirectory(path)
           }
         } catch {
           case NonFatal(e) =>
@@ -379,18 +482,6 @@ class MetalsLanguageServer(
         }
       }
     }
-  }
-
-  private def reloadAndCompile(
-      changedFiles: Seq[AbsolutePath]
-  ): Future[Unit] = {
-    for {
-      change <- onSbtBuildChanged(changedFiles)
-      _ <- {
-        if (change.isReconnected) Future.successful(())
-        else compileSourceFiles(changedFiles)
-      }
-    } yield ()
   }
 
   private val compileSourceFiles =
@@ -414,14 +505,15 @@ class MetalsLanguageServer(
               .getOrElse("")
           params.setArguments(new JsonArray)
           for {
-            isSuccess <- build.server
-              .buildTargetCompile(params)
-              .toScala
-              .trackInStatusBar(s"$$(sync) Compiling$name", maxDots = 5)
+            isSuccess <- timed(s"compiled$name", reportStatus = true) {
+              build
+                .compile(params)
+                .asScala
+            }.trackInStatusBar(s"$$(sync) Compiling$name", maxDots = 5)
               .ignoreValue
               .map(_ => true)
               .recover {
-                // FIXME: remove once bloop ugrades to BSP v2
+                // FIXME: remove once bloop upgrades to BSP v2
                 case _ => false
               }
           } yield {
@@ -429,7 +521,7 @@ class MetalsLanguageServer(
               statusBar.addMessage(
                 MetalsStatusParams(
                   "$(alert) Compile error",
-                  command = Commands.OPEN_PROBLEMS
+                  command = ClientCommands.FocusDiagnostics
                 )
               )
             }
@@ -448,13 +540,7 @@ class MetalsLanguageServer(
   private def onSbtBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {
-    val isBuildChange = paths.exists { path =>
-      val project = workspace.resolve("project").toNIO
-      val parent = path.toNIO.getParent
-      val isBuildFile = parent == workspace.toNIO || parent == project
-      val isSbtOrScala = path.isSbtOrScala
-      isBuildFile && isSbtOrScala
-    }
+    val isBuildChange = paths.exists(_.isSbtRelated(workspace))
     val result: Future[BuildChange] =
       if (isBuildChange) {
         slowConnectToBuildServer(forceImport = false)
@@ -472,24 +558,10 @@ class MetalsLanguageServer(
   def definitionResult(
       position: TextDocumentPositionParams
   ): DefinitionResult = {
-    val original = position.getTextDocument.getUri.toAbsolutePath
-    if (original.toLanguage.isScala) {
-      val result = DefinitionProvider.definition(
-        original,
-        position,
-        workspace,
-        mtags,
-        buffers,
-        index,
-        textDocuments,
-        config
-      )
-      for {
-        destination <- result.definition
-        if destination.isDependencySource(workspace)
-      } {
-        compilers.newDependencySourceFile(original, destination)
-      }
+    val source = position.getTextDocument.getUri.toAbsolutePath
+    if (source.toLanguage.isScala) {
+      val result = definitionProvider.definition(source, position)
+      interactiveSemanticdbs.didDefinition(source, result)
       result
     } else {
       // Ignore non-scala files.
