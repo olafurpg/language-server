@@ -1,0 +1,150 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Importing a build · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Metals works with a limited set of builds tools. Some build tools require manual&lt;/p&gt;
+"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Importing a build · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="&lt;p&gt;Metals works with a limited set of builds tools. Some build tools require manual&lt;/p&gt;
+"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/metals/docs/overview.html" target="_self">Docs</a></li><li class=""><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Users</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Overview</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/overview.html">Project Goals</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Contributors</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/getting-started.html">Contributing to Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/updating-website.html">Contributing to the website</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/new-editor.html">Integrating a new editor</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/new-build-tool.html">Integrating a new build tool</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Users</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/users/installation.html">Installation</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/docs/users/import-build.html">Importing a build</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/olafurpg/metals/edit/master/docs/users/import-build.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Importing a build</h1></header><article><div><span><p>Metals works with a limited set of builds tools. Some build tools require manual
+installation while others can be automatically installed.</p>
+<table>
+<thead>
+<tr><th>Build tool</th><th style="text-align:center">Automatic installation</th><th style="text-align:center">Manual installation</th></tr>
+</thead>
+<tbody>
+<tr><td>sbt v1.2.1+</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td></tr>
+<tr><td>sbt v0.13</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td></tr>
+<tr><td>Bloop</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td></tr>
+<tr><td>Maven</td><td style="text-align:center">No</td><td style="text-align:center">Experimental</td></tr>
+<tr><td>Gradle</td><td style="text-align:center">No</td><td style="text-align:center">Experimental</td></tr>
+<tr><td>Mill</td><td style="text-align:center">No</td><td style="text-align:center">Experimental</td></tr>
+<tr><td>Pants</td><td style="text-align:center">No</td><td style="text-align:center">No</td></tr>
+<tr><td>Bazel</td><td style="text-align:center">No</td><td style="text-align:center">No</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="automatic-installation"></a><a href="#automatic-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Automatic installation</h2>
+<p>To use automatic installation start the Metals language server in the root
+directory of your build.</p>
+<h3><a class="anchor" aria-hidden="true" id="sbt"></a><a href="#sbt" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sbt</h3>
+<p>Metals can automatically import builds for sbt v1.2.1+. If you use sbt 0.13, use
+<a href="#sbt-013">manual installation</a>.</p>
+<p>The first time you open a directory containing an sbt build you are prompted to
+import the build via Bloop.</p>
+<p><img src="/metals/docs/assets/import-via-bloop.png" alt="Import build via Bloop"></p>
+<p>Click &quot;Import build via Bloop&quot; to start the <code>sbt bloopInstall</code> import step.</p>
+<p><img src="/metals/docs/assets/sbt-bloopinstall.png" alt="sbt bloopInstall"></p>
+<p>This step can take a long time, especially the first time you run it in a new
+workspace. The exact time depends on how large the build is and if library
+dependencies are cached or need to be downloaded. For small builds this step can
+takes 20-40 seconds and for larger builds the first run can takes up to 10-15
+minutes.</p>
+<p>Once the import step completes compilation starts for your open files. Once
+compilation completes you can use all the functionality of Metals.</p>
+<p>Next time <code>build.sbt</code> or sources under <code>project/</code> change, you are prompted to
+re-import the build.</p>
+<p><img src="/metals/docs/assets/sbt-import-changes.png" alt="Import sbt changes"></p>
+<p>Click &quot;Import changes&quot; and that will restart the <code>sbt bloopInstall</code> step.</p>
+<p>To manually trigger a build import, execute the &quot;Import build&quot; ( <code>build.import</code>)
+command. In VS Code, open the &quot;Command palette&quot; (<code>Cmd + Shift + P</code>) and search
+&quot;import build&quot;.</p>
+<p><img src="/metals/docs/assets/vscode-import-build.png" alt="Import build command"></p>
+<h3><a class="anchor" aria-hidden="true" id="bloop"></a><a href="#bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Bloop</h3>
+<p><a href="https://scalacenter.github.io/bloop/docs/installation/#sbt">Bloop</a> is a compile
+server for Scala that works with sbt and has experimental support for other
+build tools like Maven, Gradle and Mill. If your workspace contains a <code>.bloop/</code>
+directory with Bloop JSON files then Metals will automatically connect to it.</p>
+<p>To manually trigger Metals to connect with Bloop, run the &quot;Connect to build
+server&quot; (<code>build-server.connect</code>) command. In VS Code, open the the &quot;Command
+palette&quot; (<code>Cmd + Shift + P</code>) and search &quot;connect to build server&quot;.</p>
+<p><img src="/metals/docs/assets/vscode-connect-build-server.png" alt="Import connect to build server command"></p>
+<p>Metals works with Bloop v1.1.0 or newer.</p>
+<ul>
+<li>If you have a compatible version of Bloop installed on your machine then
+Metals will connect to that server instance.</li>
+<li>If you don't have Bloop installed on your machine or the installed version is
+outdated then Metals will start its own Bloop server instance that shuts down
+when Metals exits.</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="manual-installation"></a><a href="#manual-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manual installation</h2>
+<p>Manual build installation is done via
+<a href="https://scalacenter.github.io/bloop">Bloop</a>, a compile server for Scala. In
+addition to normal Bloop installation, Metals requires that the project sources
+are compiled with the
+<a href="https://scalameta.org/docs/semanticdb/guide.html#producing-semanticdb">semanticdb-scalac</a>
+compiler plugin and <code>-Yrangepos</code> option enabled.</p>
+<h3><a class="anchor" aria-hidden="true" id="sbt-013"></a><a href="#sbt-013" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sbt 0.13</h3>
+<p>If you are unable to upgrade to sbt v1.2.1+ you can still manually import the
+build using the following steps.</p>
+<p>First, install the Bloop and Metals plugins globally</p>
+<pre><code class="hljs css language-scala"><span class="hljs-comment">// One of:</span>
+<span class="hljs-comment">//   ~/.sbt/0.13/plugins/plugins.sbt</span>
+<span class="hljs-comment">//   ~/.sbt/1.0/plugins/plugins.sbt</span>
+addSbtPlugin(<span class="hljs-string">"ch.epfl.scala"</span> % <span class="hljs-string">"sbt-bloop"</span> % <span class="hljs-string">"121807cc"</span>)
+addSbtPlugin(<span class="hljs-string">"org.scalameta"</span> % <span class="hljs-string">"sbt-metals"</span> % <span class="hljs-string">"SNAPSHOT"</span>)
+</code></pre>
+<p>Next, update the global Bloop settings to download sources of external libraries</p>
+<pre><code class="hljs css language-scala"><span class="hljs-comment">// One of:</span>
+<span class="hljs-comment">//   ~/.sbt/0.13/build.sbt</span>
+<span class="hljs-comment">//   ~/.sbt/1.0/build.sbt</span>
+bloopExportJarClassifiers in <span class="hljs-type">Global</span> := <span class="hljs-type">Some</span>(<span class="hljs-type">Set</span>(<span class="hljs-string">"sources"</span>))
+</code></pre>
+<p>Finally, run <code>sbt semanticdbEnable bloopInstall</code> to generate the Bloop JSON
+configuration files. Once complete, execute the
+&quot;<a href="#bloop">Connect to build server</a>&quot; command to tell Metals to start a Bloop
+build server.</p>
+<p>For more information about sbt-bloop, consult the
+<a href="https://scalacenter.github.io/bloop/docs/installation/#sbt">Bloop website</a>.</p>
+<p>To avoid the <code>semanticdbEnable</code> command you can permanently install the
+semanticdb-scalac compiler plugin in your build.</p>
+<pre><code class="hljs css language-diff">// build.sbt
+ lazy val myproject = project.settings(
+<span class="hljs-addition">+  scalaVersion := "2.12.7", // or 2.11.12, other versions are not supported.</span>
+<span class="hljs-addition">+  addCompilerPlugin(scalafixSemanticdb), // enable SemanticDB</span>
+<span class="hljs-addition">+  scalacOptions += "-Yrangepos" // required by SemanticDB</span>
+ )
+</code></pre>
+<p><strong>Pro tip</strong>: With semanticdb-scalac enabled you can also use
+<a href="https://scalacenter.github.io/scalafix">Scalafix</a>.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/users/installation.html"><span class="arrow-prev">← </span><span>Installation</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#automatic-installation">Automatic installation</a><ul class="toc-headings"><li><a href="#sbt">sbt</a></li><li><a href="#bloop">Bloop</a></li></ul></li><li><a href="#manual-installation">Manual installation</a><ul class="toc-headings"><li><a href="#sbt-013">sbt 0.13</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="
+                /metals/docs/overview.html">Project Goals</a><a href="
+                /metals/docs/getting-started-contributors.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2018 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
