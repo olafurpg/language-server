@@ -4,6 +4,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import scala.collection.generic.AtomicIndexFlag
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 
@@ -20,8 +22,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
  * - long-running jobs like compilation or "import workspace" are active
  *   as long as the attached `Future[_]` is not completed.
  */
-final class StatusBar(client: MetalsLanguageClient, time: Time)
-    extends Cancelable {
+final class StatusBar(
+    client: MetalsLanguageClient,
+    time: Time,
+    progressTicks: ProgressTicks = ProgressTicks.Braille
+) extends Cancelable {
 
   def addFuture(
       message: String,
@@ -56,17 +61,24 @@ final class StatusBar(client: MetalsLanguageClient, time: Time)
     garbageCollect()
     mostRelevant() match {
       case Some(value) =>
-        activeItem = Some(value)
-        val show: java.lang.Boolean = if (isHidden) true else null
-        val params = value match {
-          case Message(p) =>
-            p.copy(show = show)
-          case _ =>
-            MetalsStatusParams(value.formattedMessage, show = show)
+        val isUnchanged = activeItem.exists {
+          // Don't re-publish static messages.
+          case m: Message => m eq value
+          case _ => false
         }
-        value.show()
-        client.metalsStatus(params)
-        isHidden = false
+        if (!isUnchanged) {
+          activeItem = Some(value)
+          val show: java.lang.Boolean = if (isHidden) true else null
+          val params = value match {
+            case Message(p) =>
+              p.copy(show = show)
+            case _ =>
+              MetalsStatusParams(value.formattedMessage, show = show)
+          }
+          value.show()
+          client.metalsStatus(params)
+          isHidden = false
+        }
       case None =>
         if (!isHidden && !isActiveMessage) {
           client.metalsStatus(MetalsStatusParams("", hide = true))
@@ -83,33 +95,31 @@ final class StatusBar(client: MetalsLanguageClient, time: Time)
   }
   sealed abstract class Item {
     val timer = new Timer(time)
-    private var shown: Option[Timer] = None
+    private var firstShow: Option[Timer] = None
     def show(): Unit = {
-      if (shown.isEmpty) {
-        shown = Some(new Timer(time))
+      if (firstShow.isEmpty) {
+        firstShow = Some(new Timer(time))
       }
     }
     def priority: Long = timer.elapsedNanos
     def isRecent: Boolean = timer.elapsedSeconds < 3
+    private val dots = new AtomicInteger()
     def formattedMessage: String = this match {
       case Message(value) => value.text
-      case Progress(message, _, maxTicks) =>
-        val ticks = timer.elapsedSeconds.toInt
-        if (ticks > maxTicks) {
-          val seconds = Timer.readableSeconds(ticks)
-          s"$message $seconds"
+      case Progress(message, _, maxSeconds) =>
+        val seconds = timer.elapsedSeconds
+        if (seconds > maxSeconds) {
+          if (seconds == 0) s"$message   "
+          else s"$message ${Timer.readableSeconds(seconds)}"
         } else {
-          val i = ticks % 4
-          // pad so length==3, keeps the message position stable
-          val dots = ("." * i).padTo(3, ' ')
-          message + dots
+          message + progressTicks.format(dots.getAndIncrement())
         }
     }
     def isOutdated: Boolean =
       timer.elapsedSeconds > 10 ||
-        shown.exists(_.elapsedSeconds > 5)
+        firstShow.exists(_.elapsedSeconds > 5)
     def isStale: Boolean = this match {
-      case Message(_) => (shown.isDefined && !isRecent) || isOutdated
+      case Message(_) => (firstShow.isDefined && !isRecent) || isOutdated
       case Progress(_, job, _) => job.isCompleted
     }
   }

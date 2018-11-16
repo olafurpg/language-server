@@ -16,6 +16,7 @@ import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
 
 object BspCli {
@@ -34,7 +35,8 @@ object BspCli {
         val ex = Executors.newCachedThreadPool()
         implicit val ec = ExecutionContext.fromExecutorService(ex)
         val workspace = AbsolutePath(directory)
-        val server = new BloopServers(sh, workspace, loggingBuildClient)
+        val config = MetalsServerConfig.default
+        val server = new BloopServers(sh, workspace, loggingBuildClient, config)
         try {
           val future = compile(server, targets)
           Await.result(future, Duration("1min"))

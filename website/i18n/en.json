@@ -17,47 +17,14 @@
       "contributors/updating-website": {
         "title": "Contributing to the website"
       },
-      "contributors/website": {
-        "title": "Contributing to the website"
-      },
-      "getting-started-contributors": {
-        "title": "Contributing to Metals"
-      },
-      "import-build": {
-        "title": "Importing a build"
-      },
-      "installation-contributors": {
-        "title": "Installation"
-      },
-      "installation-users": {
-        "title": "Installation"
-      },
-      "learn-more/import-build": {
-        "title": "Importing a build"
-      },
-      "new-build-tool": {
-        "title": "Integrating a new build tool"
-      },
-      "new-editor": {
-        "title": "Integrating a new editor"
-      },
       "overview": {
         "title": "Project Goals"
-      },
-      "troubleshooting": {
-        "title": "Troubleshooting"
       },
       "users/import-build": {
         "title": "Importing a build"
       },
-      "users/installation-users": {
-        "title": "Installation"
-      },
       "users/installation": {
         "title": "Installation"
-      },
-      "website": {
-        "title": "Contributing to the website"
       }
     },
     "links": {

@@ -2,7 +2,10 @@ package scala.meta.internal.metals
 
 import com.geirsson.coursiersmall
 import java.io.InputStream
+import java.io.OutputStream
 import java.io.PrintStream
+import java.net.ServerSocket
+import java.net.Socket
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
@@ -42,31 +45,28 @@ import scala.util.control.NonFatal
 final class BloopServers(
     sh: ScheduledExecutorService,
     workspace: AbsolutePath,
-    client: MetalsBuildClient
+    client: MetalsBuildClient,
+    config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
   def newServer(): Future[BuildServerConnection] = {
     for {
-      (socket, cancelable) <- callBSP()
+      (protocol, cancelable) <- callBSP()
     } yield {
       val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
       val launcher = new Launcher.Builder[MetalsBuildServer]()
         .traceMessages(tracePrinter)
         .setRemoteInterface(classOf[MetalsBuildServer])
         .setExecutorService(ec)
-        .setInput(socket.getInputStream)
-        .setOutput(socket.getOutputStream)
+        .setInput(protocol.input)
+        .setOutput(protocol.output)
         .setLocalService(client)
         .create()
       val listening = launcher.startListening()
       val remoteServer = launcher.getRemoteProxy
       client.onConnect(remoteServer)
       val cancelables = List(
-        Cancelable(() => {
-          if (!socket.isInputShutdown) socket.shutdownInput()
-          if (!socket.isOutputShutdown) socket.shutdownOutput()
-          socket.close()
-        }),
+        Cancelable(() => protocol.cancel()),
         cancelable,
         Cancelable(() => listening.cancel(true))
       )
@@ -74,7 +74,79 @@ final class BloopServers(
     }
   }
 
-  private def callBSP(): Future[(UnixDomainSocket, Cancelable)] = {
+  private def randomPort(): Int = {
+    val s = new ServerSocket(0)
+    val port = s.getLocalPort
+    s.close()
+    port
+  }
+
+  sealed abstract class Protocol extends Cancelable {
+    import Protocol._
+    def input: InputStream = this match {
+      case Unix(socket) => socket.getInputStream
+      case Tcp(socket) => socket.getInputStream
+    }
+    def output: OutputStream = this match {
+      case Unix(socket) => socket.getOutputStream
+      case Tcp(socket) => socket.getOutputStream
+    }
+    override def cancel(): Unit = this match {
+      case Unix(socket) =>
+        if (!socket.isInputShutdown) socket.shutdownInput()
+        if (!socket.isOutputShutdown) socket.shutdownOutput()
+        socket.close()
+      case Tcp(socket) =>
+        if (socket.isClosed) {
+          socket.close()
+        }
+    }
+  }
+  object Protocol {
+    case class Unix(socket: UnixDomainSocket) extends Protocol
+    case class Tcp(socket: Socket) extends Protocol
+  }
+
+  private def callBSP(): Future[(Protocol, Cancelable)] = {
+    if (config.bloopProtocol.isTcp) callTcpBsp()
+    else callUnixBsp()
+  }
+
+  private def callTcpBsp(): Future[(Protocol, Cancelable)] = {
+    val host = "localhost"
+    val port = randomPort()
+    val args = Array(
+      "bsp",
+      "--protocol",
+      "tcp",
+      "--host",
+      host,
+      "--port",
+      port.toString
+    )
+    val cancelable = callBloopMain(args)
+    var connection: Socket = null
+    for {
+      confirmation <- waitUntilSuccess(() => {
+        try {
+          connection = new Socket(host, port)
+          true
+        } catch {
+          case NonFatal(_) =>
+            false
+        }
+      })
+    } yield {
+      if (confirmation.isYes) {
+        (Protocol.Tcp(connection), cancelable)
+      } else {
+        cancelable.cancel()
+        throw NoResponse
+      }
+    }
+  }
+
+  private def callUnixBsp(): Future[(Protocol, Cancelable)] = {
     val socket = BloopServers.newSocketFile()
     val args = Array(
       "bsp",
@@ -85,14 +157,14 @@ final class BloopServers(
     )
     val cancelable = callBloopMain(args)
     for {
-      confirmation <- waitForFileToBeCreated(socket)
+      confirmation <- waitUntilSuccess(() => Files.exists(socket.toNIO))
     } yield {
       if (confirmation.isYes) {
         val connection = new UnixDomainSocket(socket.toFile.getCanonicalPath)
-        (connection, cancelable)
+        (Protocol.Unix(connection), cancelable)
       } else {
         cancelable.cancel()
-        throw NoSocketFile(socket)
+        throw NoResponse
       }
     }
   }
@@ -182,12 +254,9 @@ final class BloopServers(
     }
   }
 
-  case class NoSocketFile(file: AbsolutePath)
-      extends Exception(s"no connection: $file")
+  case object NoResponse extends Exception("no response: bloop bsp")
 
-  private def waitForFileToBeCreated(
-      socket: AbsolutePath
-  ): Future[Confirmation] = {
+  private def waitUntilSuccess(isOk: () => Boolean): Future[Confirmation] = {
     val retryDelayMillis: Long = 200
     val maxRetries: Int = 40
     val promise = Promise[Confirmation]()
@@ -195,7 +264,7 @@ final class BloopServers(
     val tick = sh.scheduleAtFixedRate(
       new Runnable {
         override def run(): Unit = {
-          if (Files.exists(socket.toNIO)) {
+          if (isOk()) {
             promise.complete(Success(Confirmation.Yes))
           } else if (remainingRetries < 0) {
             promise.complete(Success(Confirmation.No))

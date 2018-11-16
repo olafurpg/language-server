@@ -1,5 +1,8 @@
 package tests
 
+import java.nio.file.Files
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.Messages.Only212Navigation
 
 object DefinitionSlowSuite extends BaseSlowSuite {
   testAsync("definition") {
@@ -138,51 +141,47 @@ object DefinitionSlowSuite extends BaseSlowSuite {
       _ <- server.didOpen("src/main/scala/a/Main.scala")
       _ = server.workspaceDefinitions // trigger definition
       _ <- server.didOpen("cats/Contravariant.scala")
-      _ = {
-        assertNoDiff(
-          server.workspaceDefinitions,
-          """|/.metals/readonly/cats/Contravariant.scala
-             |package cats
-             |import simulacrum/*<no symbol>*/.typeclass/*L5*/
-             |/**
-             | * Must obey the laws defined in cats.laws.ContravariantLaws.
-             | */
-             |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala:7*/[F/*L5*/] { self/*L5*/ =>
-             |  def contramap/*L6*/[A/*L6*/, B/*L6*/](fa/*L6*/: F/*L5*/[A/*L6*/])(f/*L6*/: B/*L6*/ => A/*L6*/): F/*L5*/[B/*L6*/]
-             |  override def imap/*L7*/[A/*L7*/, B/*L7*/](fa/*L7*/: F/*L5*/[A/*L7*/])(f/*L7*/: A/*L7*/ => B/*L7*/)(fi/*L7*/: B/*L7*/ => A/*L7*/): F/*L5*/[B/*L7*/] = contramap/*L6*/(fa/*L7*/)(fi/*L7*/)
-             |
-             |  def compose/*L9*/[G/*L9*/[_]: Contravariant/*L5*/]: Functor/*Functor.scala:11*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
-             |    new ComposedContravariant/*Composed.scala:107*/[F/*L5*/, G/*L9*/] {
-             |      val F/*L11*/ = self/*L5*/
-             |      val G/*L12*/ = Contravariant/*<no symbol>*/[G/*L9*/]
-             |    }
-             |
-             |  /**
-             |   * Lifts natural subtyping contravariance of contravariant Functors.
-             |   * could be implemented as contramap(identity), but the Functor laws say this is equivalent
-             |   */
-             |  def narrow/*L19*/[A/*L19*/, B/*L19*/ <: A/*L19*/](fa/*L19*/: F/*L5*/[A/*L19*/]): F/*L5*/[B/*L19*/] = fa/*L19*/.asInstanceOf/*<no symbol>*/[F/*L5*/[B/*L19*/]]
-             |
-             |  def liftContravariant/*L21*/[A/*L21*/, B/*L21*/](f/*L21*/: A/*L21*/ => B/*L21*/): F/*L5*/[B/*L21*/] => F/*L5*/[A/*L21*/] = contramap/*L6*/(_: F/*L5*/[B/*L21*/])(f/*L21*/)
-             |
-             |  override def composeFunctor/*L23*/[G/*L23*/[_]: Functor/*Functor.scala:11*/]: Contravariant/*L5*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
-             |    new ComposedContravariantCovariant/*Composed.scala:115*/[F/*L5*/, G/*L23*/] {
-             |      val F/*L25*/ = self/*L5*/
-             |      val G/*L26*/ = Functor/*Functor.scala:11*/[G/*L23*/]
-             |    }
-             |}
-             |
-             |/src/main/scala/a/Main.scala
-             |import cats._
-             |import cats.implicits/*implicits.scala:2*/._
-             |object Main/*L2*/ {
-             |  println/*Predef.scala:392*/(Contravariant/*Contravariant.scala:5*/[Show/*Show.scala:9*/])
-             |}
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/.metals/readonly/cats/Contravariant.scala
+           |package cats
+           |import simulacrum/*<no symbol>*/.typeclass/*L5*/
+           |/**
+           | * Must obey the laws defined in cats.laws.ContravariantLaws.
+           | */
+           |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala:7*/[F/*L5*/] { self/*L5*/ =>
+           |  def contramap/*L6*/[A/*L6*/, B/*L6*/](fa/*L6*/: F/*L5*/[A/*L6*/])(f/*L6*/: B/*L6*/ => A/*L6*/): F/*L5*/[B/*L6*/]
+           |  override def imap/*L7*/[A/*L7*/, B/*L7*/](fa/*L7*/: F/*L5*/[A/*L7*/])(f/*L7*/: A/*L7*/ => B/*L7*/)(fi/*L7*/: B/*L7*/ => A/*L7*/): F/*L5*/[B/*L7*/] = contramap/*L6*/(fa/*L7*/)(fi/*L7*/)
+           |
+           |  def compose/*L9*/[G/*L9*/[_]: Contravariant/*L5*/]: Functor/*Functor.scala:11*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
+           |    new ComposedContravariant/*Composed.scala:107*/[F/*L5*/, G/*L9*/] {
+           |      val F/*L11*/ = self/*L5*/
+           |      val G/*L12*/ = Contravariant/*<no symbol>*/[G/*L9*/]
+           |    }
+           |
+           |  /**
+           |   * Lifts natural subtyping contravariance of contravariant Functors.
+           |   * could be implemented as contramap(identity), but the Functor laws say this is equivalent
+           |   */
+           |  def narrow/*L19*/[A/*L19*/, B/*L19*/ <: A/*L19*/](fa/*L19*/: F/*L5*/[A/*L19*/]): F/*L5*/[B/*L19*/] = fa/*L19*/.asInstanceOf/*<no symbol>*/[F/*L5*/[B/*L19*/]]
+           |
+           |  def liftContravariant/*L21*/[A/*L21*/, B/*L21*/](f/*L21*/: A/*L21*/ => B/*L21*/): F/*L5*/[B/*L21*/] => F/*L5*/[A/*L21*/] = contramap/*L6*/(_: F/*L5*/[B/*L21*/])(f/*L21*/)
+           |
+           |  override def composeFunctor/*L23*/[G/*L23*/[_]: Functor/*Functor.scala:11*/]: Contravariant/*L5*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
+           |    new ComposedContravariantCovariant/*Composed.scala:115*/[F/*L5*/, G/*L23*/] {
+           |      val F/*L25*/ = self/*L5*/
+           |      val G/*L26*/ = Functor/*Functor.scala:11*/[G/*L23*/]
+           |    }
+           |}
+           |
+           |/src/main/scala/a/Main.scala
+           |import cats._
+           |import cats.implicits/*implicits.scala:2*/._
+           |object Main/*L2*/ {
+           |  println/*Predef.scala:392*/(Contravariant/*Contravariant.scala:5*/[Show/*Show.scala:9*/])
+           |}
           """.stripMargin
-        )
-        assertNoDiff(client.workspaceDiagnostics, "")
-      }
-      _ <- server.didFocus("cats/Contravariant.scala")
+      )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|.metals/readonly/cats/Contravariant.scala:2:8: information: not found: object simulacrum
@@ -209,11 +208,13 @@ object DefinitionSlowSuite extends BaseSlowSuite {
            |""".stripMargin
       )
       _ <- server.didFocus("src/main/scala/a/Main.scala")
+      // dependency diagnostics are unpublished.
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
 
   testAsync("2.11") {
+    cleanDatabase()
     for {
       _ <- server.initialize(
         """
@@ -227,17 +228,15 @@ object DefinitionSlowSuite extends BaseSlowSuite {
           |}
           |""".stripMargin
       )
+      _ = client.messageRequests.clear()
       _ <- server.didOpen("src/main/scala/a/Main.scala")
       _ = server.workspaceDefinitions // trigger definition
       _ <- server.didOpen("scala/Predef.scala")
-      _ = {
-        assertNoDiff(
-          client.workspaceShowMessages,
-          """
-          """.stripMargin
-        )
-        assertNoDiff(client.workspaceDiagnostics, "")
-      }
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Only212Navigation.params("2.11.12").getMessage
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
   // TODO: 2.11 dependency navigation Warning

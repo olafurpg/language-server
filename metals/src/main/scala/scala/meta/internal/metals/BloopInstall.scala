@@ -35,6 +35,7 @@ final class BloopInstall(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
     sh: ScheduledExecutorService,
+    buildTools: BuildTools,
     time: Time,
     tables: Tables
 )(implicit ec: ExecutionContext, statusBar: StatusBar)
@@ -88,62 +89,6 @@ final class BloopInstall(
           Success(BloopInstallResult.Cancelled)
         )
         BloopInstall.destroyProcess(runningProcess)
-        """java.util.concurrent.CompletionException: org.h2.jdbc.JdbcSQLException: The object is already closed [90007-197]
-          |	at java.util.concurrent.CompletableFuture.encodeThrowable(CompletableFuture.java:292)
-          |	at java.util.concurrent.CompletableFuture.completeThrowable(CompletableFuture.java:308)
-          |	at java.util.concurrent.CompletableFuture.uniAccept(CompletableFuture.java:647)
-          |	at java.util.concurrent.CompletableFuture$UniAccept.tryFire(CompletableFuture.java:632)
-          |	at java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:474)
-          |	at java.util.concurrent.CompletableFuture.completeExceptionally(CompletableFuture.java:1977)
-          |	at scala.concurrent.java8.FuturesConvertersImpl$CF.apply(FutureConvertersImpl.scala:21)
-          |	at scala.concurrent.java8.FuturesConvertersImpl$CF.apply(FutureConvertersImpl.scala:18)
-          |	at scala.concurrent.impl.CallbackRunnable.run(Promise.scala:60)
-          |	at scala.concurrent.BatchingExecutor$Batch.processBatch$1(BatchingExecutor.scala:63)
-          |	at scala.concurrent.BatchingExecutor$Batch.$anonfun$run$1(BatchingExecutor.scala:78)
-          |	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:12)
-          |	at scala.concurrent.BlockContext$.withBlockContext(BlockContext.scala:81)
-          |	at scala.concurrent.BatchingExecutor$Batch.run(BatchingExecutor.scala:55)
-          |	at scala.concurrent.Future$InternalCallbackExecutor$.unbatchedExecute(Future.scala:870)
-          |	at scala.concurrent.BatchingExecutor.execute(BatchingExecutor.scala:106)
-          |	at scala.concurrent.BatchingExecutor.execute$(BatchingExecutor.scala:103)
-          |	at scala.concurrent.Future$InternalCallbackExecutor$.execute(Future.scala:868)
-          |	at scala.concurrent.impl.CallbackRunnable.executeWithValue(Promise.scala:68)
-          |	at scala.concurrent.impl.Promise$DefaultPromise.$anonfun$tryComplete$1(Promise.scala:284)
-          |	at scala.concurrent.impl.Promise$DefaultPromise.$anonfun$tryComplete$1$adapted(Promise.scala:284)
-          |	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:284)
-          |	at scala.concurrent.Promise.complete(Promise.scala:49)
-          |	at scala.concurrent.Promise.complete$(Promise.scala:48)
-          |	at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:183)
-          |	at scala.concurrent.impl.Promise.$anonfun$transform$1(Promise.scala:29)
-          |	at scala.concurrent.impl.CallbackRunnable.run(Promise.scala:60)
-          |	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-          |	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-          |	at java.lang.Thread.run(Thread.java:748)
-          |Caused by: org.h2.jdbc.JdbcSQLException: The object is already closed [90007-197]
-          |	at org.h2.message.DbException.getJdbcSQLException(DbException.java:357)
-          |	at org.h2.message.DbException.get(DbException.java:179)
-          |	at org.h2.message.DbException.get(DbException.java:155)
-          |	at org.h2.message.DbException.get(DbException.java:144)
-          |	at org.h2.jdbc.JdbcConnection.checkClosed(JdbcConnection.java:1523)
-          |	at org.h2.jdbc.JdbcConnection.checkClosed(JdbcConnection.java:1502)
-          |	at org.h2.jdbc.JdbcConnection.prepareStatement(JdbcConnection.java:302)
-          |	at scala.meta.internal.metals.JdbcEnrichments$XtensionConnection.update(JdbcEnrichments.scala:14)
-          |	at scala.meta.internal.metals.SbtChecksums.setStatus(SbtChecksums.scala:15)
-          |	at scala.meta.internal.metals.BloopInstall.$anonfun$reimportIfChanged$10(BloopInstall.scala:149)
-          |	at scala.meta.internal.metals.BloopInstall.$anonfun$reimportIfChanged$10$adapted(BloopInstall.scala:147)
-          |	at scala.Option.foreach(Option.scala:257)
-          |	at scala.meta.internal.metals.BloopInstall.$anonfun$reimportIfChanged$9(BloopInstall.scala:147)
-          |	at scala.meta.internal.metals.BloopInstall.$anonfun$reimportIfChanged$9$adapted(BloopInstall.scala:146)
-          |	at scala.Option.foreach(Option.scala:257)
-          |	at scala.meta.internal.metals.BloopInstall.$anonfun$reimportIfChanged$8(BloopInstall.scala:146)
-          |	at scala.util.Success.$anonfun$map$1(Try.scala:251)
-          |	at scala.util.Success.map(Try.scala:209)
-          |	at scala.concurrent.Future.$anonfun$map$1(Future.scala:288)
-          |	at scala.concurrent.impl.Promise.liftedTree1$1(Promise.scala:29)
-          |	... 5 more
-          |""".stripMargin
-      } else {
-        processFuture.trackInStatusBar("$(sync) sbt bloopInstall")
       }
     }
     cancelables
@@ -152,12 +97,9 @@ final class BloopInstall(
     processFuture
   }
 
-  def reimportIfChanged(
-      buildTools: BuildTools,
-      workspace: AbsolutePath,
-      languageClient: MetalsLanguageClient,
-      forceImport: Boolean
-  )(implicit ec: ExecutionContextExecutorService): Future[BloopInstallResult] = {
+  def reimportIfChanged(forceImport: Boolean)(
+      implicit ec: ExecutionContextExecutorService
+  ): Future[BloopInstallResult] = {
     for {
       sbt <- buildTools.asSbt
       if {

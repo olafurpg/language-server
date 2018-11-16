@@ -5,10 +5,15 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities
+import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Messages._
@@ -33,14 +38,26 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   val diagnosticsCount = TrieMap.empty[AbsolutePath, AtomicInteger]
   val messageRequests = new ConcurrentLinkedQueue[String]()
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
-  val statusMessage =
-    new AtomicReference[MetalsStatusParams](MetalsStatusParams(""))
+  val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
     _: MetalsSlowTaskParams =>
       None
   }
 
+  def statusBarHistory: String = {
+    statusParams.asScala
+      .map { params =>
+        if (params.show) {
+          s"<show> - ${params.text}".trim
+        } else if (params.hide) {
+          "<hide>"
+        } else {
+          params.text.trim
+        }
+      }
+      .mkString("\n")
+  }
   def workspaceLogMessages: String = {
     logMessages.asScala
       .map { params =>
@@ -50,6 +67,12 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
   def workspaceShowMessages: String = {
     showMessages.asScala.map(_.getMessage).mkString("\n")
+  }
+  def workspaceErrorShowMessages: String = {
+    showMessages.asScala
+      .filter(_.getType == MessageType.Error)
+      .map(_.getMessage)
+      .mkString("\n")
   }
   def workspaceMessageRequests: String = {
     messageRequests.asScala.mkString("\n")
@@ -83,6 +106,27 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     }
     sb.toString()
   }
+
+  override def registerCapability(
+      params: RegistrationParams
+  ): CompletableFuture[Void] =
+    CompletableFutures.computeAsync { _ =>
+      params.getRegistrations.asScala.foreach { registration =>
+        registration.getMethod match {
+          case "workspace/didChangeWatchedFiles" =>
+            registration.getRegisterOptions match {
+              case w: DidChangeWatchedFilesRegistrationOptions =>
+                w.getWatchers.asScala.map { watcher =>
+                  // TODO(olafur): Start actual file watcher.
+                  watcher
+                }
+              case _ =>
+            }
+          case _ =>
+        }
+      }
+      null
+    }
   override def telemetryEvent(`object`: Any): Unit = ()
   override def publishDiagnostics(params: PublishDiagnosticsParams): Unit = {
     val path = params.getUri.toAbsolutePath
@@ -103,6 +147,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
         ReimportSbtProject.yes
       } else if (params == ImportBuildViaBloop.params) {
         ImportBuildViaBloop.yes
+      } else if (params == Only212Navigation.params("2.11.12")) {
+        Only212Navigation.dismissForever
       } else {
         throw new IllegalArgumentException(params.toString)
       }
@@ -125,6 +171,6 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    statusMessage.set(params)
+    statusParams.add(params)
   }
 }

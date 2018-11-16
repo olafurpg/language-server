@@ -1,7 +1,7 @@
 // See https://docusaurus.io/docs/site-config.html for all the possible
 // site configuration options.
 
-const repoUrl = "https://github.com/scalameta/metals";
+const repoUrl = "https://github.com/olafurpg/metals";
 const baseUrl = "/metals/";
 
 const siteConfig = {
@@ -11,8 +11,8 @@ const siteConfig = {
   baseUrl: baseUrl,
 
   // Used for publishing and more
-  projectName: "Metals",
-  organizationName: "Scalameta",
+  projectName: "metals",
+  organizationName: "scalameta",
 
   algolia: {
     apiKey: "c865f6d974a3072a35d4b53d48ac2307",
@@ -21,7 +21,7 @@ const siteConfig = {
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
-    { doc: "getting-started-contributors", label: "Docs" },
+    { doc: "overview", label: "Docs" },
     { href: repoUrl, label: "GitHub", external: true }
   ],
 

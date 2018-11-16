@@ -96,9 +96,13 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
      */
     def trackInStatusBar(
         message: String,
-        maxDots: Int = Int.MaxValue
+        showDots: Boolean = true
     )(implicit statusBar: StatusBar): Future[A] = {
-      statusBar.addFuture(message, future, maxDots = maxDots)
+      statusBar.addFuture(
+        message,
+        future,
+        maxDots = if (showDots) Int.MaxValue else -1
+      )
       future
     }
     def ignoreValue(implicit ec: ExecutionContext): Future[Unit] =

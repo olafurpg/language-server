@@ -1,37 +1,17 @@
 package tests
 
-import java.util.concurrent.ConcurrentLinkedQueue
 import scala.concurrent.Promise
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsStatusParams
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 
 object StatusBarSuite extends BaseSuite {
-  class FakeClient extends SilentClient {
-    def clear(): Unit = statusParams.clear()
-    def history: String = {
-      statusParams.asScala
-        .map { params =>
-          if (params.show) {
-            s"<show> - ${params.text}".trim
-          } else if (params.hide) {
-            "<hide>"
-          } else {
-            params.text.trim
-          }
-        }
-        .mkString("\n")
-    }
-    private val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
-    override def metalsStatus(params: MetalsStatusParams): Unit = {
-      statusParams.add(params)
-    }
-  }
   val time = new FakeTime
-  val client = new FakeClient
-  var status: StatusBar = new StatusBar(client, time)
+  val client = new TestingClient(PathIO.workingDirectory, Buffers())
+  var status: StatusBar = new StatusBar(client, time, ProgressTicks.Dots)
   override def utestBeforeEach(path: Seq[String]): Unit = {
-    client.clear()
+    client.statusParams.clear()
     status.cancel()
   }
 
@@ -48,7 +28,7 @@ object StatusBarSuite extends BaseSuite {
     time.elapseSeconds(11)
     status.tick()
     assertNoDiff(
-      client.history,
+      client.statusBarHistory,
       """|
          |<show> - tick 1
          |tick 2
@@ -66,7 +46,7 @@ object StatusBarSuite extends BaseSuite {
     promise.success(())
     status.tick()
     assertNoDiff(
-      client.history,
+      client.statusBarHistory,
       """|
          |<show> - tick
          |tick.
@@ -97,9 +77,9 @@ object StatusBarSuite extends BaseSuite {
     promise2.success(())
     status.tick()
     assertNoDiff(
-      client.history,
+      client.statusBarHistory,
       """|
-         |<show> - a 0s
+         |<show> - a
          |a 1s
          |a 2s
          |b 2s

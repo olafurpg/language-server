@@ -4,14 +4,12 @@ import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import com.google.gson.JsonArray
-import com.sun.xml.internal.ws.util.CompletedFuture
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
-import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -22,7 +20,6 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -40,7 +37,8 @@ class MetalsLanguageServer(
     buffers: Buffers = Buffers(),
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
-    time: Time = Time.system
+    time: Time = Time.system,
+    config: MetalsServerConfig = MetalsServerConfig.default
 ) extends Cancelable {
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
@@ -69,7 +67,7 @@ class MetalsLanguageServer(
   private var buildClient: MetalsBuildClient = _
   private var bloopServers: BloopServers = _
   private var definitionProvider: DefinitionProvider = _
-  private var initializeParams: InitializeParams = _
+  private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
   private implicit var statusBar: StatusBar = _
 
@@ -102,9 +100,9 @@ class MetalsLanguageServer(
     diagnostics = new Diagnostics(buildTargets, languageClient)
     buildClient = new ForwardingMetalsBuildClient(languageClient, diagnostics)
     bloopInstall = register(
-      new BloopInstall(workspace, languageClient, sh, time, tables)
+      new BloopInstall(workspace, languageClient, sh, buildTools, time, tables)
     )
-    bloopServers = new BloopServers(sh, workspace, buildClient)
+    bloopServers = new BloopServers(sh, workspace, buildClient, config)
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     semanticdbs = AggregateSemanticdbs(
       List(
@@ -126,7 +124,7 @@ class MetalsLanguageServer(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] =
     Future {
-      initializeParams = params
+      initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
       capabilities.setDefinitionProvider(true)
@@ -140,7 +138,13 @@ class MetalsLanguageServer(
       .asJava
 
   private def registerFileWatchers(): Unit = {
-    if (initializeParams.getCapabilities.getWorkspace.getDidChangeWatchedFiles.getDynamicRegistration) {
+    val registration = for {
+      params <- initializeParams
+      capabilities <- Option(params.getCapabilities)
+      workspace <- Option(capabilities.getWorkspace)
+      didChangeWatchedFiles <- Option(workspace.getDidChangeWatchedFiles)
+      if didChangeWatchedFiles.getDynamicRegistration
+    } yield {
       languageClient.registerCapability(
         new RegistrationParams(
           List(
@@ -157,14 +161,19 @@ class MetalsLanguageServer(
           ).asJava
         )
       )
-    } else {
-      scribe.warn("Client does not support workspace/didChangeWatchedFiles")
+    }
+    if (registration.isEmpty) {
+      scribe.warn(
+        "çlient does not support file watching, " +
+          s"expect partial functionality. Manual triggering of the command " +
+          s"'${ServerCommands.ScanWorkspaceSources}' may be required."
+      )
     }
   }
 
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
-    statusBar.start(sh, 1, 1, TimeUnit.SECONDS)
+    statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
     Future
       .sequence(
         List[Future[Unit]](
@@ -179,15 +188,18 @@ class MetalsLanguageServer(
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
     LanguageClientLogger.languageClient = None
-    cancelables.cancel()
+    try {
+      cancelables.cancel()
+    } catch {
+      case NonFatal(e) =>
+        scribe.error("cancellation error", e)
+    }
     sh.shutdownNow()
-    for {
-      _ <- buildServer match {
-        case Some(value) => value.shutdown()
-        case None => Future.successful(())
-      }
-    } yield ()
-  }.asJava
+    buildServer match {
+      case Some(value) => value.shutdown().asJava
+      case None => CompletableFuture.completedFuture(())
+    }
+  }
 
   @JsonNotification("exit")
   def exit(): Unit = {
@@ -205,7 +217,10 @@ class MetalsLanguageServer(
     buffers.put(path, params.getTextDocument.getText)
     if (path.isDependencySource(workspace)) {
       CompletableFutures.computeAsync { _ =>
+        // trigger compilation in preparation for definition requests
         interactiveSemanticdbs.textDocument(path)
+        // publish diagnostics
+        interactiveSemanticdbs.didFocus(path)
         ()
       }
     } else {
@@ -216,13 +231,16 @@ class MetalsLanguageServer(
   @JsonNotification("metals/didFocusTextDocument")
   def didFocus(uri: String): CompletableFuture[Unit] = {
     val path = uri.toAbsolutePath
-    if (openedFiles.isRecentlyActive(path))
+    if (openedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(())
-    else {
+    } else {
       Future
         .sequence(
           List(
-            Future(interactiveSemanticdbs.didFocus(path)),
+            Future {
+              // unpublish diagnostic for dependencies
+              interactiveSemanticdbs.didFocus(path)
+            },
             compileSourceFiles(List(path))
           )
         )
@@ -364,7 +382,7 @@ class MetalsLanguageServer(
       } yield ()
 
       for {
-        _ <- importingBuild.trackInStatusBar("$(sync) Importing build")
+        _ <- importingBuild.trackInStatusBar("Importing build")
         _ = statusBar.addMessage("$(rocket) Imported build!")
         _ <- compileSourceFiles(buffers.open.toSeq)
       } yield BuildChange.Reconnected
@@ -509,7 +527,7 @@ class MetalsLanguageServer(
               build
                 .compile(params)
                 .asScala
-            }.trackInStatusBar(s"$$(sync) Compiling$name", maxDots = 5)
+            }.trackInStatusBar(s"$$(sync) Compiling$name", showDots = false)
               .ignoreValue
               .map(_ => true)
               .recover {

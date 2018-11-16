@@ -8,7 +8,9 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
+import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
@@ -17,11 +19,13 @@ import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
@@ -41,6 +45,7 @@ import scala.meta.io.RelativePath
 import scala.meta.testkit.StringFS
 import scala.meta.tokens.Token
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.semanticdb.Scala._
 
@@ -60,14 +65,16 @@ final class TestingServer(
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
     root: AbsolutePath,
-    buffers: Buffers
+    buffers: Buffers,
+    config: MetalsServerConfig
 )(
     implicit ex: ExecutionContextExecutorService
 ) {
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
-    redirectSystemOut = false
+    redirectSystemOut = false,
+    config = config
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
@@ -81,6 +88,18 @@ final class TestingServer(
     cleanUnmanagedFiles()
     write(layout)
     val params = new InitializeParams
+    val workspaceCapabilities = new WorkspaceClientCapabilities()
+    workspaceCapabilities.setDidChangeWatchedFiles(
+      new DidChangeWatchedFilesCapabilities(true)
+    )
+    val textDocumentCapabilities = new TextDocumentClientCapabilities
+    params.setCapabilities(
+      new ClientCapabilities(
+        workspaceCapabilities,
+        textDocumentCapabilities,
+        null
+      )
+    )
     params.setRootUri(root.toURI.toString)
     for {
       _ <- server.initialize(params).asScala

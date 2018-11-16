@@ -19,14 +19,16 @@ object Main {
     val systemOut = System.out
     val tracePrinter = GlobalTrace.setup("LSP")
     val exec = Executors.newCachedThreadPool()
+    val config = MetalsServerConfig.default
     val server = new MetalsLanguageServer(
       ExecutionContext.fromExecutorService(exec),
       redirectSystemOut = true,
-      charset = StandardCharsets.UTF_8
+      charset = StandardCharsets.UTF_8,
+      config = config
     )
     try {
       val remoteInterface =
-        if (MetalsServerConfig.isExtensionsEnabled) {
+        if (config.isExtensionsEnabled) {
           classOf[MetalsLanguageClient]
         } else {
           classOf[LanguageClient]
@@ -44,7 +46,7 @@ object Main {
       )
       val underlyingClient = launcher.getRemoteProxy
       val client =
-        if (MetalsServerConfig.isExtensionsEnabled) {
+        if (config.isExtensionsEnabled) {
           underlyingClient.asInstanceOf[MetalsLanguageClient]
         } else {
           new NoExtensionLanguageClient(underlyingClient)

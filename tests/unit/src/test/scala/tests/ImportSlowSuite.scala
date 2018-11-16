@@ -29,7 +29,7 @@ object ImportSlowSuite extends BaseSlowSuite {
     }
   }
   testAsync("basic") {
-    clean()
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/project/build.properties
@@ -58,7 +58,8 @@ object ImportSlowSuite extends BaseSlowSuite {
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didSave("build.sbt")(identity)
-      _ = assertNoDiff(
+    } yield {
+      assertNoDiff(
         client.workspaceMessageRequests,
         List(
           // Project has .bloop directory so user is asked to "re-import project"
@@ -66,11 +67,13 @@ object ImportSlowSuite extends BaseSlowSuite {
           BloopInstallProgress.message
         ).mkString("\n")
       )
-    } yield ()
+      pprint.log(client.statusBarHistory)
+
+    }
   }
 
   testAsync("force-command") {
-    clean()
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/project/build.properties
@@ -99,7 +102,7 @@ object ImportSlowSuite extends BaseSlowSuite {
   }
 
   testAsync("new-dependency") {
-    clean()
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/project/build.properties
@@ -138,7 +141,7 @@ object ImportSlowSuite extends BaseSlowSuite {
         None
       }
     }
-    clean()
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """
@@ -157,7 +160,7 @@ object ImportSlowSuite extends BaseSlowSuite {
   }
 
   testAsync("error") {
-    clean()
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/project/build.properties

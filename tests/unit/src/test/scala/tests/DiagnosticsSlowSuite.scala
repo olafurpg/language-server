@@ -2,7 +2,7 @@ package tests
 
 object DiagnosticsSlowSuite extends BaseSlowSuite {
 
-  testAsync("diagnostics") {
+  ignore("diagnostics") {
     for {
       _ <- server.initialize(
         """|/project/build.properties
