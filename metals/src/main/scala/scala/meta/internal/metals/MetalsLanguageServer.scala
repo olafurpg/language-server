@@ -334,12 +334,7 @@ class MetalsLanguageServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
     for {
-      result <- bloopInstall.reimportIfChanged(
-        buildTools,
-        workspace,
-        languageClient,
-        forceImport
-      )
+      result <- bloopInstall.reimportIfChanged(forceImport)
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
         else if (result.isFailed) {
