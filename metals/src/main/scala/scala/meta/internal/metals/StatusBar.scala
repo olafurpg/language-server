@@ -5,7 +5,6 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import scala.collection.generic.AtomicIndexFlag
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 
@@ -23,7 +22,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
  *   as long as the attached `Future[_]` is not completed.
  */
 final class StatusBar(
-    client: MetalsLanguageClient,
+    client: () => MetalsLanguageClient,
     time: Time,
     progressTicks: ProgressTicks = ProgressTicks.Braille
 ) extends Cancelable {
@@ -76,12 +75,12 @@ final class StatusBar(
               MetalsStatusParams(value.formattedMessage, show = show)
           }
           value.show()
-          client.metalsStatus(params)
+          client().metalsStatus(params)
           isHidden = false
         }
       case None =>
         if (!isHidden && !isActiveMessage) {
-          client.metalsStatus(MetalsStatusParams("", hide = true))
+          client().metalsStatus(MetalsStatusParams("", hide = true))
           isHidden = true
           activeItem = None
         }

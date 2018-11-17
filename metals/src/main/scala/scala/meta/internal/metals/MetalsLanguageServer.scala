@@ -39,7 +39,8 @@ class MetalsLanguageServer(
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
     config: MetalsServerConfig = MetalsServerConfig.default
-) extends Cancelable {
+) extends Cancelable
+    with AutoCloseable {
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
   private val sh = Executors.newSingleThreadScheduledExecutor()
@@ -54,6 +55,7 @@ class MetalsLanguageServer(
 
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = cancelables.cancel()
+  override def close(): Unit = cancel()
 
   // These can't be instantiated until we know the workspace root directory.
   private var languageClient: MetalsLanguageClient = _
@@ -73,7 +75,7 @@ class MetalsLanguageServer(
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient = client
-    statusBar = new StatusBar(languageClient, time)
+    statusBar = new StatusBar(() => languageClient, time)
     LanguageClientLogger.languageClient = Some(client)
   }
 
@@ -124,6 +126,7 @@ class MetalsLanguageServer(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] =
     Future {
+      pprint.log(s"params: $params")
       initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
@@ -171,9 +174,27 @@ class MetalsLanguageServer(
     }
   }
 
+  def startHttpServer(): Unit = {
+    if (config.isHttpEnabled) {
+      val host = "localhost"
+      val port = 5031
+      val url = s"http://$host:$port"
+      var render: () => String = () => ""
+      val server = MetalsHttpServer(host, port, this, () => render())
+      val newClient =
+        new MetalsHttpClient(url, languageClient, () => server.reload)
+      render = () => newClient.renderHtml
+      languageClient = newClient
+      server.start()
+      cancelables.add(Cancelable(() => server.stop()))
+    }
+  }
+
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
+    startHttpServer()
+    scribe.info(config.toString)
     Future
       .sequence(
         List[Future[Unit]](
@@ -333,28 +354,33 @@ class MetalsLanguageServer(
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
-    for {
-      result <- bloopInstall.reimportIfChanged(forceImport)
-      change <- {
-        if (result.isInstalled) quickConnectToBuildServer()
-        else if (result.isFailed) {
-          if (workspace.resolve(".bloop").isDirectory) {
-            // TODO(olafur) try to connect but gracefully error
-            languageClient.showMessage(Messages.ImportProjectPartiallyFailed)
-            // Connect nevertheless, many build import failures are caused
-            // by resolution errors in one weird module while other modules
-            // exported successfully.
-            quickConnectToBuildServer()
+    if (!buildTools.isSbt) {
+      scribe.warn(s"Skipping build import for unsupport build tool $buildTools")
+      Future.successful(BuildChange.None)
+    } else {
+      for {
+        result <- bloopInstall.reimportIfChanged(forceImport)
+        change <- {
+          if (result.isInstalled) quickConnectToBuildServer()
+          else if (result.isFailed) {
+            if (buildTools.isBloop) {
+              // TODO(olafur) try to connect but gracefully error
+              languageClient.showMessage(Messages.ImportProjectPartiallyFailed)
+              // Connect nevertheless, many build import failures are caused
+              // by resolution errors in one weird module while other modules
+              // exported successfully.
+              quickConnectToBuildServer()
+            } else {
+              languageClient.showMessage(Messages.ImportProjectFailed)
+              Future.successful(BuildChange.Failed)
+            }
           } else {
-            languageClient.showMessage(Messages.ImportProjectFailed)
-            Future.successful(BuildChange.Failed)
+            Future.successful(BuildChange.None)
           }
-        } else {
-          Future.successful(BuildChange.None)
         }
+      } yield {
+        change
       }
-    } yield {
-      change
     }
   }
 

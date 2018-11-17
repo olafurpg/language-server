@@ -6,16 +6,15 @@ title: Importing a build
 Metals works with a limited set of builds tools. Some build tools require manual
 installation while others can be automatically installed.
 
-| Build tool  | Automatic installation | Manual installation |
-| ----------- | :--------------------: | :-----------------: |
-| sbt v1.2.1+ |          Yes           |         Yes         |
-| sbt v0.13   |           No           |         Yes         |
-| Bloop       |          Yes           |         Yes         |
-| Maven       |           No           |    Experimental     |
-| Gradle      |           No           |    Experimental     |
-| Mill        |           No           |    Experimental     |
-| Pants       |           No           |         No          |
-| Bazel       |           No           |         No          |
+| Build tool | Automatic installation | Manual installation |
+| ---------- | :--------------------: | :-----------------: |
+| sbt        |          Yes           |         Yes         |
+| Bloop      |          Yes           |         Yes         |
+| Maven      |           No           |    Experimental     |
+| Gradle     |           No           |    Experimental     |
+| Mill       |           No           |    Experimental     |
+| Pants      |           No           |         No          |
+| Bazel      |           No           |         No          |
 
 ## Automatic installation
 
@@ -66,8 +65,8 @@ build tools like Maven, Gradle and Mill. If your workspace contains a `.bloop/`
 directory with Bloop JSON files then Metals will automatically connect to it.
 
 To manually trigger Metals to connect with Bloop, run the "Connect to build
-server" (`build-server.connect`) command. In VS Code, open the the "Command
-palette" (`Cmd + Shift + P`) and search "connect to build server".
+server" (`build.connect`) command. In VS Code, open the the "Command palette"
+(`Cmd + Shift + P`) and search "connect to build server".
 
 ![Import connect to build server command](assets/vscode-connect-build-server.png)
 
@@ -88,10 +87,7 @@ are compiled with the
 [semanticdb-scalac](https://scalameta.org/docs/semanticdb/guide.html#producing-semanticdb)
 compiler plugin and `-Yrangepos` option enabled.
 
-### sbt 0.13
-
-If you are unable to upgrade to sbt v1.2.1+ you can still manually import the
-build using the following steps.
+### sbt
 
 First, install the Bloop and Metals plugins globally
 
@@ -99,7 +95,6 @@ First, install the Bloop and Metals plugins globally
 // One of:
 //   ~/.sbt/0.13/plugins/plugins.sbt
 //   ~/.sbt/1.0/plugins/plugins.sbt
-addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
 addSbtPlugin("org.scalameta" % "sbt-metals" % "@VERSION@")
 ```
 
@@ -112,7 +107,7 @@ Next, update the global Bloop settings to download sources of external libraries
 bloopExportJarClassifiers in Global := Some(Set("sources"))
 ```
 
-Finally, run `sbt semanticdbEnable bloopInstall` to generate the Bloop JSON
+Finally, run `sbt metalsEnable bloopInstall` to generate the Bloop JSON
 configuration files. Once complete, execute the
 "[Connect to build server](#bloop)" command to tell Metals to start a Bloop
 build server.
@@ -127,7 +122,7 @@ semanticdb-scalac compiler plugin in your build.
 // build.sbt
  lazy val myproject = project.settings(
 +  scalaVersion := "@SCALA_VERSION@", // or @SCALA211_VERSION@, other versions are not supported.
-+  addCompilerPlugin(scalafixSemanticdb), // enable SemanticDB
++  addCompilerPlugin(MetalsPlugin.semanticdbModule), // enable SemanticDB
 +  scalacOptions += "-Yrangepos" // required by SemanticDB
  )
 ```

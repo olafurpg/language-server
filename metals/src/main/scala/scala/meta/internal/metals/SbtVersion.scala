@@ -19,13 +19,15 @@ object SbtVersion {
       }
     BuildTool.Sbt(version.getOrElse(unknown))
   }
+
   private def unknown = "<unknown>"
 
   def isSupported(version: String): Boolean = {
-    !version.startsWith(unknown) &&
-    !version.startsWith("0.") &&
-    !version.startsWith("1.0") &&
-    !version.startsWith("1.1") &&
-    !version.startsWith("1.2.0")
+    true
+//    !version.startsWith(unknown) &&
+//    !version.startsWith("0.") &&
+//    !version.startsWith("1.0") &&
+//    !version.startsWith("1.1") &&
+//    !version.startsWith("1.2.0")
   }
 }

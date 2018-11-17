@@ -9,7 +9,7 @@ import scala.meta.internal.metals.StatusBar
 object StatusBarSuite extends BaseSuite {
   val time = new FakeTime
   val client = new TestingClient(PathIO.workingDirectory, Buffers())
-  var status: StatusBar = new StatusBar(client, time, ProgressTicks.Dots)
+  var status: StatusBar = new StatusBar(() => client, time, ProgressTicks.Dots)
   override def utestBeforeEach(path: Seq[String]): Unit = {
     client.statusParams.clear()
     status.cancel()

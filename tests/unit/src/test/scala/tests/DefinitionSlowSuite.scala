@@ -1,7 +1,5 @@
 package tests
 
-import java.nio.file.Files
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages.Only212Navigation
 
 object DefinitionSlowSuite extends BaseSlowSuite {

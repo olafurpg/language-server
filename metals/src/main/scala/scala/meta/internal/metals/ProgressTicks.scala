@@ -5,7 +5,7 @@ abstract class ProgressTicks {
 }
 object ProgressTicks {
   object Braille extends ProgressTicks {
-    val value = "⠇⠦⠴⠸⠙⠋"
+    val value = "⠇⠋⠙⠸⠦⠴"
     override def format(i: Int): String = {
       value.charAt(i % value.length).toString
     }

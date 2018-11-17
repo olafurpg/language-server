@@ -2,45 +2,43 @@ package scala.meta.sbt {
 
   import sbt._
   import sbt.Keys._
-  import java.io._
 
   object MetalsPlugin extends AutoPlugin {
     override def trigger = allRequirements
     override def requires = sbt.plugins.JvmPlugin
 
-    def semanticdbVersion = System.getProperty("scalameta.version", "4.0.0")
+    def semanticdbVersion: String =
+      System.getProperty("scalameta.version", "4.0.0")
+    def semanticdbModule: ModuleID =
+      "org.scalameta" % "semanticdb-scalac" % semanticdbVersion cross CrossVersion.full
 
     override def globalSettings = Seq(
-      commands ++= Seq(
-        semanticdbEnable
-      )
+      commands ++= Seq(metalsEnable)
     )
 
     private def isValidScalaBinaryVersion: Set[String] = Set("2.11", "2.12")
 
     /** Command to automatically enable semanticdb-scalac for shell session */
-    lazy val semanticdbEnable = Command.command(
-      "semanticdbEnable",
-      briefHelp =
-        "Configure libraryDependencies, scalaVersion and scalacOptions for scalafix.",
-      detail = """1. enables the semanticdb-scalac compiler plugin
-                 |2. add -Yrangepos to scalacOptions""".stripMargin
+    lazy val metalsEnable = Command.command(
+      "metalsEnable",
+      briefHelp = "Configures the build to be used with Metals.",
+      detail = """1. Enables the semanticdb-scalac compiler plugin
+                 |2. Enables downloading of sources for bloopInstall""".stripMargin
     ) { s =>
       val extracted = Project.extract(s)
       val settings: Seq[Setting[_]] = for {
         p <- extracted.structure.allProjectRefs
-        if scalaBinaryVersion
+        projectScalaVersion <- scalaVersion
           .in(p)
           .get(extracted.structure.data)
-          .exists(isValidScalaBinaryVersion)
-        isDisabled = {
-          val metalsEnabled =
-            SettingKey[Boolean]("metalsEnabled")
-              .in(p)
-              .get(extracted.structure.data)
-          metalsEnabled == Some(false)
-        }
-        if !isDisabled
+          .toList
+        isSupportedScalaVersion = isValidScalaBinaryVersion.exists(
+          binaryVersion => projectScalaVersion.startsWith(binaryVersion)
+        )
+        if isSupportedScalaVersion
+        isExplicitlyDisabled = Some(true) ==
+          SettingKey[Boolean]("noMetals").in(p).get(extracted.structure.data)
+        if !isExplicitlyDisabled
         setting <- List(
           scalacOptions.in(p) --= List(
             // Disable fatal warnings so that SemanticDBs are generated even for unused warnings.
@@ -58,17 +56,18 @@ package scala.meta.sbt {
             "-Yrangepos",
             s"-Xplugin-require:semanticdb"
           ),
-          libraryDependencies.in(p) ++= {
-            List(
-              compilerPlugin(
-                "org.scalameta" % "semanticdb-scalac" %
-                  semanticdbVersion cross CrossVersion.full
-              )
-            )
-          }
+          libraryDependencies.in(p) += compilerPlugin(
+            "org.scalameta" % s"semanticdb-scalac_${projectScalaVersion}" % semanticdbVersion
+          )
         )
       } yield setting
-      val semanticdbInstalled = Compat.appendWithSession(extracted, settings, s)
+      val sourcesClassifier: Def.Setting[_] =
+        SettingKey[Option[Set[String]]](
+          "bloopExportJarClassifiers"
+        ).in(Global) := Some(Set("sources"))
+      val allSettings = sourcesClassifier +: settings
+      val semanticdbInstalled =
+        Compat.appendWithSession(extracted, allSettings, s)
       s.log.info("semanticdb-scalac is enabled")
       semanticdbInstalled
     }

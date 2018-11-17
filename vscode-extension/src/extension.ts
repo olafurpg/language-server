@@ -34,6 +34,7 @@ export async function activate(context: ExtensionContext) {
 
   const javaArgs = [
     `-Dmetals.extensions=true`,
+    // `-Dmetals.http=true`,
     `-Xss4m`,
     `-Xms1G`,
     `-Xmx4G`,
@@ -111,7 +112,7 @@ export async function activate(context: ExtensionContext) {
   context.subscriptions.push(client.start());
 
   client.onReady().then(_ => {
-    ["build.import", "build-server.connect", "workspace.sources.scan"].forEach(
+    ["build.import", "build.connect", "workspace.sources.scan"].forEach(
       command => {
         const cancel = commands.registerCommand("metals." + command, async () =>
           client.sendRequest(ExecuteCommandRequest.type, { command: command })

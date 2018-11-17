@@ -33,7 +33,7 @@ object ServerCommands {
    * case this command is needed to tell metals to communicate with the bloop
    * server.
    */
-  val ConnectBuildServer = "build-server.connect"
+  val ConnectBuildServer = "build.connect"
 
   /**
    * Open the browser at the given url.

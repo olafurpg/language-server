@@ -143,8 +143,8 @@ final class DefinitionProvider(
       for {
         symbolDefinition <- index.definition(Symbol(symbol))
         destinationDoc = semanticdbs.textDocument(symbolDefinition.path) match {
-          case TextDocumentLookup.Success(d) => d
-          case TextDocumentLookup.Stale(_, _, d) => d
+//          case TextDocumentLookup.Success(d) => d
+//          case TextDocumentLookup.Stale(_, _, d) => d
           case _ =>
             // Compute SemanticDB on-the-fly with Mtags, we read text contents from
             // disk instead of buffers because text on disk is more likely to

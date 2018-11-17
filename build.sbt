@@ -76,7 +76,8 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.7"
-  val scalameta = MetalsPlugin.semanticdbVersion
+  val scalameta = "4.0.0"
+  val bloop = "121807cc"
 }
 
 skip.in(publish) := true
@@ -94,6 +95,9 @@ lazy val metals = project
     fork.in(Compile, run) := true,
     resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
     libraryDependencies ++= List(
+      "io.undertow" % "undertow-core" % "2.0.13.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.6.5.Final",
+      "io.methvin" % "directory-watcher" % "0.8.0",
       "org.flywaydb" % "flyway-core" % "5.2.1",
       "com.h2database" % "h2" % "1.4.197",
       "com.geirsson" %% "coursier-small" % "1.1.0", // needed due to bincompat with jvm-directories
@@ -114,6 +118,8 @@ lazy val metals = project
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
+      "metalsVersion" -> version.value,
+      "bloopVersion" -> V.bloop,
       "scalametaVersion" -> V.scalameta,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212
@@ -126,6 +132,7 @@ lazy val `sbt-metals` = project
   .settings(
     sbtPlugin := true,
     crossScalaVersions := List(V.scala212, V.scala210),
+    addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % V.bloop),
     sbtVersion in pluginCrossBuild := {
       scalaBinaryVersion.value match {
         case "2.10" => "0.13.17"
