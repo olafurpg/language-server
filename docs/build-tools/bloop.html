@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Bloop · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;&lt;a href=&quot;https://scalacenter.github.io/bloop/docs/installation/#sbt&quot;&gt;Bloop&lt;/a&gt; is a compile&lt;/p&gt;
+"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Bloop · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="&lt;p&gt;&lt;a href=&quot;https://scalacenter.github.io/bloop/docs/installation/#sbt&quot;&gt;Bloop&lt;/a&gt; is a compile&lt;/p&gt;
+"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/overview.html" target="_self">Docs</a></li><li class=""><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/olafurpg/metals/edit/master/docs/build-tools/bloop.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Bloop</h1></header><article><div><span><p><a href="https://scalacenter.github.io/bloop/docs/installation/#sbt">Bloop</a> is a compile
+server for Scala that works with sbt and has experimental support for other
+build tools like Maven, Gradle and Mill. If your workspace contains a <code>.bloop/</code>
+directory with Bloop JSON files then Metals will automatically connect to it.</p>
+<p>To manually tell Metals to connect with Bloop, run the &quot;Connect to build server&quot;
+(<code>build.connect</code>) command. In VS Code, open the the &quot;Command palette&quot;
+(<code>Cmd + Shift + P</code>) and search &quot;connect to build server&quot;.</p>
+<p><img src="/metals/docs/assets/vscode-connect-build-server.png" alt="Import connect to build server command"></p>
+<p>Metals works with Bloop v1.1.0+.</p>
+<ul>
+<li>If you have a compatible version of Bloop installed on your machine then
+Metals will connect to that server instance.</li>
+<li>If you don't have Bloop installed on your machine or the installed version is
+outdated then Metals will start its own Bloop server instance that shuts down
+when Metals exits.</li>
+</ul>
+</span></div></article></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="
+                /metals/docs/overview.html">Project Goals</a><a href="
+                /metals/docs/getting-started-contributors.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2018 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
