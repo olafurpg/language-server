@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import scala.meta.io.AbsolutePath
 import MetalsEnrichments._
+import scala.meta.internal.io.PathIO
 
 final class BuildTools(workspace: AbsolutePath) {
   // Naive implementations to detect which build tool is being used,
@@ -16,7 +17,18 @@ final class BuildTools(workspace: AbsolutePath) {
       hasJsonFile
     }
   }
-  def isSbt: Boolean = workspace.resolve("build.sbt").isFile
+  def isSbt: Boolean = {
+    workspace.resolve("build.sbt").isFile || {
+      workspace.resolve("project").isDirectory &&
+      workspace.resolve("project").resolve("build.properties").isFile && {
+        val ls = Files.list(workspace.resolve("project").toNIO)
+        val hasSbtFile =
+          ls.iterator().asScala.exists(_.getFileName.toString.endsWith(".sbt"))
+        ls.close()
+        hasSbtFile
+      }
+    }
+  }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
   def isGradle: Boolean = workspace.resolve("build.gradle").isFile
   def isMaven: Boolean = workspace.resolve("pom.xml").isFile
@@ -37,5 +49,9 @@ final class BuildTools(workspace: AbsolutePath) {
     if (isBazel) buf += Bazel
     buf.result()
   }
-  override def toString: String = all.mkString("+")
+  override def toString: String = {
+    val names = all.mkString("+")
+    if (names.isEmpty) "<no build tool>"
+    else names
+  }
 }

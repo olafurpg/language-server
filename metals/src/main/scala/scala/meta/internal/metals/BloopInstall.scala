@@ -58,8 +58,7 @@ final class BloopInstall(
       s"""-Dsbt.log.noformat=true""",
       s"""-Dfile.encoding=UTF-8""",
       s"""metalsEnable""",
-      s"""bloopInstall""",
-      s"""exit"""
+      s"""bloopInstall"""
     )
     val pb = new NuProcessBuilder(handler, args.asJava)
     pb.setCwd(workspace.toNIO)
@@ -207,13 +206,17 @@ object BloopInstall {
   }
 
   private def writeGlobalPluginFile(sbt: Sbt): Unit = {
-    val destination =
+    val plugins =
       if (sbt.version.startsWith("0.13")) pluginsDirectory("0.13")
       else pluginsDirectory("1.0")
-    Files.write(
-      destination.resolve("metals.sbt").toNIO,
-      globalMetalsSbt.getBytes(StandardCharsets.UTF_8)
-    )
+    Files.createDirectories(plugins.toNIO)
+    val bytes = globalMetalsSbt.getBytes(StandardCharsets.UTF_8)
+    val destination = plugins.resolve("metals.sbt")
+    if (destination.isFile && destination.readAllBytes.sameElements(bytes)) {
+      () // do nothing
+    } else {
+      Files.write(destination.toNIO, bytes)
+    }
   }
 
   /**
@@ -224,20 +227,20 @@ object BloopInstall {
         |// By default, this file does not do anything.
         |// If the environment variable METALS_ENABLED has the value 'true',
         |// then this file enables sbt-metals and sbt-bloop.
-        |val bloopModule = "ch.epfl.scala" % "sbt-bloop" % "${BuildInfo.bloopVersion}"
-        |val metalsModule = "org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"
         |libraryDependencies := {
         |  import Defaults.sbtPluginExtra
-        |  val oldDependencies = libraryDependencies.value.filterNot { dep =>
-        |    (dep.organization == "ch.epfl.scala" && dep.name == "sbt-bloop") ||
-        |    (dep.organization == "org.scalameta" && dep.name == "sbt-metals")
-        |  }
+        |  val oldDependencies = libraryDependencies.value
         |  if (System.getenv("METALS_ENABLED") == "true") {
+        |    val bloopModule = "ch.epfl.scala" % "sbt-bloop" % "${BuildInfo.bloopVersion}"
+        |    val metalsModule = "org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"
         |    val sbtVersion = Keys.sbtBinaryVersion.in(pluginCrossBuild).value
         |    val scalaVersion = Keys.scalaBinaryVersion.in(update).value
         |    val bloopPlugin = sbtPluginExtra(bloopModule, sbtVersion, scalaVersion)
         |    val metalsPlugin = sbtPluginExtra(metalsModule, sbtVersion, scalaVersion)
-        |    List(bloopPlugin, metalsPlugin) ++ oldDependencies
+        |    List(bloopPlugin, metalsPlugin) ++ oldDependencies.filterNot { dep =>
+        |      (dep.organization == "ch.epfl.scala" && dep.name == "sbt-bloop") ||
+        |      (dep.organization == "org.scalameta" && dep.name == "sbt-metals")
+        |    }
         |  } else {
         |    oldDependencies
         |  }
