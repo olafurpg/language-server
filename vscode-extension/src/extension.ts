@@ -34,7 +34,7 @@ export async function activate(context: ExtensionContext) {
 
   const javaArgs = [
     `-Dmetals.extensions=true`,
-    `-Dmetals.http=true`,
+    `-Dmetals.http=false`,
     `-Dmetals.icons=octicons`,
     `-Xss4m`,
     `-Xms1G`,
