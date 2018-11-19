@@ -57,7 +57,7 @@ package scala.meta.sbt {
             s"-Xplugin-require:semanticdb"
           ),
           libraryDependencies.in(p) += compilerPlugin(
-            "org.scalameta" % s"semanticdb-scalac_${projectScalaVersion}" % semanticdbVersion
+            "org.scalameta" % s"semanticdb-scalac_$projectScalaVersion" % semanticdbVersion
           )
         )
       } yield setting

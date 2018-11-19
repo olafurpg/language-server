@@ -38,7 +38,8 @@ class MetalsLanguageServer(
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
-    config: MetalsServerConfig = MetalsServerConfig.default
+    config: MetalsServerConfig = MetalsServerConfig.default,
+    icons: Icons = Icons.default
 ) extends Cancelable
     with AutoCloseable {
 
@@ -52,6 +53,7 @@ class MetalsLanguageServer(
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
+  private val messages = new Messages(icons)
 
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = cancelables.cancel()
@@ -85,6 +87,7 @@ class MetalsLanguageServer(
   }
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
+    startHttpServer()
     tables = register(Tables.forWorkspace(workspace, time))
     buildTools = new BuildTools(workspace)
     buildTargets = new BuildTargets()
@@ -96,13 +99,22 @@ class MetalsLanguageServer(
         buildTargets,
         charset,
         languageClient,
-        tables
+        tables,
+        messages
       )
     )
     diagnostics = new Diagnostics(buildTargets, languageClient)
     buildClient = new ForwardingMetalsBuildClient(languageClient, diagnostics)
     bloopInstall = register(
-      new BloopInstall(workspace, languageClient, sh, buildTools, time, tables)
+      new BloopInstall(
+        workspace,
+        languageClient,
+        sh,
+        buildTools,
+        time,
+        tables,
+        messages
+      )
     )
     bloopServers = new BloopServers(sh, workspace, buildClient, config)
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
@@ -112,8 +124,14 @@ class MetalsLanguageServer(
         interactiveSemanticdbs
       )
     )
-    definitionProvider =
-      new DefinitionProvider(workspace, mtags, buffers, index, semanticdbs)
+    definitionProvider = new DefinitionProvider(
+      workspace,
+      mtags,
+      buffers,
+      index,
+      semanticdbs,
+      icons
+    )
 
     cancelables
       .add(interactiveSemanticdbs)
@@ -174,17 +192,24 @@ class MetalsLanguageServer(
     }
   }
 
-  def startHttpServer(): Unit = {
+  private def startHttpServer(): Unit = {
     if (config.isHttpEnabled) {
       val host = "localhost"
       val port = 5031
       val url = s"http://$host:$port"
       var render: () => String = () => ""
       val server = MetalsHttpServer(host, port, this, () => render())
-      val newClient =
-        new MetalsHttpClient(url, languageClient, () => server.reload)
+      val newClient = new MetalsHttpClient(
+        workspace,
+        url,
+        languageClient,
+        () => server.reload(),
+        charset,
+        icons
+      )
       render = () => newClient.renderHtml
       languageClient = newClient
+      LanguageClientLogger.languageClient = Some(newClient)
       server.start()
       cancelables.add(Cancelable(() => server.stop()))
     }
@@ -193,7 +218,6 @@ class MetalsLanguageServer(
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
-    startHttpServer()
     scribe.info(config.toString)
     Future
       .sequence(
@@ -365,13 +389,13 @@ class MetalsLanguageServer(
           else if (result.isFailed) {
             if (buildTools.isBloop) {
               // TODO(olafur) try to connect but gracefully error
-              languageClient.showMessage(Messages.ImportProjectPartiallyFailed)
+              languageClient.showMessage(messages.ImportProjectPartiallyFailed)
               // Connect nevertheless, many build import failures are caused
               // by resolution errors in one weird module while other modules
               // exported successfully.
               quickConnectToBuildServer()
             } else {
-              languageClient.showMessage(Messages.ImportProjectFailed)
+              languageClient.showMessage(messages.ImportProjectFailed)
               Future.successful(BuildChange.Failed)
             }
           } else {
@@ -404,7 +428,7 @@ class MetalsLanguageServer(
 
       for {
         _ <- importingBuild.trackInStatusBar("Importing build")
-        _ = statusBar.addMessage("$(rocket) Imported build!")
+        _ = statusBar.addMessage(s"${icons.rocket}Imported build!")
         _ <- compileSourceFiles(buffers.open.toSeq)
       } yield BuildChange.Reconnected
     }
@@ -469,7 +493,7 @@ class MetalsLanguageServer(
         scribe.info(s"time: $didWhat in $elapsed")
       }
       if (reportStatus && elapsed.isHumanVisible && e.isSuccess) {
-        statusBar.addMessage(s"$$(check) $didWhat in $elapsed")
+        statusBar.addMessage(s"${icons.check}$didWhat in $elapsed")
       }
     }
     result
@@ -548,7 +572,10 @@ class MetalsLanguageServer(
               build
                 .compile(params)
                 .asScala
-            }.trackInStatusBar(s"$$(sync) Compiling$name", showDots = false)
+            }.trackInStatusBar(
+                s"${icons.sync}Compiling$name",
+                showDots = false
+              )
               .ignoreValue
               .map(_ => true)
               .recover {
@@ -559,7 +586,7 @@ class MetalsLanguageServer(
             if (!isSuccess) {
               statusBar.addMessage(
                 MetalsStatusParams(
-                  "$(alert) Compile error",
+                  s"${icons.alert} Compile error",
                   command = ClientCommands.FocusDiagnostics
                 )
               )

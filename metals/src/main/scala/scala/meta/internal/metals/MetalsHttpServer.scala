@@ -14,8 +14,12 @@ import io.undertow.websockets.core.WebSocketChannel
 import io.undertow.websockets.core.WebSockets
 import io.undertow.websockets.spi.WebSocketHttpExchange
 import java.nio.charset.StandardCharsets
+import java.util.Collections
+import org.eclipse.lsp4j.ExecuteCommandParams
 import scala.collection.mutable
 import scala.meta.internal.io.InputStreamIO
+import MetalsEnrichments._
+import io.undertow.util.StatusCodes
 
 final class MetalsHttpServer private (
     languageServer: MetalsLanguageServer,
@@ -63,6 +67,26 @@ object MetalsHttpServer {
     val baseHandler =
       path()
         .addExactPath("/livereload.js", staticResource("/livereload.js"))
+        .addPrefixPath(
+          "/execute-command",
+          new HttpHandler {
+            override def handleRequest(exchange: HttpServerExchange): Unit = {
+              val command = for {
+                params <- Option(exchange.getQueryParameters.get("command"))
+                command <- params.asScala.headOption
+              } yield command
+              languageServer.executeCommand(
+                new ExecuteCommandParams(
+                  command.getOrElse("<unknown command>"),
+                  Collections.emptyList()
+                )
+              )
+              exchange.setStatusCode(StatusCodes.SEE_OTHER)
+              exchange.getResponseHeaders.put(Headers.LOCATION, "/")
+              exchange.endExchange()
+            }
+          }
+        )
         .addPrefixPath(
           "/livereload",
           websocket(new LiveReloadConnectionCallback(openChannels))

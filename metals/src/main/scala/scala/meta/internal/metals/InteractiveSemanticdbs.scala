@@ -16,7 +16,6 @@ import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.Messages.Only212Navigation
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
@@ -40,10 +39,12 @@ final class InteractiveSemanticdbs(
     buildTargets: BuildTargets,
     charset: Charset,
     client: MetalsLanguageClient,
-    tables: Tables
+    tables: Tables,
+    messages: Messages
 )(implicit statusBar: StatusBar, ec: ExecutionContext)
     extends Cancelable
     with Semanticdbs {
+  import messages._
   private val activeDocument = new AtomicReference[Option[String]](None)
   private val globalCache = Collections.synchronizedMap(
     new java.util.HashMap[BuildTargetIdentifier, Global]
@@ -136,7 +137,7 @@ final class InteractiveSemanticdbs(
           new l.Diagnostic(range.toLSP, diag.message, severity, "scala")
         }
         if (diagnostics.nonEmpty) {
-          statusBar.addMessage(Messages.PartialNavigation)
+          statusBar.addMessage(PartialNavigation)
           client.publishDiagnostics(
             new PublishDiagnosticsParams(doc.uri, diagnostics.asJava)
           )

@@ -19,9 +19,13 @@ object GlobalTrace {
     setupTracePrinter(protocolName)
   }
 
-  def setupTracePrinter(protocolName: String): PrintWriter = {
+  def protocolTracePath(protocolName: String): AbsolutePath = {
     val traceFilename = s"${protocolName.toLowerCase}.trace.json"
-    val tracePath = globalLoggingDirectory.resolve(traceFilename)
+    globalLoggingDirectory.resolve(traceFilename)
+  }
+
+  def setupTracePrinter(protocolName: String): PrintWriter = {
+    val tracePath = protocolTracePath(protocolName)
     val path = tracePath.toString()
     if (tracePath.isFile) {
       scribe.info(s"Tracing is enabled: $path")

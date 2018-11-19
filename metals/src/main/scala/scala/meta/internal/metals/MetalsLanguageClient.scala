@@ -34,8 +34,7 @@ trait MetalsLanguageClient extends LanguageClient {
 /**
  * Arguments for the metals/status notification.
  *
- * @param text The text to display in the status bar. May contains "$(alert)" formatted
- *            emojis from https://octicons.github.com/
+ * @param text The text to display in the status bar.
  * @param show if true, show the status bar.
  * @param hide if true, hide the status bar.
  * @param tooltip optional display this message when the user hovers over the status bar item.

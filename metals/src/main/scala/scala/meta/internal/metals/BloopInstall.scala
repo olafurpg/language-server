@@ -16,7 +16,6 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.metals.BuildTool.Sbt
-import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SbtChecksum.Status
 import scala.meta.io.AbsolutePath
@@ -36,9 +35,11 @@ final class BloopInstall(
     sh: ScheduledExecutorService,
     buildTools: BuildTools,
     time: Time,
-    tables: Tables
+    tables: Tables,
+    messages: Messages
 )(implicit ec: ExecutionContext, statusBar: StatusBar)
     extends Cancelable {
+  import messages._
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = {
     cancelables.cancel()
@@ -113,11 +114,7 @@ final class BloopInstall(
     } yield {
       tables.sbtChecksums.setStatus(current, Status.Requested)
       for {
-        userResponse <- BloopInstall.requestImport(
-          buildTools,
-          languageClient,
-          forceImport
-        )
+        userResponse <- requestImport(buildTools, languageClient, forceImport)
         installResult <- {
           if (userResponse.isYes) {
             SbtChecksum
@@ -142,32 +139,6 @@ final class BloopInstall(
     }
   }.getOrElse(Future.successful(BloopInstallResult.Unchanged))
 
-  private val pendingNotification = new AtomicBoolean(false)
-  private def reportUnsupportedSbtVersion(sbt: Sbt): Unit = {
-    statusBar.addMessage(IncompatibleSbtVersion.statusBar(sbt))
-    val notification = tables.dismissedNotifications.IncompatibleSbt
-    if (!notification.isDismissed &&
-      pendingNotification.compareAndSet(false, true)) {
-      languageClient
-        .showMessageRequest(IncompatibleSbtVersion.params(sbt))
-        .asScala
-        .foreach { item =>
-          pendingNotification.set(false)
-          if (item == IncompatibleSbtVersion.dismissForever) {
-            notification.dismissForever()
-          } else if (item == IncompatibleSbtVersion.learnMore) {
-            Urls.openBrowser(IncompatibleSbtVersion.learnMoreUrl)
-          } else {
-            notification.dismiss(1, TimeUnit.DAYS)
-          }
-        }
-    }
-  }
-
-}
-
-object BloopInstall {
-
   private def requestImport(
       buildTools: BuildTools,
       languageClient: MetalsLanguageClient,
@@ -190,6 +161,10 @@ object BloopInstall {
         }
     }
   }
+
+}
+
+object BloopInstall {
 
   // Creates ~/.sbt/1.0/plugins if it doesn't exist, see
   // https://github.com/sbt/sbt/issues/4395

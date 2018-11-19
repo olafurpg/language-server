@@ -34,7 +34,8 @@ final class DefinitionProvider(
     mtags: Mtags,
     buffers: Buffers,
     index: GlobalSymbolIndex,
-    semanticdbs: Semanticdbs
+    semanticdbs: Semanticdbs,
+    icons: Icons
 )(implicit statusBar: StatusBar) {
 
   def definition(
@@ -43,7 +44,7 @@ final class DefinitionProvider(
   ): DefinitionResult = {
     semanticdbs.textDocument(path).toOption match {
       case None =>
-        statusBar.addMessage("$(alert) No SemanticDB")
+        statusBar.addMessage(s"${icons.alert} No SemanticDB")
         DefinitionResult.empty
       case Some(doc) =>
         definitionFromSnapshot(path, params, doc)

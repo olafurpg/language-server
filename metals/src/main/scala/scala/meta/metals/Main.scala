@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.GlobalTrace
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
@@ -24,7 +25,8 @@ object Main {
       ExecutionContext.fromExecutorService(exec),
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
-      config = config
+      config = config,
+      icons = Icons.default
     )
     try {
       val remoteInterface =
