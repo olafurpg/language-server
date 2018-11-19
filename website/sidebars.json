@@ -8,6 +8,8 @@
       "contributors/new-editor",
       "contributors/new-build-tool"
     ],
-    "Users": ["users/installation", "users/import-build"]
+    "Build Tools": ["build-tools/overview", "build-tools/sbt"],
+    "Text Editors": ["editors/sublime"],
+    "Users": ["users/installation"]
   }
 }

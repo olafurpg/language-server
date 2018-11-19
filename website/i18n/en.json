@@ -5,6 +5,16 @@
     "previous": "Previous",
     "tagline": "Work-in-progress language server for Scala",
     "docs": {
+      "build-tools/bloop": {
+        "title": "Bloop"
+      },
+      "build-tools/overview": {
+        "title": "Build Tools Overview",
+        "sidebar_label": "Overview"
+      },
+      "build-tools/sbt": {
+        "title": "sbt"
+      },
       "contributors/getting-started": {
         "title": "Contributing to Metals"
       },
@@ -17,14 +27,42 @@
       "contributors/updating-website": {
         "title": "Contributing to the website"
       },
+      "editors/overview": {
+        "title": "Text Editors Overview",
+        "sidebar_label": "Overview"
+      },
+      "editors/sublime": {
+        "title": "Sublime Text"
+      },
+      "getting-started-contributors": {
+        "title": "Contributing to Metals"
+      },
+      "installation-contributors": {
+        "title": "Installation"
+      },
+      "installation-users": {
+        "title": "Installation"
+      },
+      "new-build-tool": {
+        "title": "Integrating a new build tool"
+      },
+      "new-editor": {
+        "title": "Integrating a new editor"
+      },
       "overview": {
         "title": "Project Goals"
+      },
+      "troubleshooting": {
+        "title": "Troubleshooting"
       },
       "users/import-build": {
         "title": "Importing a build"
       },
       "users/installation": {
         "title": "Installation"
+      },
+      "website": {
+        "title": "Contributing to the website"
       }
     },
     "links": {
@@ -35,6 +73,8 @@
       "Docusaurus": "Docusaurus",
       "Overview": "Overview",
       "Contributors": "Contributors",
+      "Build Tools": "Build Tools",
+      "Text Editors": "Text Editors",
       "Users": "Users"
     }
   },
