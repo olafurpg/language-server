@@ -98,11 +98,13 @@ the editor.</p>
 triggered on file save for the build target (project/module) containing the
 focused text file.</p>
 <p><img src="https://user-images.githubusercontent.com/1408093/48774587-f4d5c780-ecca-11e8-8087-acca5a05ca78.png" alt="Diagnostics"></p>
-<blockquote>
-<p>Compilation is handled by the build tool, meaning diagnostics may take a while
-to publish for large projects. The batch compilation mode used by build tools
-is slower than the interactive compiler used by IntelliJ as you type.</p>
-</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="known-limitations"></a><a href="#known-limitations" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Known limitations</h3>
+<ul>
+<li>Slow feedback. Compilation is handled by the build tool, meaning diagnostics
+may take a while to publish for large projects. The batch compilation mode
+used by build tools is slower than the interactive compiler used by IntelliJ
+as you type.</li>
+</ul>
 <h2><a class="anchor" aria-hidden="true" id="goto-definition"></a><a href="#goto-definition" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Goto definition</h2>
 <p>Navigate to symbol definitions for project sources and Scala/Java library
 dependencies.</p>
@@ -110,11 +112,20 @@ dependencies.</p>
 tool and navigation continues to work despite syntax errors in the open unsaved
 buffer.</p>
 <p><img src="https://user-images.githubusercontent.com/1408093/48776422-1f764f00-ecd0-11e8-96d1-170f2354d50e.gif" alt="Goto Definition"></p>
-<blockquote>
-<p>Navigation does not work for identifiers that have just been typed in unsaved
-editor buffers. An identifiers must compile successfully at least once in
-order to resolve to a definition.</p>
-</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="known-limitations-1"></a><a href="#known-limitations-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Known limitations</h3>
+<ul>
+<li>Navigation does not work for identifiers that have just been typed in unsaved
+editor buffer. An identifier must compile successfully at least once in order
+to resolve to a definition.</li>
+<li>Navigation does not work for buffers that do not tokenize, for example due to
+unclosed string literals.</li>
+<li><a href="https://github.com/scalameta/scalameta/issues/1780">scalameta/scalameta#1780</a>
+extension methods sometimes resolve to the implicit conversion method instead
+of the extension method.</li>
+<li><a href="https://github.com/scalameta/scalameta/issues/1802">scalameta/scalameta#1802</a>
+reflective invocations (methods calls on structural types) do not resolve to a
+definition.</li>
+</ul>
 <h2><a class="anchor" aria-hidden="true" id="metals-extensions"></a><a href="#metals-extensions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Metals Extensions</h2>
 <p><strong>Status bar</strong>: Editor client implements the <code>metals/status</code> notification.</p>
 <p><strong>Did focus</strong>: Editor client implements the <code>metals/didFocus</code> notification.</p>
@@ -123,7 +134,7 @@ order to resolve to a definition.</p>
 <p>The Metals language server supports custom extensions that are not part of the
 Language Server Protocol (LSP). These extensions are not necessary for Metals to
 function but they improve the user experience. To learn more about Metals
-extensions, see <a href="editor.md">integrating a new editor</a>.</p>
+extensions, see <a href="new-editor.html">integrating a new editor</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="unsupported-features"></a><a href="#unsupported-features" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Unsupported features</h2>
 <p>Metals does not support the following features:</p>
 <ul>
@@ -135,9 +146,7 @@ extensions, see <a href="editor.md">integrating a new editor</a>.</p>
 <li>Formatting with Scalafmt</li>
 <li>Refactoring with Scalafix</li>
 </ul>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-next button" href="/metals/docs/editors/vscode.html"><span>Visual Studio Code</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#installation">Installation</a></li><li><a href="#build-import">Build import</a></li><li><a href="#diagnostics">Diagnostics</a></li><li><a href="#goto-definition">Goto definition</a></li><li><a href="#metals-extensions">Metals Extensions</a></li><li><a href="#unsupported-features">Unsupported features</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="
-                /metals/docs/overview.html">Project Goals</a><a href="
-                /metals/docs/getting-started-contributors.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2018 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-next button" href="/metals/docs/editors/vscode.html"><span>Visual Studio Code</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#installation">Installation</a></li><li><a href="#build-import">Build import</a></li><li><a href="#diagnostics">Diagnostics</a><ul class="toc-headings"><li><a href="#known-limitations">Known limitations</a></li></ul></li><li><a href="#goto-definition">Goto definition</a><ul class="toc-headings"><li><a href="#known-limitations-1">Known limitations</a></li></ul></li><li><a href="#metals-extensions">Metals Extensions</a></li><li><a href="#unsupported-features">Unsupported features</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2018 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;

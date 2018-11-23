@@ -31,11 +31,12 @@
 <a href="https://github.com/tomv564/LSP">tomv564/LSP</a>.</p>
 <p><img src="../assets/sublime-demo.gif" alt="Sublime Text demo"></p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
-<ul>
-<li>Java 8. Metals does not yet work with Java 11, see <a href="https://github.com/scalameta/scalameta/issues/1779">scalameta/scalameta#1779</a></li>
-<li>macOS, Linux or Windows. Metals is not developed on Windows but CI runs tests on Windows so
-please report issues if you encounter problems.</li>
-</ul>
+<p><strong>Java 8</strong>. Metals does not yet work with Java 11, see
+<a href="https://github.com/scalameta/scalameta/issues/1779">scalameta/scalameta#1779</a></p>
+<p><strong>macOS, Linux or Windows</strong>. Metals is developed on macOS and every PR is tested on Ubuntu+Windows.</p>
+<p><strong>Scala 2.12.7 and 2.11.12</strong>. Metals works only with the latest Scala 2.12 and 2.11 versions.
+See <a href="https://github.com/scalameta/scalameta/issues/1695">scalameta/scalameta#1695</a> for updates on
+adding support for Scala 2.13 once it's out.</p>
 <h2><a class="anchor" aria-hidden="true" id="installing-the-plugin"></a><a href="#installing-the-plugin" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing the plugin</h2>
 <p>First, install the LSP plugin:
 <code>Command Palette (Cmd + Shift + P) &gt; Install package &gt; LSP</code></p>
@@ -56,7 +57,7 @@ please report issues if you encounter problems.</li>
 Text LSP client.</p>
 <p>(optional) Feel free to place this binary anywhere on your <code>$PATH</code>, for example
 adapt the <code>-o</code> flag like this:</p>
-<pre><code class="hljs css language-diff"><span class="hljs-deletion">-  -o metals-vim -f</span>
+<pre><code class="hljs css language-diff"><span class="hljs-deletion">-  -o metals-sublime -f</span>
 <span class="hljs-addition">+  -o /usr/local/bin/metals-sublime -f</span>
 </code></pre>
 <p>Next, update the LSP plugin settings to run <code>metals-sublime</code> for Scala sources:
@@ -116,9 +117,7 @@ it necessary to import the build via the browser instead of inside the editor.</
 <li><p>The Sublime Text client uses an invasive alert window for
 <code>window/showMessage</code>, so Metals uses <code>window/logMessage</code> instead.</p></li>
 </ul>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/vim.html"><span class="arrow-prev">← </span><span>Vim</span></a><a class="docs-next button" href="/metals/docs/editors/new-editor.html"><span>Integrating a new editor</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugin">Installing the plugin</a></li><li><a href="#importing-a-build">Importing a build</a></li><li><a href="#known-issues">Known issues</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="
-                /metals/docs/overview.html">Project Goals</a><a href="
-                /metals/docs/getting-started-contributors.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2018 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/vim.html"><span class="arrow-prev">← </span><span>Vim</span></a><a class="docs-next button" href="/metals/docs/editors/new-editor.html"><span>Integrating a new editor</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugin">Installing the plugin</a></li><li><a href="#importing-a-build">Importing a build</a></li><li><a href="#known-issues">Known issues</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/olafurpg/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2018 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
