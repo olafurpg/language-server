@@ -41,25 +41,27 @@ adding support for Scala 2.13 once it's out.</p>
 <p>First, install the LSP plugin:
 <code>Command Palette (Cmd + Shift + P) &gt; Install package &gt; LSP</code></p>
 <p>Next, build a <code>metals-sublime</code> binary using the
-<a href="https://github.com/coursier/coursier">Coursier</a> command-line interface.</p>
-<pre><code class="hljs css language-sh">coursier bootstrap \
+<a href="https://github.com/coursier/coursier">Coursier</a> (v1.1+) command-line interface.</p>
+<pre><code class="hljs css language-sh">curl -L -o coursier https://git.io/coursier &amp;&amp;
+    chmod +x coursier &amp;&amp;
+./coursier bootstrap \
   --java-opt -XX:+UseG1GC \
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms1G \
   --java-opt -Xmx4G  \
   --java-opt -Dmetals.client=sublime \
-  org.scalameta:metals_2.12:SNAPSHOT \
+  org.scalameta:metals_2.12:0.2.0-SNAPSHOT \
   -r bintray:scalacenter/releases \
   -o metals-sublime -f
 </code></pre>
-<p>The <code>-Dmetals.client=sublime</code> flag configures Metals for usage with the Sublime
-Text LSP client.</p>
 <p>(optional) Feel free to place this binary anywhere on your <code>$PATH</code>, for example
 adapt the <code>-o</code> flag like this:</p>
 <pre><code class="hljs css language-diff"><span class="hljs-deletion">-  -o metals-sublime -f</span>
 <span class="hljs-addition">+  -o /usr/local/bin/metals-sublime -f</span>
 </code></pre>
+<p>The <code>-Dmetals.client=sublime</code> flag configures Metals for usage with the Sublime
+Text LSP client.</p>
 <p>Next, update the LSP plugin settings to run <code>metals-sublime</code> for Scala sources:
 <code>Command Palette (Cmd + Shift + P) &gt; LSP Settings</code>. Update the JSON file to
 include the Metals server.</p>

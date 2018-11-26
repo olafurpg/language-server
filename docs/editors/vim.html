@@ -51,25 +51,27 @@ Plug <span class="hljs-string">'derekwyatt/vim-scala'</span>
 Plug <span class="hljs-string">'natebosch/vim-lsc'</span>
 </code></pre>
 <p>Next, build a <code>metals-vim</code> binary using the
-<a href="https://github.com/coursier/coursier">Coursier</a> command-line interface.</p>
-<pre><code class="hljs css language-sh">coursier bootstrap \
+<a href="https://github.com/coursier/coursier">Coursier</a> (v1.1+) command-line interface.</p>
+<pre><code class="hljs css language-sh">curl -L -o coursier https://git.io/coursier &amp;&amp;
+    chmod +x coursier &amp;&amp;
+./coursier bootstrap \
   --java-opt -XX:+UseG1GC \
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms1G \
   --java-opt -Xmx4G  \
   --java-opt -Dmetals.client=vim-lsc \
-  org.scalameta:metals_2.12:SNAPSHOT \
+  org.scalameta:metals_2.12:0.2.0-SNAPSHOT \
   -r bintray:scalacenter/releases \
   -o metals-vim -f
 </code></pre>
-<p>The <code>-Dmetals.client=vim-lsc</code> flag configures Metals for usage with the
-<code>vim-lsc</code> client.</p>
 <p>(optional) Feel free to place this binary anywhere on your <code>$PATH</code>, for example
 adapt the <code>-o</code> flag like this:</p>
 <pre><code class="hljs css language-diff"><span class="hljs-deletion">-  -o metals-vim -f</span>
 <span class="hljs-addition">+  -o /usr/local/bin/metals-vim -f</span>
 </code></pre>
+<p>The <code>-Dmetals.client=vim-lsc</code> flag configures Metals for usage with the
+<code>vim-lsc</code> client.</p>
 <p>Next, update <code>~/.vimrc</code> to tell <code>vim-lsc</code> to use <code>metals-vim</code> for Scala sources
 and map <code>gd</code> to run &quot;Goto definition&quot;.</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
