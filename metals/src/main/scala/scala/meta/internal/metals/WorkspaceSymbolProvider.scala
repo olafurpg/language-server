@@ -19,20 +19,22 @@ import scala.meta.io.Classpath
 import scala.meta.internal.io._
 import scala.reflect.NameTransformer
 
-class WorkspaceSymbolProvider(
-    buildTargets: BuildTargets,
-    workspace: AbsolutePath
-) {
-  def dummyLocation: Location = {
-    new Location(
-      workspace.resolve("build.sbt").toURI.toString,
-      new l.Range(
-        new l.Position(0, 0),
-        new l.Position(0, 0)
+object WorkspaceSymbolProvider {
+  def symbol(
+      buildTargets: BuildTargets,
+      workspace: AbsolutePath,
+      query: String
+  ): util.List[SymbolInformation] = {
+    if (query.trim.isEmpty) return null
+    def dummyLocation: Location = {
+      new Location(
+        workspace.resolve("build.sbt").toURI.toString,
+        new l.Range(
+          new l.Position(0, 0),
+          new l.Position(0, 0)
+        )
       )
-    )
-  }
-  def symbol(query: String): util.List[SymbolInformation] = {
+    }
     val classpath = mutable.Set.empty[AbsolutePath]
     buildTargets.all.foreach { target =>
       classpath ++= target.scalac.classpath.entries
@@ -47,9 +49,9 @@ class WorkspaceSymbolProvider(
               attrs: BasicFileAttributes
           ): FileVisitResult = {
             if (PathIO.extension(file) == "class") {
-              val relpath = AbsolutePath(file).toRelative(dir)
-              val reluri = relpath.toURI(false).toString
-              if (isSubstring(query, reluri)) {
+              if (isSubstring(query, file.getFileName.toString)) {
+                val relpath = AbsolutePath(file).toRelative(dir)
+                val reluri = relpath.toURI(false).toString
                 results.add(
                   new SymbolInformation(
                     file.getFileName.toString,
@@ -107,7 +109,12 @@ class WorkspaceSymbolProvider(
     if (haystack.endsWith("$.class")) {
       false
     } else {
-      isSubstring(needle, needle.length - 1, haystack, haystack.length - 1)
+      isSubstring(
+        needle,
+        needle.length - 1,
+        haystack,
+        haystack.length - "$.class".length
+      )
     }
   }
 

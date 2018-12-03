@@ -22,6 +22,7 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceSymbolParams
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
@@ -227,6 +228,10 @@ final class TestingServer(
         s"/$relpath\n$printedTextDocument"
       }
       .mkString("\n")
+  }
+
+  def workspaceSymbol(query: String): String = {
+    server.workspaceSymbolResult(query).asScala.map(_.getName).mkString("\n")
   }
 
   def cancel(): Unit = {

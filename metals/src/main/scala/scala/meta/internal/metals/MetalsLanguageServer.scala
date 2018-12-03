@@ -191,6 +191,7 @@ class MetalsLanguageServer(
       initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
+      capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setExecuteCommandProvider(
         new ExecuteCommandOptions(
           ServerCommands.all.map(_.id).asJava
@@ -484,9 +485,10 @@ class MetalsLanguageServer(
       params: WorkspaceSymbolParams
   ): CompletableFuture[util.List[SymbolInformation]] =
     CompletableFutures.computeAsync { _ =>
-      new WorkspaceSymbolProvider(buildTargets, workspace)
-        .symbol(params.getQuery)
+      workspaceSymbolResult(params.getQuery)
     }
+  def workspaceSymbolResult(query: String): util.List[SymbolInformation] =
+    WorkspaceSymbolProvider.symbol(buildTargets, workspace, query)
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(

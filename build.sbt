@@ -164,6 +164,7 @@ lazy val metals = project
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % V.pprint,
       // for producing SemanticDB from Scala source files
+      "org.scalameta" %% "symtab" % V.scalameta,
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
     ),
