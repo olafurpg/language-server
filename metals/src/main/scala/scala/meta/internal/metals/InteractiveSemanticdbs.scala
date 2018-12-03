@@ -186,9 +186,8 @@ final class InteractiveSemanticdbs(
   }
 
   private def newGlobal(item: ScalacOptionsItem): Global = {
-    val classpath = item.getClasspath.asScala.iterator
-      .map(uri => Paths.get(URI.create(uri)))
-      .filterNot(path => Files.isDirectory(path))
+    val classpath = item.classpath.entries
+      .filterNot(_.isDirectory)
       .mkString(java.io.File.pathSeparator)
     val scalacOptions = item.getOptions.asScala.iterator
       .filterNot(_.isNonJVMPlatformOption)

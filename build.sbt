@@ -95,6 +95,7 @@ lazy val V = new {
   val bsp = "2.0.0-M2"
   val sbtBloop = "121807cc"
   val bloop = "1.0.0+417-35327239"
+  val pprint = "0.5.3"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions = Seq(
@@ -110,6 +111,7 @@ lazy val mtags = project
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
+      "com.lihaoyi" %% "pprint" % V.pprint,
       "org.scalameta" %% "scalameta" % V.scalameta
     )
   )
@@ -145,6 +147,8 @@ lazy val metals = project
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
       // for finding paths of global log/cache directories
       "io.github.soc" % "directories" % "11",
+      // for fuzzy workspace/symbol search
+      "me.xdrop" % "fuzzywuzzy" % "1.1.10",
       // ==================
       // Scala dependencies
       // ==================
@@ -158,7 +162,7 @@ lazy val metals = project
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.3",
+      "com.lihaoyi" %% "pprint" % V.pprint,
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full

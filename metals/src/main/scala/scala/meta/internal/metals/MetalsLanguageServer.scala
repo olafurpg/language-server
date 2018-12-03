@@ -23,6 +23,7 @@ import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -476,6 +477,15 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { _ =>
       definitionResult(position).locations
+    }
+
+  @JsonRequest("workspace/symbol")
+  def workspaceSymbol(
+      params: WorkspaceSymbolParams
+  ): CompletableFuture[util.List[SymbolInformation]] =
+    CompletableFutures.computeAsync { _ =>
+      new WorkspaceSymbolProvider(buildTargets, workspace)
+        .symbol(params.getQuery)
     }
 
   @JsonRequest("textDocument/typeDefinition")

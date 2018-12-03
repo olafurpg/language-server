@@ -173,6 +173,10 @@ class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
       scanner.curr.token match {
         case Open => count += 1
         case Close => count -= 1
+        case CLASS | OBJECT | TRAIT =>
+          acceptTrivia()
+          val name = newIdentifier
+          pprint.log(currentOwner -> name)
         case _ =>
       }
     }

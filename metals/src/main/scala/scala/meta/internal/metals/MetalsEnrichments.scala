@@ -26,6 +26,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
 import scala.util.Properties
 import scala.util.Try
 import scala.{meta => m}
@@ -326,6 +327,14 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
+    def classpath: Classpath = {
+      Classpath(
+        item.getClasspath.asScala.iterator
+          .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
+          .filter(p => Files.exists(p.toNIO))
+          .toList
+      )
+    }
     def isJVM: Boolean = {
       // FIXME: https://github.com/scalacenter/bloop/issues/700
       !item.getOptions.asScala.exists(_.isNonJVMPlatformOption)

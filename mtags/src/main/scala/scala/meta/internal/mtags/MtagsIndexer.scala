@@ -1,5 +1,6 @@
 package scala.meta.internal.mtags
 
+import scala.collection.mutable.ListBuffer
 import scala.meta.Name
 import scala.meta.Term
 import scala.meta.inputs.Input
@@ -20,14 +21,15 @@ trait MtagsIndexer {
       uri = input.path,
       text = input.text,
       language = language,
-      occurrences = names.result(),
-      symbols = symbols.result()
+      occurrences = names.toList,
+      symbols = symbols.toList
     )
   }
   private val root: String =
     Symbols.RootPackage
   var currentOwner: String = root
-  def owner = currentOwner
+  var lastCurrentOwner: String = root
+  def owner: String = currentOwner
   def withOwner[A](owner: String = currentOwner)(thunk: => A): A = {
     val old = currentOwner
     currentOwner = owner
@@ -107,8 +109,8 @@ trait MtagsIndexer {
       pkg(qual)
       currentOwner = symbol(Descriptor.Package(name))
   }
-  private val names = List.newBuilder[s.SymbolOccurrence]
-  private val symbols = List.newBuilder[s.SymbolInformation]
+  private val names = ListBuffer.empty[s.SymbolOccurrence]
+  private val symbols = ListBuffer.empty[s.SymbolInformation]
   private def addSignature(
       signature: Descriptor,
       definition: m.Position,
