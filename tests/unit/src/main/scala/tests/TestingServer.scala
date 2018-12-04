@@ -231,6 +231,7 @@ final class TestingServer(
   }
 
   def workspaceSymbol(query: String): String = {
+    Debug.printEnclosing()
     server.workspaceSymbolResult(query).asScala.map(_.getName).mkString("\n")
   }
 

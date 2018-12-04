@@ -12,54 +12,118 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.SymbolKind
 import scala.annotation.tailrec
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import scala.meta.io.Classpath
 import scala.meta.internal.io._
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.io.Classpath
 import scala.reflect.NameTransformer
+import scala.meta.internal.mtags.MtagsEnrichments._
+import MetalsEnrichments._
+import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.semanticdb.Scala
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
 
-object WorkspaceSymbolProvider {
-  def symbol(
-      buildTargets: BuildTargets,
-      workspace: AbsolutePath,
-      query: String
-  ): util.List[SymbolInformation] = {
+final class WorkspaceSymbolProvider(
+    mtags: Mtags,
+    index: GlobalSymbolIndex,
+    buildTargets: BuildTargets,
+    workspace: AbsolutePath
+) {
+  case class CachedFile(
+      source: AbsolutePath,
+      readonly: AbsolutePath,
+      semanticdb: TextDocument
+  )
+  private val cache = TrieMap.empty[AbsolutePath, CachedFile]
+  def search(query: String): util.List[SymbolInformation] = {
     if (query.trim.isEmpty) return null
-    def dummyLocation: Location = {
-      new Location(
-        workspace.resolve("build.sbt").toURI.toString,
-        new l.Range(
-          new l.Position(0, 0),
-          new l.Position(0, 0)
-        )
-      )
-    }
     val classpath = mutable.Set.empty[AbsolutePath]
+    classpath ++= JdkClasspath.bootClasspath.entries
     buildTargets.all.foreach { target =>
       classpath ++= target.scalac.classpath.entries
     }
     val results = new util.ArrayList[SymbolInformation]()
-    def expandDirectory(dir: AbsolutePath): Unit = {
+    Classpath(classpath.toList).foreach { root =>
       Files.walkFileTree(
-        dir.toNIO,
+        root.path.toNIO,
         new SimpleFileVisitor[Path] {
           override def visitFile(
               file: Path,
               attrs: BasicFileAttributes
           ): FileVisitResult = {
             if (PathIO.extension(file) == "class") {
-              if (isSubstring(query, file.getFileName.toString)) {
-                val relpath = AbsolutePath(file).toRelative(dir)
-                val reluri = relpath.toURI(false).toString
-                results.add(
-                  new SymbolInformation(
-                    file.getFileName.toString,
-                    SymbolKind.Class,
-                    dummyLocation,
-                    reluri
+              val filename = file.getFileName.toString
+              if (isSub(query, filename)) {
+                val dollar = filename.indexOf('$')
+                val symname =
+                  if (dollar < 0) filename.stripSuffix(".class")
+                  else filename.substring(0, dollar)
+                val owner =
+                  if (root.enclosingJar.isDefined) file.getParent.toString
+                  else root.pathOnDisk.toNIO.getParent.toString
+                val toplevel =
+                  Symbols.Global(
+                    owner.stripPrefix("/") + "/",
+                    Descriptor.Type(symname)
                   )
-                )
+                val d = index.definition(Symbol(toplevel))
+                d.foreach {
+                  defn =>
+                    val path = defn.path
+                    val cached = cache.getOrElseUpdate(
+                      path, {
+                        val input = path.toInput
+                        val readonly = path.toFileOnDisk(workspace)
+                        val semanticdb = mtags.index(path.toLanguage, input)
+                        CachedFile(path, readonly, semanticdb)
+                      }
+                    )
+                    for {
+                      sym <- cached.semanticdb.symbols
+                      if (sym.kind match {
+                        case Kind.CLASS | Kind.INTERFACE | Kind.TRAIT |
+                            Kind.OBJECT =>
+                          true
+                        case _ => false
+                      })
+                      if isSub(query, sym.displayName, isEncode = false)
+                    } {
+                      for {
+                        occ <- cached.semanticdb.occurrences
+                          .find(_.symbol == sym.symbol)
+                        range <- occ.range
+                      } {
+                        val location = new l.Location(
+                          cached.readonly.toURI.toString,
+                          new l.Range(
+                            new l.Position(
+                              range.startLine,
+                              range.startCharacter
+                            ),
+                            new l.Position(
+                              range.endLine,
+                              range.endCharacter
+                            )
+                          )
+                        )
+                        results.add(
+                          new l.SymbolInformation(
+                            sym.displayName,
+                            sym.kind.toLSP,
+                            location,
+                            sym.symbol
+                          )
+                        )
+                      }
+                    }
+                }
               }
             }
             FileVisitResult.CONTINUE
@@ -67,45 +131,15 @@ object WorkspaceSymbolProvider {
         }
       )
     }
-
-    def expandJar(jarpath: AbsolutePath): Unit = {
-      val file = jarpath.toFile
-      val jar = new JarFile(file)
-      try {
-        val entries = jar.entries()
-        while (entries.hasMoreElements) {
-          val element = entries.nextElement()
-          val name = element.getName
-          if (!name.startsWith("META-INF")) {
-            if (isSubstring(query, name)) {
-              results.add(
-                new SymbolInformation(
-                  PathIO.basename(name),
-                  SymbolKind.Class,
-                  dummyLocation,
-                  name
-                )
-              )
-            }
-          }
-        }
-      } finally {
-        jar.close()
-      }
-    }
-    classpath.foreach { entry =>
-      if (entry.isFile && PathIO.extension(entry.toNIO) == "jar") {
-        expandJar(entry)
-      } else if (entry.isDirectory) {
-        expandDirectory(entry)
-      } else {
-        ()
-      }
-    }
+    results.sort((a, b) => Integer.compare(a.getName.length, b.getName.length))
     results
   }
 
-  def isSubstring(needle: String, haystack: String): Boolean = {
+  def isSub(
+      needle: String,
+      haystack: String,
+      isEncode: Boolean = true
+  ): Boolean = {
     if (haystack.endsWith("$.class")) {
       false
     } else {
@@ -113,7 +147,8 @@ object WorkspaceSymbolProvider {
         needle,
         needle.length - 1,
         haystack,
-        haystack.length - "$.class".length
+        haystack.length - "$.class".length,
+        isEncode
       )
     }
   }
@@ -124,11 +159,12 @@ object WorkspaceSymbolProvider {
   }
 
   @tailrec
-  final def isSubstring(
+  def isSubstring(
       needle: String,
       n: Int,
       haystack: String,
       h: Int,
+      isEncode: Boolean,
       encodedChar: String = null
   ): Boolean = {
     if (n < 0) {
@@ -139,11 +175,11 @@ object WorkspaceSymbolProvider {
       false
     } else {
       val ch = needle.charAt(n)
-      if (Character.isLetterOrDigit(ch)) {
+      if (isEncode && Character.isLetterOrDigit(ch)) {
         if (needle.charAt(n) == haystack.charAt(h)) {
-          isSubstring(needle, n - 1, haystack, h - 1)
+          isSubstring(needle, n - 1, haystack, h - 1, isEncode)
         } else {
-          isSubstring(needle, n, haystack, h - 1)
+          isSubstring(needle, n, haystack, h - 1, isEncode)
         }
       } else {
         val encoded =
@@ -154,9 +190,9 @@ object WorkspaceSymbolProvider {
           }
         val from = h - encoded.length
         if (haystack.startsWith(encoded, from)) {
-          isSubstring(needle, n - 1, haystack, h - encoded.length)
+          isSubstring(needle, n - 1, haystack, h - encoded.length, isEncode)
         } else {
-          isSubstring(needle, n, haystack, h - 1, encoded)
+          isSubstring(needle, n, haystack, h - 1, isEncode, encoded)
         }
       }
     }

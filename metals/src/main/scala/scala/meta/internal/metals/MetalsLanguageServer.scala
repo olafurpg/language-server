@@ -84,6 +84,7 @@ class MetalsLanguageServer(
   private var fileEvents: Option[FileEvents] = None
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
+  var workspaceSymbols: WorkspaceSymbolProvider = _
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient = client
@@ -109,6 +110,8 @@ class MetalsLanguageServer(
     tables = register(Tables.forWorkspace(workspace, time))
     buildTools = new BuildTools(workspace)
     buildTargets = new BuildTargets()
+    workspaceSymbols =
+      new WorkspaceSymbolProvider(mtags, index, buildTargets, workspace)
     fileSystemSemanticdbs =
       new FileSystemSemanticdbs(buildTargets, charset, workspace, fingerprints)
     interactiveSemanticdbs = register(
@@ -484,11 +487,11 @@ class MetalsLanguageServer(
   def workspaceSymbol(
       params: WorkspaceSymbolParams
   ): CompletableFuture[util.List[SymbolInformation]] =
-    CompletableFutures.computeAsync { _ =>
-      workspaceSymbolResult(params.getQuery)
-    }
+    timed(s"workspace/symbol '${params.getQuery}'") {
+      Future(workspaceSymbolResult(params.getQuery))
+    }.asJava
   def workspaceSymbolResult(query: String): util.List[SymbolInformation] =
-    WorkspaceSymbolProvider.symbol(buildTargets, workspace, query)
+    workspaceSymbols.search(query)
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(

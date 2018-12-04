@@ -1,9 +1,9 @@
 package tests
 
+import scala.meta.internal.metals.JdkClasspath
+import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.mtags.SemanticdbClasspath
-import scala.meta.io.Classpath
 
 /** Base class for all expect tests.
  *
@@ -13,14 +13,8 @@ abstract class BaseExpectSuite(val suiteName: String) extends BaseSuite {
   lazy val input = InputProperties.default()
 
   lazy val symtab = {
-    val bootClasspath =
-      sys.props
-        .collectFirst {
-          case (k, v) if k.endsWith(".boot.class.path") => Classpath(v)
-        }
-        .getOrElse(Classpath(Nil))
     GlobalSymbolTable(
-      input.classpath ++ bootClasspath
+      input.classpath ++ JdkClasspath.bootClasspath
     )
   }
   final lazy val sourceroot: AbsolutePath =

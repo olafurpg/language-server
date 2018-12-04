@@ -24,6 +24,7 @@ import scala.concurrent.Future
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
@@ -301,6 +302,26 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     }
   }
 
+  implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
+    def toLSP: l.SymbolKind = kind match {
+      case Kind.LOCAL => l.SymbolKind.Variable
+      case Kind.FIELD => l.SymbolKind.Field
+      case Kind.METHOD => l.SymbolKind.Method
+      case Kind.CONSTRUCTOR => l.SymbolKind.Constructor
+      case Kind.MACRO => l.SymbolKind.Method
+      case Kind.TYPE => l.SymbolKind.Class
+      case Kind.PARAMETER => l.SymbolKind.Variable
+      case Kind.SELF_PARAMETER => l.SymbolKind.Variable
+      case Kind.TYPE_PARAMETER => l.SymbolKind.TypeParameter
+      case Kind.OBJECT => l.SymbolKind.Object
+      case Kind.PACKAGE => l.SymbolKind.Module
+      case Kind.PACKAGE_OBJECT => l.SymbolKind.Module
+      case Kind.CLASS => l.SymbolKind.Class
+      case Kind.TRAIT => l.SymbolKind.Interface
+      case Kind.INTERFACE => l.SymbolKind.Interface
+      case _ => l.SymbolKind.Class
+    }
+  }
   implicit class XtensionSymbolOccurrenceProtocol(occ: s.SymbolOccurrence) {
     def toLocation(uri: String): l.Location = {
       val range = occ.range.getOrElse(s.Range(0, 0, 0, 0)).toLSP
