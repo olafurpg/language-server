@@ -45,9 +45,9 @@ Protocol client to communicate with the Metals language server.</li>
 <li><a href="https://github.com/derekwyatt/vim-scala"><code>derekwyatt/vim-scala</code></a>: for syntax
 highlighting Scala and sbt source files.</li>
 </ul>
-<p>Assuming <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a> is used for
-installing plugin (another plugin manager like vundle works too), update
-<code>~/.vimrc</code> to include the following settings.</p>
+<p>Assuming <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a> is used (another
+plugin manager like vundle works too), update <code>~/.vimrc</code> to include the
+following settings.</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
 
 <span class="hljs-comment">" Configuration for vim-plug</span>
@@ -72,11 +72,25 @@ installed, be sure to update to the latest version with <code>:PlugUpdate</code>
 exist yet.</p>
 <p>Next, build a <code>metals-vim</code> binary for the latest Metals release using the
 <a href="https://github.com/coursier/coursier">Coursier</a> command-line interface.</p>
-<pre><code class="hljs">Version              | Published        | Resolver                |
----                  | ---              | ---                     |
- 0.4.0-SNAPSHOT  | 09 Dec 2018 22:12  | `-r sonatype:releases`  |
- 0.4.0-SNAPSHOT | 09 Dec 2018 22:12 | `-r sonatype:snapshots` |
-</code></pre>
+<table>
+<thead>
+<th>Version</th>
+<th>Published</th>
+<th>Resolver</th>
+</thead>
+<tbody>
+<tr>
+<td>0.4.0-SNAPSHOT</td>
+<td>09 Dec 2018 22:30</td>
+<td><code>-r sonatype:releases</code></td>
+</tr>
+<tr>
+<td>0.4.0-SNAPSHOT</td>
+<td>09 Dec 2018 22:30</td>
+<td><code>-r sonatype:snapshots</code></td>
+</tr>
+</tbody>
+</table>
 <pre><code class="hljs css language-sh"><span class="hljs-comment"># Make sure to use coursier v1.1.0-M9 or newer.</span>
 curl -L -o coursier https://git.io/coursier
 chmod +x coursier
