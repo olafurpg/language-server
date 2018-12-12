@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Fri, 07 Dec 2018 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 12 Dec 2018 06:00:00 GMT</lastBuildDate>
         <docs>http://blogs.law.harvard.edu/tech/rss</docs>
         <generator>Feed for Node.js</generator>
         <image>
@@ -15,9 +15,9 @@
         <copyright>Copyright © 2018 Metals</copyright>
         <item>
             <title><![CDATA[Fast goto definition with low memory footprint]]></title>
-            <link>http://scalameta.org/metals/blog/2018/12/07/fast-navigation.html</link>
-            <guid>http://scalameta.org/metals/blog/2018/12/07/fast-navigation.html</guid>
-            <pubDate>Fri, 07 Dec 2018 06:00:00 GMT</pubDate>
+            <link>http://scalameta.org/metals/blog/2018/12/12/index.html</link>
+            <guid>http://scalameta.org/metals/blog/2018/12/12/index.html</guid>
+            <pubDate>Wed, 12 Dec 2018 06:00:00 GMT</pubDate>
             <description><![CDATA[<p>Metals throws away its navigation index when it shuts down. Next time it starts,
 the index is computed again from scratch. Although this approach is simple, it
 requires indexing to be fast enough so you don't mind running it again and
