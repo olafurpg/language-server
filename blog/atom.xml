@@ -10,8 +10,8 @@
     <rights>Copyright © 2018 Metals</rights>
     <entry>
         <title type="html"><![CDATA[Fast goto definition with low memory footprint]]></title>
-        <id>http://scalameta.org/metals/blog/2018/12/12/index.html</id>
-        <link href="http://scalameta.org/metals/blog/2018/12/12/index.html">
+        <id>http://scalameta.org/metals/blog/2018/12/12/fast-goto-definition.html</id>
+        <link href="http://scalameta.org/metals/blog/2018/12/12/fast-goto-definition.html">
         </link>
         <updated>2018-12-12T06:00:00Z</updated>
         <summary type="html"><![CDATA[<p>Metals throws away its navigation index when it shuts down. Next time it starts,
