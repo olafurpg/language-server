@@ -11,12 +11,12 @@ import scala.meta.io.AbsolutePath
  * We don't use a library like Scalatags because we are trying to keep
  * the number of external Scala dependencies low.
  */
-final class HtmlBuilder() {
+final class Fobarbab() {
   private val sb = new StringBuilder()
   def render: String = sb.toString
   override def toString: String = render
 
-  def section(title: String, content: HtmlBuilder => Unit): HtmlBuilder = {
+  def section(title: String, content: Fobarbab => Unit): Fobarbab = {
     element(
       "section",
       "class='container with-title' style='margin-bottom: .75rem'"
@@ -26,8 +26,8 @@ final class HtmlBuilder() {
     )
   }
   def page(title: String, raw: String = "")(
-      body: HtmlBuilder => Unit
-  ): HtmlBuilder = {
+      body: Fobarbab => Unit
+  ): Fobarbab = {
     element("html")(
       _.element("head")(
         _.element("title")(_.text(title))
@@ -40,14 +40,14 @@ final class HtmlBuilder() {
     )
   }
 
-  def submitButton(query: String, title: String): HtmlBuilder =
+  def submitButton(query: String, title: String): Fobarbab =
     element("form", s"action='/complete?$query' method='post'")(
       _.element("button", "type='submit' class='btn'")(_.text(title))
     )
 
   def unorderedList[T](
       iterable: Iterable[T]
-  )(fn: T => Unit): HtmlBuilder = {
+  )(fn: T => Unit): Fobarbab = {
     sb.append("<ul>")
     iterable.foreach { item =>
       sb.append("<li>")
@@ -65,16 +65,16 @@ final class HtmlBuilder() {
     case _ => "#009688"
   }
 
-  def path(p: AbsolutePath): HtmlBuilder = {
+  def path(p: AbsolutePath): Fobarbab = {
     raw("</br>").text(p.toString())
   }
 
-  def call(fn: HtmlBuilder => Unit): HtmlBuilder = {
+  def call(fn: Fobarbab => Unit): Fobarbab = {
     fn(this)
     this
   }
 
-  def append(params: MessageParams): HtmlBuilder = {
+  def append(params: MessageParams): Fobarbab = {
     element("font", s"color='${color(params.getType)}'")(
       _.text(params.getType.toString.toLowerCase())
     ).text(" ")
@@ -85,7 +85,7 @@ final class HtmlBuilder() {
   def element(
       name: String,
       attr: String = ""
-  )(fn: HtmlBuilder => Unit): this.type = {
+  )(fn: Fobarbab => Unit): this.type = {
     sb.append("<")
       .append(name)
       .append(" ")

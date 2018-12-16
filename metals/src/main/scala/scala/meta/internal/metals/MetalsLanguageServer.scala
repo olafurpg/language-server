@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import ch.epfl.scala.bsp4j.SourcesParams
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
+import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.Charset
@@ -89,6 +90,7 @@ class MetalsLanguageServer(
   private var definitionProvider: DefinitionProvider = _
   private val documentSymbolProvider: DocumentSymbolProvider =
     new DocumentSymbolProvider(buffers)
+  private var referencesProvider: ReferenceProvider = _
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
   var statusBar: StatusBar = _
@@ -183,6 +185,12 @@ class MetalsLanguageServer(
       config.icons,
       statusBar
     )
+    referencesProvider = new ReferenceProvider(
+      workspace,
+      semanticdbs,
+      buffers,
+      definitionProvider
+    )
     doctor = new Doctor(
       buildTargets,
       config,
@@ -217,6 +225,7 @@ class MetalsLanguageServer(
           ServerCommands.all.map(_.id).asJava
         )
       )
+      capabilities.setReferencesProvider(true)
       capabilities.setDefinitionProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
@@ -450,9 +459,14 @@ class MetalsLanguageServer(
   def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
   ): CompletableFuture[Unit] = {
+    params.getChanges.asScala.iterator
+      .filter(_.getUri.endsWith(".semanticdb"))
+      .map(_.getUri.toAbsolutePath)
+      .foreach(p => referencesProvider.onChange(p.toNIO))
     val paths = params.getChanges.asScala.iterator
       .map(_.getUri.toAbsolutePath)
       .filterNot(savedFiles.isRecentlyActive) // de-duplicate didSave events.
+      .filterNot(_.isSemanticdb)
       .toSeq
     onChange(paths)
   }
@@ -463,6 +477,17 @@ class MetalsLanguageServer(
     val path = AbsolutePath(event.path())
     if (!savedFiles.isRecentlyActive(path) && path.isScalaOrJava) {
       onChange(List(path))
+    } else if (path.isSemanticdb) {
+      CompletableFuture.completedFuture {
+        event.eventType() match {
+          case EventType.DELETE =>
+            referencesProvider.onDelete(event.path())
+          case EventType.CREATE | EventType.MODIFY =>
+            referencesProvider.onChange(event.path())
+          case EventType.OVERFLOW =>
+            referencesProvider.onChange(event.path())
+        }
+      }
     } else {
       CompletableFuture.completedFuture(())
     }
@@ -564,11 +589,12 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/references")
   def references(
-      position: ReferenceParams
+      params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/references is not supported.")
-      null
+      timedThunk("references", config.statistics.isReferences)(
+        referencesProvider.references(params).asJava
+      )
     }
 
   @JsonRequest("textDocument/completion")
@@ -720,7 +746,16 @@ class MetalsLanguageServer(
         _ = {
           statusBar.addMessage(s"${config.icons.rocket}Imported build!")
           if (config.statistics.isMemory) {
-            scribe.info(s"memory: ${Memory.footprint(index)}")
+            val definition = Memory.footprint(
+              "definition index",
+              index
+            )
+            val references = Memory.footprint(
+              "references index",
+              ReferenceIndex(referencesProvider.index)
+            )
+            scribe.info(s"memory: $definition")
+            scribe.info(s"memory: $references")
           }
         }
         _ <- compileSourceFiles(buffers.open.toSeq)
@@ -822,6 +857,7 @@ class MetalsLanguageServer(
         JdkSources(userConfig.javaHome).foreach { zip =>
           index.addSourceJar(zip)
         }
+        referencesProvider.onScalacOptions(scalacOptions)
         doctor.check()
       }
       _ <- registerSourceDirectories(build, ids)

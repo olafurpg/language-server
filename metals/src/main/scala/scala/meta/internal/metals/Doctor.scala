@@ -24,7 +24,7 @@ final class Doctor(
   /** Returns a full HTML page for the HTTP client. */
   def problemsHtmlPage(url: String): String = {
     val livereload = Urls.livereload(url)
-    new HtmlBuilder()
+    new Fobarbab()
       .page("Metals Doctor", livereload) { html =>
         html.section("Build targets", buildTargetsTable)
       }
@@ -150,13 +150,13 @@ final class Doctor(
   }
 
   private def buildTargetsHtml(): String = {
-    new HtmlBuilder()
+    new Fobarbab()
       .element("h1")(_.text("Metals Doctor"))
       .call(buildTargetsTable)
       .render
   }
 
-  private def buildTargetsTable(html: HtmlBuilder): Unit = {
+  private def buildTargetsTable(html: Fobarbab): Unit = {
     html
       .element("p")(
         _.text(
@@ -178,7 +178,7 @@ final class Doctor(
       )
   }
 
-  private def buildTargetRows(html: HtmlBuilder): Unit = {
+  private def buildTargetRows(html: Fobarbab): Unit = {
     buildTargets.all.sortBy(_.info.getBaseDirectory).foreach { target =>
       val scala = target.info.asScalaBuildTarget
       val scalaVersion =

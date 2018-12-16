@@ -52,10 +52,7 @@ final class FileSystemSemanticdbs(
       buildTarget <- buildTargets.inverseSources(scalaPath)
       scalacOptions <- buildTargets.scalacOptions(buildTarget)
     } yield {
-      scalacOptions
-        .semanticdbFlag("targetroot")
-        .map(AbsolutePath(_))
-        .getOrElse(scalacOptions.getClassDirectory.toAbsolutePath)
+      scalacOptions.targetroot
     }
   }
 }

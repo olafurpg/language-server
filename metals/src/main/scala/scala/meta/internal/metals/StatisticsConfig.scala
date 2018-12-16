@@ -4,6 +4,7 @@ final case class StatisticsConfig(value: String) {
   def isAll: Boolean = value == "all"
   def isMemory: Boolean = isAll || value.contains("memory")
   def isDefinition: Boolean = isAll || value.contains("definition")
+  def isReferences: Boolean = isAll || value.contains("references")
 }
 
 object StatisticsConfig {

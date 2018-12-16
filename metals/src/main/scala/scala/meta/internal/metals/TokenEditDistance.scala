@@ -1,11 +1,13 @@
 package scala.meta.internal.metals
 
-import scala.annotation.tailrec
-import scala.meta._
 import difflib._
 import difflib.myers.Equalizer
+import scala.annotation.tailrec
 import scala.meta.Token
+import scala.meta._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.TextDocument
 
 sealed trait EmptyResult
 object EmptyResult {
@@ -195,6 +197,16 @@ object TokenEditDistance {
       }
       result.getOrElse(noMatch)
     }
+  }
+
+  def fromBuffer(
+      source: AbsolutePath,
+      snapshot: TextDocument,
+      buffers: Buffers
+  ): TokenEditDistance = {
+    val bufferInput = source.toInputFromBuffers(buffers)
+    val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot.text)
+    TokenEditDistance(snapshotInput, bufferInput)
   }
 
   /** Compare tokens only by their text and token category. */

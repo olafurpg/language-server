@@ -58,6 +58,15 @@ object UserConfiguration {
         |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
         |like using environment variables.
         |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "inverse-compile",
+      """`true`""",
+      "`false`",
+      "Inverse compile mode",
+      """If true, when compiling a build target A, also compile build targets that depend on A.
+        |If false, when compiling a build target A, do no not compile build targets that depend on A.
+        |""".stripMargin
     )
   )
 

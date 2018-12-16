@@ -122,6 +122,7 @@ lazy val metals = project
       // Java dependencies
       // =================
       // for measuring memory footprint
+      "com.google.guava" % "guava" % "27.0.1-jre",
       "org.openjdk.jol" % "jol-core" % "0.9",
       // for file watching
       "io.methvin" % "directory-watcher" % "0.8.0",

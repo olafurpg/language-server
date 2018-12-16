@@ -82,7 +82,7 @@ final class MetalsHttpClient(
       timer: Timer
   )
   private val slowTasks = new ConcurrentLinkedDeque[SlowTask]()
-  private def slowTasksFormatted(html: HtmlBuilder): HtmlBuilder = {
+  private def slowTasksFormatted(html: Fobarbab): Fobarbab = {
     slowTasks.removeIf(_.promise.isDone)
     html.unorderedList(slowTasks.asScala) { task =>
       html
@@ -123,7 +123,7 @@ final class MetalsHttpClient(
   // ==================
   private case class ShowMessage(id: String, value: MessageParams)
   private val showMessages = new ConcurrentLinkedDeque[ShowMessage]()
-  def showMessagesFormatted(html: HtmlBuilder): Unit = {
+  def showMessagesFormatted(html: Fobarbab): Unit = {
     html.unorderedList(showMessages.asScala) { params =>
       html
         .append(params.value)
@@ -145,7 +145,7 @@ final class MetalsHttpClient(
       promise: CompletableFuture[MessageActionItem]
   )
   private val showMessageRequests = new ConcurrentLinkedDeque[MessageRequest]()
-  private def showMessageRequestsFormatted(html: HtmlBuilder): Unit = {
+  private def showMessageRequestsFormatted(html: Fobarbab): Unit = {
     showMessageRequests.removeIf(_.promise.isDone)
     html.unorderedList(showMessageRequests.asScala) { params =>
       html.append(params.value)
@@ -174,7 +174,7 @@ final class MetalsHttpClient(
   // window/logMessage
   // =================
   private val logs = new ConcurrentLinkedDeque[MessageParams]()
-  private def logsFormatted(html: HtmlBuilder): Unit = {
+  private def logsFormatted(html: Fobarbab): Unit = {
     while (logs.size() > 20) logs.pollLast()
     logs.forEach { params =>
       html.append(params)
@@ -195,7 +195,7 @@ final class MetalsHttpClient(
   private val isBspTraceEnabled = bspTrace.isFile
   private val globalLog = GlobalTrace.globalLog
 
-  private def serverCommands(html: HtmlBuilder): HtmlBuilder = {
+  private def serverCommands(html: Fobarbab): Fobarbab = {
     ServerCommands.all.foreach { command =>
       html.element(
         "form",
@@ -219,7 +219,7 @@ final class MetalsHttpClient(
 
   def renderHtml: String = {
     val livereload = Urls.livereload(url())
-    val result = new HtmlBuilder().page("Metals", livereload) { html =>
+    val result = new Fobarbab().page("Metals", livereload) { html =>
       html
         .section(
           "metals/status",
