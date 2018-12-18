@@ -7,6 +7,8 @@ import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -20,14 +22,16 @@ final class BuildTargets() {
     TrieMap.empty[BuildTargetIdentifier, BuildTarget]
   private val scalacTargetInfo =
     TrieMap.empty[BuildTargetIdentifier, ScalacOptionsItem]
+  private val inverseDependencies =
+    TrieMap.empty[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]]
 
   def reset(): Unit = {
     sourceDirectoriesToBuildTarget.values.foreach(_.clear())
     sourceDirectoriesToBuildTarget.clear()
     buildTargetInfo.clear()
     scalacTargetInfo.clear()
+    inverseDependencies.clear()
   }
-
   def sourceDirectories: Iterable[AbsolutePath] =
     sourceDirectoriesToBuildTarget.keys
 
@@ -51,6 +55,11 @@ final class BuildTargets() {
   def addWorkspaceBuildTargets(result: WorkspaceBuildTargetsResult): Unit = {
     result.getTargets.asScala.foreach { target =>
       buildTargetInfo(target.getId) = target
+      target.getDependencies.asScala.foreach { dependency =>
+        val buf =
+          inverseDependencies.getOrElseUpdate(dependency, ListBuffer.empty)
+        buf += target.getId
+      }
     }
   }
 
@@ -88,4 +97,43 @@ final class BuildTargets() {
     } yield target
   }
 
+  def inverseDependencies(
+      target: BuildTargetIdentifier
+  ): Iterable[BuildTargetIdentifier] = {
+    BuildTargets.inverseDependencies(target, inverseDependencies.get)
+  }
+
+}
+
+object BuildTargets {
+
+  def inverseDependencies(
+      target: BuildTargetIdentifier,
+      fn: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
+  ): Iterable[BuildTargetIdentifier] = {
+    val isVisited = mutable.Set.empty[BuildTargetIdentifier]
+    val result = mutable.Set.empty[BuildTargetIdentifier]
+    def loop(toVisit: List[BuildTargetIdentifier]): Unit =
+      toVisit match {
+        case Nil => ()
+        case head :: tail =>
+          if (!isVisited(head)) {
+            isVisited += head
+            fn(head) match {
+              case Some(next) =>
+                loop(next.toList)
+              case None =>
+                // Only add leaves of the tree to the result to minimize the number
+                // of targets that we compile. If `B` depends on `A`, it's faster
+                // in Bloop to compile only `B` than `A+B`.
+                result += head
+            }
+            loop(tail)
+          } else {
+            ()
+          }
+      }
+    loop(target :: Nil)
+    result
+  }
 }

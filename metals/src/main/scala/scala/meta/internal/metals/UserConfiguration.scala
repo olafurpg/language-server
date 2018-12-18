@@ -13,7 +13,8 @@ import scala.util.Try
  */
 case class UserConfiguration(
     javaHome: Option[String] = None,
-    sbtScript: Option[String] = None
+    sbtScript: Option[String] = None,
+    cascadeCompile: Boolean = true
 )
 
 object UserConfiguration {
@@ -70,12 +71,18 @@ object UserConfiguration {
       getKey("java-home")
     val sbtScript =
       getKey("sbt-script")
+    val cascadeCompile =
+      getKey("cascade-compile") match {
+        case Some("true") => true
+        case _ => false
+      }
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
-          sbtScript
+          sbtScript,
+          cascadeCompile
         )
       )
     } else {

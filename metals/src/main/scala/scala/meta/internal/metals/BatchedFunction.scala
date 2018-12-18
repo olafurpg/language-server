@@ -37,6 +37,10 @@ final class BatchedFunction[A, B](
     promise.future
   }
 
+  def hasPendingWork: Boolean = {
+    !queue.isEmpty
+  }
+
   private val queue = new ConcurrentLinkedQueue[Request]()
   private case class Request(arguments: Seq[A], result: Promise[B])
   private def clearQueue(destination: ListBuffer[Request]): Unit = {
