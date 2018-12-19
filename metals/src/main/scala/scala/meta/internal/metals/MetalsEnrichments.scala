@@ -30,6 +30,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.Properties
 import scala.util.Try
+import scala.util.control.NonFatal
 import scala.{meta => m}
 
 /**
@@ -53,24 +54,38 @@ import scala.{meta => m}
  */
 object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
-  implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
-
-    /**
-     * Reads BSP `BuildTarget.data` field into a `ScalaBuildTarget`.
-     */
-    def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
-      for {
-        data <- Option(buildTarget.getData)
-        if data.isInstanceOf[JsonElement]
-        info <- Try(
-          new Gson().fromJson[b.ScalaBuildTarget](
+  private def decodeJson[T](obj: AnyRef, cls: Class[T]): Option[T] =
+    for {
+      data <- Option(obj)
+      value <- try {
+        Some(
+          new Gson().fromJson[T](
             data.asInstanceOf[JsonElement],
-            classOf[b.ScalaBuildTarget]
+            cls
           )
-        ).toOption
-      } yield info
-    }
+        )
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(s"decode error: $cls", e)
+          None
+      }
+    } yield value
 
+  implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
+    def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
+      decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
+    }
+  }
+  implicit class XtensionTaskStart(task: b.TaskStartParams) {
+    def asCompileTask: Option[b.CompileTask] = {
+      decodeJson(task.getData, classOf[b.CompileTask])
+    }
+  }
+
+  implicit class XtensionTaskFinish(task: b.TaskFinishParams) {
+    def asCompileReport: Option[b.CompileReport] = {
+      decodeJson(task.getData, classOf[b.CompileReport])
+    }
   }
 
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {

@@ -129,7 +129,13 @@ class MetalsLanguageServer(
       )
     )
     diagnostics = new Diagnostics(buildTargets, languageClient)
-    buildClient = new ForwardingMetalsBuildClient(languageClient, diagnostics)
+    buildClient = new ForwardingMetalsBuildClient(
+      languageClient,
+      diagnostics,
+      buildTargets,
+      config,
+      statusBar
+    )
     bloopInstall = register(
       new BloopInstall(
         workspace,
@@ -893,38 +899,7 @@ class MetalsLanguageServer(
               targets
             }
           val params = new CompileParams(allTargets.asJava)
-          val name =
-            targets.headOption
-              .flatMap(buildTargets.info)
-              .map(info => " " + info.getDisplayName)
-              .getOrElse("")
-          for {
-            (elapsed, status) <- withTimer(
-              s"compiled$name",
-              reportStatus = true
-            ) {
-              statusBar.trackFuture(
-                s"${config.icons.sync}Compiling$name",
-                build.compile(params).asScala,
-                showTimer = true
-              )
-            }
-          } yield {
-            status.getStatusCode match {
-              case StatusCode.OK =>
-                statusBar.addMessage(
-                  s"${config.icons.check}Compiled$name ($elapsed)"
-                )
-              case StatusCode.ERROR =>
-                statusBar.addMessage(
-                  MetalsStatusParams(
-                    s"${config.icons.alert}Compile error ($elapsed)",
-                    command = ClientCommands.FocusDiagnostics.id
-                  )
-                )
-              case StatusCode.CANCELLED =>
-            }
-          }
+          build.compile(params).asScala.ignoreValue
         }
       case _ =>
         Future.successful(())
