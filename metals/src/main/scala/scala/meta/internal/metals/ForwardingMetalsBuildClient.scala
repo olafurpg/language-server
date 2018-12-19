@@ -10,8 +10,9 @@ import org.eclipse.{lsp4j => l}
 import MetalsEnrichments._
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
+import java.util.Collections
 import java.util.concurrent.CancellationException
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ConcurrentHashMap
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 
@@ -23,15 +24,25 @@ final class ForwardingMetalsBuildClient(
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     config: MetalsServerConfig,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    time: Time
 ) extends MetalsBuildClient
     with Cancelable {
 
-  private val compilations =
-    TrieMap.empty[BuildTargetIdentifier, Promise[CompileReport]]
+  private case class Compilation(
+      timer: Timer,
+      promise: Promise[CompileReport]
+  )
+
+  private val compilations = TrieMap.empty[BuildTargetIdentifier, Compilation]
+  private val hasReportedError = Collections.newSetFromMap(
+    new ConcurrentHashMap[BuildTargetIdentifier, java.lang.Boolean]()
+  )
 
   override def cancel(): Unit = {
-    compilations.values.foreach(_.tryFailure(new CancellationException()))
+    compilations.values.foreach { compilation =>
+      compilation.promise.tryFailure(new CancellationException())
+    }
   }
 
   def onBuildShowMessage(params: l.MessageParams): Unit =
@@ -70,7 +81,8 @@ final class ForwardingMetalsBuildClient(
         } {
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
-          compilations(task.getTarget) = promise
+          val compilation = Compilation(new Timer(time), promise)
+          compilations(task.getTarget) = compilation
           statusBar.trackFuture(
             s"Compiling $name",
             promise.future,
@@ -87,19 +99,31 @@ final class ForwardingMetalsBuildClient(
       case TaskDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
-          promise <- compilations.get(report.getTarget)
+          compilation <- compilations.get(report.getTarget)
         } {
-          promise.trySuccess(report)
+          val target = report.getTarget
+          compilation.promise.trySuccess(report)
           val name = buildTargets
             .info(report.getTarget)
-            .fold("<unknown>")(_.getDisplayName)
-          val elapsed =
-            Timer.readableNanos(TimeUnit.MILLISECONDS.toNanos(report.getTime))
+            .fold(" <unknown>")(i => " " + i.getDisplayName)
           val isSuccess = report.getErrors == 0
           val icon = if (isSuccess) config.icons.check else config.icons.alert
-          statusBar.addMessage(
-            s"${icon}Compiled$name ($elapsed)"
-          )
+
+          if (isSuccess) {
+            hasReportedError.remove(target)
+            statusBar.addMessage(
+              s"${icon}Compiled$name (${compilation.timer})"
+            )
+          } else {
+            hasReportedError.add(target)
+            statusBar.addMessage(
+              MetalsStatusParams(
+                s"${icon}Compiled$name (${compilation.timer})",
+                command = ClientCommands.FocusDiagnostics.id
+              )
+            )
+          }
+
         }
       case _ =>
     }

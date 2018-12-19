@@ -3,8 +3,8 @@ package scala.meta.internal.metals
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 
-class Timer(time: Time) {
-  val startNanos: Long = time.nanos()
+class Timer(val startNanos: Long, time: Time) {
+  def this(time: Time) = this(time.nanos(), time)
   def isLogWorthy: Boolean =
     elapsedMillis > 100
   def isHumanVisible: Boolean =

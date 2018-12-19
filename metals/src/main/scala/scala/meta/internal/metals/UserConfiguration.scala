@@ -73,8 +73,8 @@ object UserConfiguration {
       getKey("sbt-script")
     val cascadeCompile =
       getKey("cascade-compile") match {
-        case Some("true") => true
-        case _ => false
+        case Some("false") => false
+        case _ => true
       }
 
     if (errors.isEmpty) {

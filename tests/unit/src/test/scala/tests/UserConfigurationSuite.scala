@@ -52,12 +52,14 @@ object UserConfigurationSuite extends BaseSuite {
     """
       |{
       | "java-home": "home",
+      | "cascade-compile": false,
       | "sbt-script": "script"
       |}
     """.stripMargin
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtScript == Some("script"))
+    assert(!obtained.cascadeCompile)
   }
 
   checkOK(
@@ -66,6 +68,7 @@ object UserConfigurationSuite extends BaseSuite {
   ) { obtained =>
     assert(obtained.javaHome.isEmpty)
     assert(obtained.sbtScript.isEmpty)
+    assert(obtained.cascadeCompile)
   }
 
   checkOK(

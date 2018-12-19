@@ -134,7 +134,8 @@ class MetalsLanguageServer(
       diagnostics,
       buildTargets,
       config,
-      statusBar
+      statusBar,
+      time
     )
     bloopInstall = register(
       new BloopInstall(
@@ -892,43 +893,21 @@ class MetalsLanguageServer(
           scribe.warn(s"no build target: ${scalaPaths.mkString("\n  ")}")
           Future.successful(())
         } else {
+          pprint.log(userConfig.cascadeCompile)
+          pprint.log(targets.flatMap(buildTargets.inverseDependencies).distinct)
           val allTargets =
             if (userConfig.cascadeCompile) {
               targets.flatMap(buildTargets.inverseDependencies).distinct
             } else {
               targets
             }
+          pprint.log(allTargets -> targets)
           val params = new CompileParams(allTargets.asJava)
           build.compile(params).asScala.ignoreValue
         }
       case _ =>
         Future.successful(())
     }
-  }
-
-  private def cascadeCompile(
-      build: BuildServerConnection,
-      name: String,
-      targets: Seq[BuildTargetIdentifier]
-  ): Future[Unit] = {
-    val promise = Promise[Unit]()
-    sh.schedule(
-      new Runnable {
-        override def run(): Unit = {
-          if (userConfig.cascadeCompile && !compileSourceFiles.hasPendingWork) {
-            val cascade =
-              targets.flatMap(buildTargets.inverseDependencies).distinct
-            val params = new CompileParams(cascade.asJava)
-            promise.completeWith(build.compile(params).asScala.ignoreValue)
-          } else {
-            promise.trySuccess(())
-          }
-        }
-      },
-      1,
-      TimeUnit.SECONDS
-    )
-    promise.future
   }
 
   /**
