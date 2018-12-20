@@ -14,11 +14,39 @@ import scala.util.Try
 case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
-    cascadeCompile: Boolean = true
-)
+    compileOnSave: String = UserConfiguration.CascadeCompile
+) {
+  def isCascadeCompile: Boolean =
+    compileOnSave == UserConfiguration.CascadeCompile
+  def isOneProject: Boolean =
+    compileOnSave == UserConfiguration.CurrentProjectCompile
+  def isNoCompile: Boolean =
+    compileOnSave == UserConfiguration.NoCompile
+}
 
 object UserConfiguration {
+  val NoCompile = "none"
+  val CascadeCompile = "cascade"
+  val CurrentProjectCompile = "current-project"
+  def allCompile: List[String] =
+    List(CascadeCompile, CurrentProjectCompile, NoCompile)
   def options: List[UserConfigurationOption] = List(
+    UserConfigurationOption(
+      "compile-on-save",
+      s""" `"$CascadeCompile"` """,
+      CurrentProjectCompile,
+      "Compile on save",
+      """What compilation mode to use for file save events.
+        |Possible values:
+        |
+        |- `"cascade"` (default): compile the build target that contains the saved file
+        |  along other build targets that depend on that build target.
+        |- `"current-project"`: compile only the build target that contains the saved file.
+        |- `"none"`: don't compile on file save. ⚠️ Goto Definition is disabled when
+        |  with this setting enabled.
+        |
+      """.stripMargin
+    ),
     UserConfigurationOption(
       "java-home",
       "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
@@ -71,11 +99,20 @@ object UserConfiguration {
       getKey("java-home")
     val sbtScript =
       getKey("sbt-script")
-    val cascadeCompile =
-      getKey("cascade-compile") match {
-        case Some("false") => false
-        case _ => true
-      }
+    val cascadeCompile = getKey("compile-on-save") match {
+      case None => CascadeCompile
+      case Some(value) =>
+        value match {
+          case CascadeCompile | CurrentProjectCompile | NoCompile => value
+          case unknown =>
+            scribe.warn(
+              s"unknown compile-on-save: '$unknown'. " +
+                s"Expected on of ${allCompile.mkString(", ")}. " +
+                s"Falling back to $CascadeCompile"
+            )
+            CascadeCompile
+        }
+    }
 
     if (errors.isEmpty) {
       Right(
