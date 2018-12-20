@@ -391,6 +391,27 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       )
   }
 
+  implicit class XtensionInitializeParams(params: Option[l.InitializeParams]) {
+    def isTextDocumentDynamic(
+        fn: l.TextDocumentClientCapabilities => l.DynamicRegistrationCapabilities
+    ): Boolean =
+      (for {
+        params <- params
+        capabilities <- Option(params.getCapabilities)
+        textDocument <- Option(capabilities.getTextDocument)
+      } yield
+        fn(textDocument).getDynamicRegistration.booleanValue()).getOrElse(false)
+    def isWorkspaceDynamic(
+        fn: l.WorkspaceClientCapabilities => l.DynamicRegistrationCapabilities
+    ): Boolean =
+      (for {
+        params <- params
+        capabilities <- Option(params.getCapabilities)
+        workspace <- Option(capabilities.getWorkspace)
+      } yield
+        fn(workspace).getDynamicRegistration.booleanValue()).getOrElse(false)
+  }
+
   implicit class XtensionHttpExchange(exchange: HttpServerExchange) {
     def getQuery(key: String): Option[String] =
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)

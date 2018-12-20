@@ -68,7 +68,7 @@ class MetalsLanguageServer(
   private val messages = new Messages(config.icons)
   private val languageClient =
     new DelegatingLanguageClient(NoopLanguageClient, config)
-  private var userConfig = UserConfiguration()
+  var userConfig = UserConfiguration()
   private val buildTargets: BuildTargets = new BuildTargets()
   private val fileEvents = register(
     new FileEvents(
@@ -91,6 +91,8 @@ class MetalsLanguageServer(
   private val documentSymbolProvider: DocumentSymbolProvider =
     new DocumentSymbolProvider(buffers)
   private var initializeParams: Option[InitializeParams] = None
+  private var definitionRegistration: Option[Registration] =
+    None
   var tables: Tables = _
   private var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -245,26 +247,33 @@ class MetalsLanguageServer(
     }
   }
 
-  private def registerNiceToHaveFilePatterns(): Unit = {
-    for {
-      params <- initializeParams
-      capabilities <- Option(params.getCapabilities)
-      workspace <- Option(capabilities.getWorkspace)
-      didChangeWatchedFiles <- Option(workspace.getDidChangeWatchedFiles)
-      if didChangeWatchedFiles.getDynamicRegistration
-    } yield {
-      languageClient.registerCapability(
-        new RegistrationParams(
-          List(
-            new Registration(
-              "1",
-              "workspace/didChangeWatchedFiles",
-              config.globSyntax.registrationOptions(this.workspace)
-            )
-          ).asJava
+  def definitionRegistrationParams: Registration = {
+    new Registration(
+      "definition",
+      "textDocument/definition",
+      new TextDocumentRegistrationOptions(
+        List(new DocumentFilter("scala", "file", null)).asJava
+      )
+    )
+  }
+
+  private def registerDynamicFeatures(): Unit = {
+    val registrations = new util.ArrayList[Registration]()
+    if (initializeParams.isTextDocumentDynamic(_.getDefinition)) {
+      val registration = definitionRegistrationParams
+      definitionRegistration = Some(registration)
+      registrations.add(registration)
+    }
+    if (initializeParams.isWorkspaceDynamic(_.getDidChangeWatchedFiles)) {
+      registrations.add(
+        new Registration(
+          "1",
+          "workspace/didChangeWatchedFiles",
+          config.globSyntax.registrationOptions(this.workspace)
         )
       )
     }
+    languageClient.registerCapability(new RegistrationParams(registrations))
   }
 
   private def startHttpServer(): Unit = {
@@ -313,7 +322,7 @@ class MetalsLanguageServer(
     if (isInitialized.compareAndSet(false, true)) {
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
       tables.connect()
-      registerNiceToHaveFilePatterns()
+      registerDynamicFeatures()
       Future
         .sequence(
           List[Future[Unit]](
@@ -442,6 +451,32 @@ class MetalsLanguageServer(
         }
       case Right(value) =>
         userConfig = value
+        synchronizeDynamicRegistration()
+    }
+  }
+
+  private def synchronizeDynamicRegistration(): Unit = {
+    if (userConfig.isNoCompile) {
+      definitionRegistration.foreach { registration =>
+        languageClient.unregisterCapability(
+          new UnregistrationParams(
+            List(
+              new Unregistration(registration.getId, registration.getMethod)
+            ).asJava
+          )
+        )
+      }
+    } else if (definitionRegistration.isEmpty) {
+      definitionRegistration = Some(
+        registration =>
+          languageClient.registerCapability(
+            new UnregistrationParams(
+              List(
+                new Unregistration(registration.getId, registration.getMethod)
+              ).asJava
+            )
+          )
+      )
     }
   }
 
@@ -885,6 +920,8 @@ class MetalsLanguageServer(
   private def compileSourceFilesUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[Unit] = {
+    if (userConfig.isNoCompile) return Future.successful(())
+
     val scalaPaths = paths.filter(_.isScalaOrJava)
     buildServer match {
       case Some(build) if scalaPaths.nonEmpty =>
@@ -893,15 +930,12 @@ class MetalsLanguageServer(
           scribe.warn(s"no build target: ${scalaPaths.mkString("\n  ")}")
           Future.successful(())
         } else {
-          pprint.log(userConfig.cascadeCompile)
-          pprint.log(targets.flatMap(buildTargets.inverseDependencies).distinct)
           val allTargets =
-            if (userConfig.cascadeCompile) {
+            if (userConfig.isCascadeCompile) {
               targets.flatMap(buildTargets.inverseDependencies).distinct
             } else {
               targets
             }
-          pprint.log(allTargets -> targets)
           val params = new CompileParams(allTargets.asJava)
           build.compile(params).asScala.ignoreValue
         }

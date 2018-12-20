@@ -9,6 +9,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 /**
@@ -16,6 +17,7 @@ import scala.meta.io.AbsolutePath
  */
 abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   def protocol: BloopProtocol = BloopProtocol.auto
+  def userConfig: UserConfiguration = UserConfiguration()
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   def bspGlobalDirectories: List[AbsolutePath] = Nil
@@ -34,6 +36,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     val obtained = server.server.buildServer.get.name
     assertNoDiff(obtained, expectedName)
   }
+
   override def utestBeforeEach(path: Seq[String]): Unit = {
     if (server != null) {
       server.cancel()
@@ -59,6 +62,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       config,
       bspGlobalDirectories
     )(ex)
+    server.server.userConfig = userConfig
   }
 
   def cleanCompileCache(project: String): Unit = {

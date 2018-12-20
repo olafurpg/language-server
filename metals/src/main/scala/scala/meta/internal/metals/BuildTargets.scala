@@ -100,7 +100,6 @@ final class BuildTargets() {
   def inverseDependencies(
       target: BuildTargetIdentifier
   ): Iterable[BuildTargetIdentifier] = {
-    pprint.log(inverseDependencies)
     BuildTargets.inverseDependencies(target, inverseDependencies.get)
   }
 
