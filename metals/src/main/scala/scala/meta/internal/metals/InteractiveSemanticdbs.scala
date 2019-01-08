@@ -23,6 +23,7 @@ import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.util.Position
 
 /**
  * Produces SemanticDBs on-demand by using the presentation compiler.
