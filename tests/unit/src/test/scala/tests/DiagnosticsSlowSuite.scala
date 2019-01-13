@@ -227,4 +227,43 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
     } yield ()
   }
 
+  testAsync("no-op") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/a/src/main/scala/a/NoOp.scala
+            |package a
+            |object Deprecation {
+            |  val x = 1
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/NoOp.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- server.didSave("a/src/main/scala/a/NoOp.scala")(
+        _.replaceAllLiterally("val x = 1", "val x = 1\n  val x = 2")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/NoOp.scala:4:7: error: x is already defined as value x
+           |  val x = 2
+           |      ^
+           |a/src/main/scala/a/NoOp.scala:4:7: error: x  is already defined as value x
+           |  val x = 2
+           |      ^^^^^
+           |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/NoOp.scala")(
+        _.replaceAllLiterally("\n  val x = 2", "")
+      )
+      _ = pprint.log(server.textContents("a/src/main/scala/a/NoOp.scala"))
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+    } yield ()
+  }
+
 }

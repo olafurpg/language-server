@@ -32,6 +32,7 @@ case class BuildServerConnection(
     name: String
 )(implicit ec: ExecutionContext)
     extends Cancelable {
+  pprint.log(initializeResult)
 
   private val ongoingRequests = new MutableCancelable().addAll(cancelables)
 
