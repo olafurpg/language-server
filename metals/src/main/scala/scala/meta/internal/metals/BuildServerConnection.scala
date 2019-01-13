@@ -14,9 +14,11 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
@@ -36,14 +38,28 @@ case class BuildServerConnection(
 
   private val ongoingRequests = new MutableCancelable().addAll(cancelables)
 
-  /** Run build/shutdown procedure */
-  def shutdown(): Future[Unit] = {
+  private def bspShutdown(): Future[Unit] = {
     for {
       _ <- server.buildShutdown().asScala
     } yield {
       server.onBuildExit()
-      // Cancel pending compilations on our side, this is not needed for Bloop.
+    }
+  }
+
+  def shutdown(): Future[Unit] = {
+    for {
+      _ <- bspShutdown()
+    } yield {
       cancel()
+    }
+  }
+
+  def blockingShutdown(): Unit = {
+    try Await.result(bspShutdown(), Duration("7s"))
+    catch {
+      case _: TimeoutException =>
+        scribe.warn("timeout shutting down build server")
+        () // ignore it
     }
   }
 
@@ -59,6 +75,7 @@ case class BuildServerConnection(
   private val cancelled = new AtomicBoolean(false)
   override def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
+      blockingShutdown()
       ongoingRequests.cancel()
     }
   }
