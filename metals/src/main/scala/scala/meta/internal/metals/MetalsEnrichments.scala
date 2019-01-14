@@ -6,6 +6,7 @@ import com.google.gson.JsonElement
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -221,6 +222,11 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   }
 
   implicit class XtensionPath(path: Path) {
+    def toUriInput: Input.VirtualFile = {
+      val uri = path.toUri.toString
+      val text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
+      Input.VirtualFile(uri, text)
+    }
     def isSemanticdb: Boolean =
       path.getFileName.toString.endsWith(".semanticdb")
   }
@@ -507,5 +513,26 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
         case _: CancellationException =>
           true
       }
+  }
+
+  implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
+    def toLSP: l.SymbolKind = kind match {
+      case k.LOCAL => l.SymbolKind.Variable
+      case k.FIELD => l.SymbolKind.Field
+      case k.METHOD => l.SymbolKind.Method
+      case k.CONSTRUCTOR => l.SymbolKind.Constructor
+      case k.MACRO => l.SymbolKind.Method
+      case k.TYPE => l.SymbolKind.Class
+      case k.PARAMETER => l.SymbolKind.Variable
+      case k.SELF_PARAMETER => l.SymbolKind.Variable
+      case k.TYPE_PARAMETER => l.SymbolKind.TypeParameter
+      case k.OBJECT => l.SymbolKind.Object
+      case k.PACKAGE => l.SymbolKind.Module
+      case k.PACKAGE_OBJECT => l.SymbolKind.Module
+      case k.CLASS => l.SymbolKind.Class
+      case k.TRAIT => l.SymbolKind.Interface
+      case k.INTERFACE => l.SymbolKind.Interface
+      case _ => l.SymbolKind.Class
+    }
   }
 }
