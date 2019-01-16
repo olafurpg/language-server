@@ -18,10 +18,14 @@ import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
+import tests.Libraries
 import tests.TestingWorkspaceSymbolProvider
 
 @State(Scope.Benchmark)
@@ -56,45 +60,47 @@ class WorkspaceFuzzBench {
 class ClasspathFuzzBench {
   var buildTargets = new BuildTargets()
   var symbols: WorkspaceSymbolProvider = _
+  var tmp: AbsolutePath = _
 
   @Setup
   def setup(): Unit = {
-    val tmp = Files.createTempDirectory("metals")
+    tmp = AbsolutePath(Files.createTempDirectory("metals"))
+    val index = OnDemandSymbolIndex()
     symbols = TestingWorkspaceSymbolProvider(
-      AbsolutePath(tmp),
+      tmp,
       buildTargets = buildTargets,
-      statistics = StatisticsConfig.default
+      statistics = StatisticsConfig.default,
+      index = index
     )
-    val classpath = CoursierSmall.fetch(
-      new Settings().withDependencies(
-        List(
-          new Dependency(
-            "org.apache.spark",
-            "spark-sql_2.12",
-            "2.4.0"
-          )
-        )
-      )
-    )
+    val sources = Libraries.suite.flatMap(_.sources().entries).distinct
+    val classpath = Libraries.suite.flatMap(_.classpath().entries).distinct
+    sources.foreach(s => index.addSourceJar(s))
     val item = new ScalacOptionsItem(
       new BuildTargetIdentifier(""),
       Nil.asJava,
-      classpath.map(_.toUri.toString).asJava,
+      classpath.map(_.toURI.toString).asJava,
       ""
     )
     buildTargets.addScalacOptions(new ScalacOptionsResult(List(item).asJava))
     symbols.onBuildTargetsUpdate()
   }
 
-//  @Param(Array("Sp", "Str", "Failure", "InputStream", "FaDD"))
-//@Param(Array("Sp"))
-  @Param(Array("File"))
+  @TearDown
+  def teardown(): Unit = {
+    RecursivelyDelete(tmp)
+  }
+
+  @Param(Array("InputStream", "Str", "Like", "Paths"))
   var query: String = _
+
+  @Param(Array("5", "10", "20"))
+  var maxResults: Int = _
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Seq[SymbolInformation] = {
+    symbols.maxResults = maxResults
     symbols.search(query)
   }
 
