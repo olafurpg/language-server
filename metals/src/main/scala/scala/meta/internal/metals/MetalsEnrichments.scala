@@ -32,6 +32,7 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
 import scala.util.Properties
 import scala.util.control.NonFatal
 import scala.{meta => m}
@@ -454,6 +455,11 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
+    def classpath: Iterator[AbsolutePath] = {
+      item.getClasspath.asScala.iterator
+        .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
+        .filter(p => Files.exists(p.toNIO))
+    }
     def targetroot: AbsolutePath = {
       semanticdbFlag("targetroot")
         .map(AbsolutePath(_))

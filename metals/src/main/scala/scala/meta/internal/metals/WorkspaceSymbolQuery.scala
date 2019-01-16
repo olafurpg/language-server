@@ -9,7 +9,7 @@ case class WorkspaceSymbolQuery(
 
   def matches(bloom: BloomFilter[CharSequence]): Boolean =
     combinations.forall(bloom.mightContain)
-  def matches(symbol: String): Boolean =
+  def matches(symbol: CharSequence): Boolean =
     Fuzzy.matches(query, symbol)
 }
 

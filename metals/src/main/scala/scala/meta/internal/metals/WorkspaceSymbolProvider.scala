@@ -11,11 +11,15 @@ import org.eclipse.lsp4j
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.inputs.Input
+import scala.meta.internal.classpath.Classdir
+import scala.meta.internal.classpath.ClasspathElement
+import scala.meta.internal.classpath.ClasspathIndex
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.ListFiles
@@ -27,6 +31,7 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 
@@ -37,7 +42,8 @@ final class WorkspaceSymbolProvider(
 )(implicit ec: ExecutionContext) {
   private val files = new WorkspaceSources(workspace)
   private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  private val inDependencies = TrieMap.empty[Path, BloomFilter[CharSequence]]
+  private var classpathIndex = ClasspathIndex(Classpath(Nil))
+  private val inDependencies = TrieMap.empty[String, BloomFilter[CharSequence]]
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -73,13 +79,8 @@ final class WorkspaceSymbolProvider(
   }
 
   def onBuildTargetsUpdate(): Unit = {
-    for {
-      dir <- buildTargets.sourceDirectories
-      source <- ListFiles(dir)
-      if source.isScalaOrJava && !inWorkspace.contains(source.toNIO)
-    } {
-      indexSource(source)
-    }
+    indexSourceDirectories()
+    indexClasspath()
   }
 
   def didChange(path: AbsolutePath): Unit = {
@@ -101,6 +102,36 @@ final class WorkspaceSymbolProvider(
     if (statistics.isMemory) {
       val footprint = Memory.footprint("workspace-symbol index", inWorkspace)
       scribe.info(s"memory: $footprint")
+    }
+  }
+  private def indexClasspath(): Unit = {
+    inDependencies.clear()
+    val classpath = mutable.Set.empty[AbsolutePath]
+    buildTargets.all.foreach { target =>
+      classpath ++= target.scalac.classpath
+    }
+    classpathIndex =
+      ClasspathIndex(Classpath(classpath.toList), includeJdk = true)
+    val symtab = classpathIndex.dirs
+    for {
+      (pkg, element) <- symtab
+    } {
+      val buf = Fuzzy.bloomFilterSymbolStrings(element.members.keys)
+      buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)
+      val bloom = BloomFilters.create(buf.size)
+      buf.foreach { key =>
+        bloom.put(key)
+      }
+      inDependencies(pkg) = bloom
+    }
+  }
+  private def indexSourceDirectories(): Unit = {
+    for {
+      dir <- buildTargets.sourceDirectories
+      source <- ListFiles(dir)
+      if source.isScalaOrJava && !inWorkspace.contains(source.toNIO)
+    } {
+      indexSource(source)
     }
   }
 
@@ -217,50 +248,33 @@ final class WorkspaceSymbolProvider(
         val falsePositiveRatio =
           ((falsePositives.toDouble / visitsCount) * 100).toInt
         scribe.info(
-          s"workspace-symbol: query '${query}' returned ${result.size()} results in $timer, " +
+          s"workspace-symbol: query '${query}' returned ${result.size()} results in $timer from workspace, " +
             s"visited ${visitsCount} files (${falsePositiveRatio}% false positives)"
         )
       }
     }
     def searchDependencySymbols(): Unit = {
       val timer = new Timer(Time.system)
-      var visitsCount = 0
-      var falsePositives = 0
+      val buf = mutable.ArrayBuffer.empty[CharSequence]
       for {
-        (path, bloom) <- inWorkspace
-        _ = token.checkCanceled()
+        (pkg, bloom) <- inDependencies
         if queries.exists(_.matches(bloom))
+        (member, _) <- classpathIndex.dirs(pkg).members
+        if member.endsWith(".class")
+        name = member.subSequence(0, member.length - ".class".length)
+        if name.charAt(name.length - 1) != '$'
+        symbol = new ConcatSequence(pkg, name)
+        isMatch = queries.exists(_.matches(symbol))
+        if isMatch
       } {
-        visitsCount += 1
-        var isFalsePositive = true
-        val input = path.toUriInput
-        foreachSymbol(input) { (info, occ, owner) =>
-          if (WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
-            queries.exists(_.matches(info.symbol))) {
-            isFalsePositive = false
-            val linfo = new l.SymbolInformation(
-              info.displayName,
-              info.kind.toLSP,
-              new l.Location(input.path, occ.range.get.toLSP),
-              owner.replace('/', '.')
-            )
-            result.add(linfo)
-          }
-        }
-        if (isFalsePositive) {
-          falsePositives += 1
-        }
+        buf += symbol
       }
-      if (statistics.isWorkspaceSymbol) {
-        val falsePositiveRatio =
-          ((falsePositives.toDouble / visitsCount) * 100).toInt
-        scribe.info(
-          s"workspace-symbol: query '${query}' returned ${result.size()} results in $timer, " +
-            s"visited ${visitsCount} files (${falsePositiveRatio}% false positives)"
-        )
-      }
+      scribe.info(
+        s"workspace-symbol: query '${query}' returned ${buf.length} results from classpath in $timer"
+      )
     }
-    searchWorkspaceSymbols()
+//    searchWorkspaceSymbols()
+    searchDependencySymbols()
     result.asScala.toSeq.sortBy(_.getName.length)
   }
 

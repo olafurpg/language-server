@@ -46,11 +46,11 @@ object Fuzzy {
    * Returns true if the query matches the given symbol.
    */
   def matches(
-      query: String,
-      symbol: String
+      query: CharSequence,
+      symbol: CharSequence
   ): Boolean = {
     def lastDelimiter(
-        string: String,
+        string: CharSequence,
         fromIndex: Int
     ): (Boolean, Int) = {
       var curr = fromIndex - 2
@@ -93,10 +93,10 @@ object Fuzzy {
   // Compares two names like query "InStr" and "InputFileStream".
   // The substring are guaranteed to not have delimiters like '.' or '/' or '#'.
   private def matchesName(
-      query: String,
+      query: CharSequence,
       qa: Int,
       qb: Int,
-      symbol: String,
+      symbol: CharSequence,
       sa: Int,
       sb: Int
   ): Boolean = {
@@ -134,9 +134,9 @@ object Fuzzy {
   }
 
   def bloomFilterSymbolStrings(
-      symbols: Iterable[String]
+      symbols: Iterable[String],
+      result: mutable.Set[CharSequence] = mutable.Set.empty
   ): mutable.Set[CharSequence] = {
-    val result = mutable.Set.empty[CharSequence]
     def visit(symbol: String): Unit = {
       var i = 0
       var delimiter = i

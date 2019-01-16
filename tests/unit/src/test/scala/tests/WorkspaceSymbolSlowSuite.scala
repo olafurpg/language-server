@@ -103,4 +103,22 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
       }
     } yield ()
   }
+
+  testAsync("classpath") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": { }
+          |}
+          |""".stripMargin
+      )
+      query = "Str"
+      _ = pprint.log(server.server.workspaceSymbol(query))
+      _ = pprint.log(server.server.workspaceSymbol(query))
+      _ = pprint.log(server.server.workspaceSymbol(query))
+      _ = pprint.log(server.server.workspaceSymbol(query))
+    } yield ()
+  }
 }
