@@ -2,11 +2,8 @@ package scala.meta.internal.metals
 
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
-import java.io
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Comparator
 import java.util.PriorityQueue
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicReference
@@ -39,13 +36,15 @@ final class WorkspaceSymbolProvider(
     buildTargets: BuildTargets
 )(implicit ec: ExecutionContext) {
   private val files = new WorkspaceSources(workspace)
-  private val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
+  private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
+  private val inDependencies = TrieMap.empty[Path, BloomFilter[CharSequence]]
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
   }
 
   def search(query: String, token: CancelChecker): Seq[l.SymbolInformation] = {
+    if (query.isEmpty) return Nil
     try {
       searchUnsafe(query, token)
     } catch {
@@ -77,7 +76,7 @@ final class WorkspaceSymbolProvider(
     for {
       dir <- buildTargets.sourceDirectories
       source <- ListFiles(dir)
-      if source.isScalaOrJava && !index.contains(source.toNIO)
+      if source.isScalaOrJava && !inWorkspace.contains(source.toNIO)
     } {
       indexSource(source)
     }
@@ -88,7 +87,7 @@ final class WorkspaceSymbolProvider(
   }
 
   def didRemove(path: AbsolutePath): Unit = {
-    index.remove(path.toNIO)
+    inWorkspace.remove(path.toNIO)
   }
 
   def indexWorkspace(): Unit = {
@@ -96,11 +95,11 @@ final class WorkspaceSymbolProvider(
     files.all.foreach(indexSource)
     if (statistics.isWorkspaceSymbol) {
       scribe.info(
-        s"workspace-symbol: reindex ${index.size} files in $timer"
+        s"workspace-symbol: reindex ${inWorkspace.size} files in $timer"
       )
     }
     if (statistics.isMemory) {
-      val footprint = Memory.footprint("workspace-symbol index", index)
+      val footprint = Memory.footprint("workspace-symbol index", inWorkspace)
       scribe.info(s"memory: $footprint")
     }
   }
@@ -131,7 +130,7 @@ final class WorkspaceSymbolProvider(
       Integer.valueOf(bloomFilterStrings.size),
       0.01
     )
-    index(source.toNIO) = bloom
+    inWorkspace(source.toNIO) = bloom
     bloomFilterStrings.foreach { c =>
       bloom.put(c)
     }
@@ -183,57 +182,88 @@ final class WorkspaceSymbolProvider(
       query: String,
       token: CancelChecker
   ): Seq[l.SymbolInformation] = {
-    if (query.isEmpty) return Nil
-    val timer = new Timer(Time.system)
     val result = newPriorityQueue()
     val queries = WorkspaceSymbolQuery.fromQuery(query)
-    var visitsCount = 0
-    var falsePositives = 0
-    def bloomMatches(bloom: BloomFilter[CharSequence]): Boolean = {
-      queries.exists { q =>
-        q.combinations.forall(bloom.mightContain)
-      }
-    }
-    def symbolMatches(symbol: String): Boolean = {
-      queries.exists { q =>
-        Fuzzy.matches(q.query, symbol)
-      }
-    }
-    for {
-      (path, bloom) <- index
-      _ = token.checkCanceled()
-      if bloomMatches(bloom)
-    } {
-      visitsCount += 1
-      var isFalsePositive = true
-      val input = path.toUriInput
-      foreachSymbol(input) { (info, occ, owner) =>
-        if (WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
-          symbolMatches(info.symbol)) {
-          isFalsePositive = false
-          val linfo = new l.SymbolInformation(
-            info.displayName,
-            info.kind.toLSP,
-            new l.Location(input.path, occ.range.get.toLSP),
-            owner.replace('/', '.')
-          )
-          result.add(linfo)
+    def searchWorkspaceSymbols(): Unit = {
+      val timer = new Timer(Time.system)
+      var visitsCount = 0
+      var falsePositives = 0
+      for {
+        (path, bloom) <- inWorkspace
+        _ = token.checkCanceled()
+        if queries.exists(_.matches(bloom))
+      } {
+        visitsCount += 1
+        var isFalsePositive = true
+        val input = path.toUriInput
+        foreachSymbol(input) { (info, occ, owner) =>
+          if (WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
+            queries.exists(_.matches(info.symbol))) {
+            isFalsePositive = false
+            val linfo = new l.SymbolInformation(
+              info.displayName,
+              info.kind.toLSP,
+              new l.Location(input.path, occ.range.get.toLSP),
+              owner.replace('/', '.')
+            )
+            result.add(linfo)
+          }
+        }
+        if (isFalsePositive) {
+          falsePositives += 1
         }
       }
-      if (isFalsePositive) {
-        falsePositives += 1
+      if (statistics.isWorkspaceSymbol) {
+        val falsePositiveRatio =
+          ((falsePositives.toDouble / visitsCount) * 100).toInt
+        scribe.info(
+          s"workspace-symbol: query '${query}' returned ${result.size()} results in $timer, " +
+            s"visited ${visitsCount} files (${falsePositiveRatio}% false positives)"
+        )
       }
     }
-    if (statistics.isWorkspaceSymbol) {
-      val falsePositiveRatio =
-        ((falsePositives.toDouble / visitsCount) * 100).toInt
-      scribe.info(
-        s"workspace-symbol: query '${query}' returned ${result.size()} results in $timer, " +
-          s"visited ${visitsCount} files (${falsePositiveRatio}% false positives)"
-      )
+    def searchDependencySymbols(): Unit = {
+      val timer = new Timer(Time.system)
+      var visitsCount = 0
+      var falsePositives = 0
+      for {
+        (path, bloom) <- inWorkspace
+        _ = token.checkCanceled()
+        if queries.exists(_.matches(bloom))
+      } {
+        visitsCount += 1
+        var isFalsePositive = true
+        val input = path.toUriInput
+        foreachSymbol(input) { (info, occ, owner) =>
+          if (WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
+            queries.exists(_.matches(info.symbol))) {
+            isFalsePositive = false
+            val linfo = new l.SymbolInformation(
+              info.displayName,
+              info.kind.toLSP,
+              new l.Location(input.path, occ.range.get.toLSP),
+              owner.replace('/', '.')
+            )
+            result.add(linfo)
+          }
+        }
+        if (isFalsePositive) {
+          falsePositives += 1
+        }
+      }
+      if (statistics.isWorkspaceSymbol) {
+        val falsePositiveRatio =
+          ((falsePositives.toDouble / visitsCount) * 100).toInt
+        scribe.info(
+          s"workspace-symbol: query '${query}' returned ${result.size()} results in $timer, " +
+            s"visited ${visitsCount} files (${falsePositiveRatio}% false positives)"
+        )
+      }
     }
+    searchWorkspaceSymbols()
     result.asScala.toSeq.sortBy(_.getName.length)
   }
+
 }
 
 object WorkspaceSymbolProvider {

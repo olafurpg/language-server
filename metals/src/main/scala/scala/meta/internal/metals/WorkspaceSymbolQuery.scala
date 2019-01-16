@@ -1,9 +1,17 @@
 package scala.meta.internal.metals
 
+import com.google.common.hash.BloomFilter
+
 case class WorkspaceSymbolQuery(
     query: String,
     combinations: Array[CharSequence]
-)
+) {
+
+  def matches(bloom: BloomFilter[CharSequence]): Boolean =
+    combinations.forall(bloom.mightContain)
+  def matches(symbol: String): Boolean =
+    Fuzzy.matches(query, symbol)
+}
 
 object WorkspaceSymbolQuery {
   def apply(query: String): WorkspaceSymbolQuery = {
