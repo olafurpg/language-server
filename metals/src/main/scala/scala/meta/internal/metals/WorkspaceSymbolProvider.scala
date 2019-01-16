@@ -47,7 +47,11 @@ final class WorkspaceSymbolProvider(
   private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
   private var classpathIndex = ClasspathIndex(Classpath(Nil))
   private val inDependencies = TrieMap.empty[String, BloomFilter[CharSequence]]
-  var maxResults = 20
+
+  /**
+   * Benchmarks show that 10x
+   */
+  private val maxClasspathResults = 10
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -84,7 +88,18 @@ final class WorkspaceSymbolProvider(
 
   def onBuildTargetsUpdate(): Unit = {
     indexSourceDirectories()
+    val timer = new Timer(Time.system)
     indexClasspath()
+    if (statistics.isWorkspaceSymbol) {
+      scribe.info(
+        s"workspace-symbol: index ${inDependencies.size} classpath packages in $timer"
+      )
+    }
+    if (statistics.isMemory) {
+      scribe.info(
+        s"memory: ${Memory.footprint(inDependencies)} ${Memory.footprint(classpathIndex)}"
+      )
+    }
   }
 
   def didChange(path: AbsolutePath): Unit = {
@@ -100,7 +115,7 @@ final class WorkspaceSymbolProvider(
     files.all.foreach(indexSource)
     if (statistics.isWorkspaceSymbol) {
       scribe.info(
-        s"workspace-symbol: reindex ${inWorkspace.size} files in $timer"
+        s"workspace-symbol: index ${inWorkspace.size} files in $timer"
       )
     }
     if (statistics.isMemory) {
@@ -298,7 +313,7 @@ final class WorkspaceSymbolProvider(
       }
       val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
       val isVisited = mutable.Set.empty[AbsolutePath]
-      while (classpathEntries.length < maxResults && !buf.isEmpty) {
+      while (classpathEntries.length < maxClasspathResults && !buf.isEmpty) {
         val hit = buf.poll()
         for {
           defn <- index.definition(Symbol(hit.toplevel))

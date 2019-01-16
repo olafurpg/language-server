@@ -69,7 +69,7 @@ class ClasspathFuzzBench {
     symbols = TestingWorkspaceSymbolProvider(
       tmp,
       buildTargets = buildTargets,
-      statistics = StatisticsConfig.default,
+      statistics = StatisticsConfig.all,
       index = index
     )
     val sources = Libraries.suite.flatMap(_.sources().entries).distinct
@@ -90,17 +90,13 @@ class ClasspathFuzzBench {
     RecursivelyDelete(tmp)
   }
 
-  @Param(Array("InputStream", "Str", "Like", "Paths"))
+  @Param(Array("InputStream", "Str", "Like"))
   var query: String = _
-
-  @Param(Array("5", "10", "20"))
-  var maxResults: Int = _
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Seq[SymbolInformation] = {
-    symbols.maxResults = maxResults
     symbols.search(query)
   }
 
