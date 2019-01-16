@@ -5,6 +5,7 @@ import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.PriorityQueue
+import scala.meta.internal.mtags.Symbol
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j
@@ -17,15 +18,16 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.inputs.Input
-import scala.meta.internal.classpath.Classdir
-import scala.meta.internal.classpath.ClasspathElement
 import scala.meta.internal.classpath.ClasspathIndex
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.ListFiles
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -38,7 +40,8 @@ import scala.util.control.NonFatal
 final class WorkspaceSymbolProvider(
     workspace: AbsolutePath,
     statistics: StatisticsConfig,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    index: OnDemandSymbolIndex
 )(implicit ec: ExecutionContext) {
   private val files = new WorkspaceSources(workspace)
   private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
@@ -150,10 +153,11 @@ final class WorkspaceSymbolProvider(
   private def indexSourceUnsafe(source: AbsolutePath): Unit = {
     val input = source.toInput
     val symbols = ArrayBuffer.empty[String]
-    foreachSymbol(input) { (info, _, _) =>
-      if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-        symbols += info.symbol
-      }
+    foreachSymbol(input) {
+      case SymbolDefinition(info, _, _) =>
+        if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
+          symbols += info.symbol
+        }
     }
     val bloomFilterStrings = Fuzzy.bloomFilterSymbolStrings(symbols)
     val bloom = BloomFilter.create[CharSequence](
@@ -167,8 +171,13 @@ final class WorkspaceSymbolProvider(
     }
   }
 
+  case class SymbolDefinition(
+      info: SymbolInformation,
+      occ: SymbolOccurrence,
+      owner: String
+  )
   private def foreachSymbol(input: Input.VirtualFile)(
-      fn: (SymbolInformation, SymbolOccurrence, String) => Unit
+      fn: SymbolDefinition => Unit
   ): Unit = {
     input.toLanguage match {
       case Language.SCALA =>
@@ -178,7 +187,7 @@ final class WorkspaceSymbolProvider(
               info: s.SymbolInformation,
               owner: String
           ): Unit = {
-            fn(info, occ, owner)
+            fn(SymbolDefinition(info, occ, owner))
           }
         }
         try mtags.indexRoot()
@@ -193,7 +202,7 @@ final class WorkspaceSymbolProvider(
               info: s.SymbolInformation,
               owner: String
           ): Unit = {
-            fn(info, occ, owner)
+            fn(SymbolDefinition(info, occ, owner))
           }
         }
         try mtags.indexRoot()
@@ -227,18 +236,19 @@ final class WorkspaceSymbolProvider(
         visitsCount += 1
         var isFalsePositive = true
         val input = path.toUriInput
-        foreachSymbol(input) { (info, occ, owner) =>
-          if (WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
-            queries.exists(_.matches(info.symbol))) {
-            isFalsePositive = false
-            val linfo = new l.SymbolInformation(
-              info.displayName,
-              info.kind.toLSP,
-              new l.Location(input.path, occ.range.get.toLSP),
-              owner.replace('/', '.')
-            )
-            result.add(linfo)
-          }
+        foreachSymbol(input) {
+          case SymbolDefinition(info, occ, owner) =>
+            if (WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
+              queries.exists(_.matches(info.symbol))) {
+              isFalsePositive = false
+              val linfo = new l.SymbolInformation(
+                info.displayName,
+                info.kind.toLSP,
+                new l.Location(input.path, occ.range.get.toLSP),
+                owner.replace('/', '.')
+              )
+              result.add(linfo)
+            }
         }
         if (isFalsePositive) {
           falsePositives += 1
@@ -255,7 +265,18 @@ final class WorkspaceSymbolProvider(
     }
     def searchDependencySymbols(): Unit = {
       val timer = new Timer(Time.system)
-      val buf = mutable.ArrayBuffer.empty[CharSequence]
+      case class Hit(pkg: String, name: String) {
+        def toplevel: String = {
+          val dollar = name.indexOf('$')
+          val symname =
+            if (dollar < 0) name.stripSuffix(".class")
+            else name.substring(0, dollar)
+          Symbols.Global(pkg, Descriptor.Type(symname))
+        }
+      }
+      val buf = new PriorityQueue[Hit](
+        (a, b) => -Integer.compare(a.name.length, b.name.length)
+      )
       for {
         (pkg, bloom) <- inDependencies
         if queries.exists(_.matches(bloom))
@@ -267,11 +288,42 @@ final class WorkspaceSymbolProvider(
         isMatch = queries.exists(_.matches(symbol))
         if isMatch
       } {
-        buf += symbol
+        buf.add(Hit(pkg, member))
+        while (buf.size() > 20) {
+          buf.poll()
+        }
       }
-      scribe.info(
-        s"workspace-symbol: query '${query}' returned ${buf.length} results from classpath in $timer"
-      )
+      for {
+        hit <- buf.asScala
+        defn <- index.definition(Symbol(hit.toplevel))
+        input = defn.path.toInput
+      } {
+        lazy val uri = defn.path.toFileOnDisk(workspace).toURI.toString
+        foreachSymbol(input) {
+          case SymbolDefinition(info, occ, owner) =>
+            if (WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
+              queries.exists(_.matches(info.symbol))) {
+              val linfo = new l.SymbolInformation(
+                info.displayName,
+                info.kind.toLSP,
+                new l.Location(uri, occ.range.get.toLSP),
+                owner.replace('/', '.')
+              )
+              result.add(linfo)
+            }
+        }
+      }
+
+      buf.asScala.foreach { s =>
+        val linfo = new l.SymbolInformation()
+        linfo.setName(s.toString)
+        result.add(linfo)
+      }
+      if (statistics.isWorkspaceSymbol) {
+        scribe.info(
+          s"workspace-symbol: query '${query}' returned ${buf.size()} results from classpath in $timer"
+        )
+      }
     }
 //    searchWorkspaceSymbols()
     searchDependencySymbols()

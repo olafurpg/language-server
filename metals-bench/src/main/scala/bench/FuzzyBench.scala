@@ -7,11 +7,13 @@ import com.geirsson.coursiersmall.CoursierSmall
 import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.MetalsEnrichments._
 import org.eclipse.lsp4j.SymbolInformation
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.OutputTimeUnit
 import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
@@ -43,6 +45,7 @@ class WorkspaceFuzzBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def upper(): Seq[SymbolInformation] = {
     symbols.search(query)
   }
@@ -83,12 +86,15 @@ class ClasspathFuzzBench {
     symbols.onBuildTargetsUpdate()
   }
 
-  @Param(Array("Str", "Failure"))
+//  @Param(Array("Sp", "Str", "Failure", "InputStream", "FaDD"))
+//@Param(Array("Sp"))
+  @Param(Array("File"))
   var query: String = _
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def upper(): Seq[SymbolInformation] = {
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  def run(): Seq[SymbolInformation] = {
     symbols.search(query)
   }
 

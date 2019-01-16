@@ -178,7 +178,8 @@ class MetalsLanguageServer(
     workspaceSymbols = new WorkspaceSymbolProvider(
       workspace,
       config.statistics,
-      buildTargets
+      buildTargets,
+      definitionIndex
     )
     bloopServers = new BloopServers(
       sh,

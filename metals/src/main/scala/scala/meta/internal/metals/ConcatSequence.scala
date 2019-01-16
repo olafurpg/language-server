@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
-class ConcatSequence(a: CharSequence, b: CharSequence) extends CharSequence {
+class ConcatSequence(val a: CharSequence, val b: CharSequence)
+    extends CharSequence {
   override def length(): Int = a.length + b.length
   override def charAt(index: Int): Char = {
     if (index < a.length) a.charAt(index)

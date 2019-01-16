@@ -5,6 +5,7 @@ object MainBench {
     val bench = new ClasspathFuzzBench
     bench.setup()
     val symbols = bench.symbols
-    pprint.log(symbols.search("SparkS"))
+    bench.query = "InputStream"
+    pprint.log(bench.run())
   }
 }
