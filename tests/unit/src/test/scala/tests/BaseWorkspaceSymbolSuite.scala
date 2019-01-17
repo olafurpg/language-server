@@ -10,13 +10,14 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   lazy val symbols: WorkspaceSymbolProvider = {
     val p = TestingWorkspaceSymbolProvider(workspace)
     p.indexWorkspace()
-    libraries.foreach(p.indexLibrary)
+    p.indexLibraries(libraries)
     p.onBuildTargetsUpdate()
     p
   }
   def check(query: String, expected: String): Unit = {
     test(query) {
       val result = symbols.search(query)
+      pprint.log(result.length)
       val obtained =
         if (result.length > 100) s"${result.length} results"
         else {

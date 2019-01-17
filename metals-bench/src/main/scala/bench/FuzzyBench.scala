@@ -57,7 +57,7 @@ class ClasspathFuzzBench {
   def setup(): Unit = {
     tmp = AbsolutePath(Files.createTempDirectory("metals"))
     symbols = TestingWorkspaceSymbolProvider(tmp)
-    Libraries.suite.foreach(symbols.indexLibrary)
+    symbols.indexLibraries(Libraries.suite)
     symbols.onBuildTargetsUpdate()
   }
 
@@ -66,13 +66,19 @@ class ClasspathFuzzBench {
     RecursivelyDelete(tmp)
   }
 
-  @Param(Array("InputStream", "Str", "Like", "M.E"))
+//  @Param(Array("InputStream", "Str", "Like", "M.E"))
+//@Param(Array("Path", "File", "Files", "Paths"))
+  @Param(Array("Path", "File"))
   var query: String = _
+
+  @Param(Array("5", "10", "20", "40"))
+  var maxResults: Int = _
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Seq[SymbolInformation] = {
+    symbols.extraMaxClasspathResults = maxResults
     symbols.search(query)
   }
 

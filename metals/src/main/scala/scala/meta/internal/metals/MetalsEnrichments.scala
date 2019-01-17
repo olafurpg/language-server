@@ -541,4 +541,5 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       case _ => l.SymbolKind.Class
     }
   }
+
 }

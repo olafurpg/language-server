@@ -40,5 +40,32 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |javax.imageio.stream.FileImageOutputStream Class
        |""".stripMargin
   )
+  check(
+    "Files",
+    """|java.io.FileInputStream Class
+       |java.io.FileOutputStream Class
+       |java.util.zip.ZipFile#ZipFileInflaterInputStream Class
+       |java.util.zip.ZipFile#ZipFileInputStream Class
+       |javax.imageio.stream.FileCacheImageInputStream Class
+       |javax.imageio.stream.FileCacheImageOutputStream Class
+       |javax.imageio.stream.FileImageInputStream Class
+       |javax.imageio.stream.FileImageOutputStream Class
+       |""".stripMargin
+  )
+
+  check(
+    "Implicits",
+    """|org.apache.spark.sql.LowPrioritySQLImplicits Interface
+       |org.apache.spark.sql.SQLImplicits Class
+       |org.json4s.Implicits Interface
+       |scala.collection.convert.ToJavaImplicits Interface
+       |scala.collection.convert.ToScalaImplicits Interface
+       |scala.sys.process.ProcessImplicits Interface
+       |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits1 Interface
+       |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
+       |scala.tools.nsc.typechecker.Implicits Interface
+       |scala.tools.nsc.typechecker.ImplicitsStats Object
+       |""".stripMargin
+  )
 
 }

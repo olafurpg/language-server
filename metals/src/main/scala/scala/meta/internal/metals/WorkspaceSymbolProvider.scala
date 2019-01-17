@@ -48,10 +48,8 @@ final class WorkspaceSymbolProvider(
   private var classpathIndex = ClasspathIndex(Classpath(Nil))
   private val inDependencies = TrieMap.empty[String, BloomFilter[CharSequence]]
 
-  /**
-   * Benchmarks show that 10x
-   */
-  private val maxClasspathResults = 10
+  var defaultMaxClasspathResults = 10
+  var extraMaxClasspathResults = 40
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -250,14 +248,14 @@ final class WorkspaceSymbolProvider(
     )
 
   private def searchUnsafe(
-      query: String,
+      textQuery: String,
       token: CancelChecker
   ): Seq[l.SymbolInformation] = {
     val result = newPriorityQueue()
-    val queries = WorkspaceSymbolQuery.fromQuery(query)
+    val query = SymbolQuery.fromTextQuery(textQuery)
     def matches(info: s.SymbolInformation): Boolean = {
       WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
-      queries.exists(_.matches(info.symbol))
+      query.matches(info.symbol)
     }
     def searchWorkspaceSymbols(): Unit = {
       val timer = new Timer(Time.system)
@@ -266,7 +264,7 @@ final class WorkspaceSymbolProvider(
       for {
         (path, bloom) <- inWorkspace
         _ = token.checkCanceled()
-        if queries.exists(_.matches(bloom))
+        if query.matches(bloom)
       } {
         visitsCount += 1
         var isFalsePositive = true
@@ -293,45 +291,51 @@ final class WorkspaceSymbolProvider(
     def searchDependencySymbols(): Unit = {
       val timer = new Timer(Time.system)
       case class Hit(pkg: String, name: String) {
-        def toplevel: String = {
+        def isExact: Boolean = desc.value == query.query
+        def desc: Descriptor = {
           val dollar = name.indexOf('$')
           val symname =
             if (dollar < 0) name.stripSuffix(".class")
             else name.substring(0, dollar)
-          Symbols.Global(pkg, Descriptor.Type(symname))
+          Descriptor.Type(symname)
+        }
+        def toplevel: String = {
+          Symbols.Global(pkg, desc)
         }
       }
-      val buf = new PriorityQueue[Hit](
-        (a, b) => Integer.compare(a.name.length, b.name.length)
-      )
+      val buf =
+        mutable.PriorityQueue.empty[Hit](Ordering.by[Hit, Int](_.name.length))
       for {
         (pkg, bloom) <- inDependencies
-        if queries.exists(_.matches(bloom))
+        if query.matches(bloom)
         (member, _) <- classpathIndex.dirs(pkg).members
         if member.endsWith(".class")
         name = member.subSequence(0, member.length - ".class".length)
         if name.charAt(name.length - 1) != '$'
         symbol = new ConcatSequence(pkg, name)
-        isMatch = queries.exists(_.matches(symbol))
+        isMatch = query.matches(symbol)
         if isMatch
       } {
-        buf.add(Hit(pkg, member))
+        buf += Hit(pkg, member)
       }
       val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
       val isVisited = mutable.Set.empty[AbsolutePath]
-      while (classpathEntries.length < maxClasspathResults && !buf.isEmpty) {
-        val hit = buf.poll()
-        for {
-          defn <- index.definition(Symbol(hit.toplevel))
-          if !isVisited(defn.path)
-        } {
-          isVisited += defn.path
-          val input = defn.path.toInput
-          lazy val uri = defn.path.toFileOnDisk(workspace).toURI.toString
-          foreachSymbol(input) { defn =>
-            if (matches(defn.info)) {
-              classpathEntries += defn.toInfo(uri)
-            }
+      var nonExactMatches = 0
+      for {
+        hit <- buf
+        if nonExactMatches < defaultMaxClasspathResults
+        defn <- index.definition(Symbol(hit.toplevel))
+        if !isVisited(defn.path)
+      } {
+        isVisited += defn.path
+        if (!hit.isExact) {
+          nonExactMatches += 1
+        }
+        val input = defn.path.toInput
+        lazy val uri = defn.path.toFileOnDisk(workspace).toURI.toString
+        foreachSymbol(input) { defn =>
+          if (matches(defn.info)) {
+            classpathEntries += defn.toInfo(uri)
           }
         }
       }
@@ -340,7 +344,7 @@ final class WorkspaceSymbolProvider(
       }
       if (statistics.isWorkspaceSymbol) {
         scribe.info(
-          s"workspace-symbol: query '${query}' returned ${buf.size()} results from classpath in $timer"
+          s"workspace-symbol: query '${query}' returned ${buf.size} results from classpath in $timer"
         )
       }
     }

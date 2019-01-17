@@ -156,7 +156,7 @@ lazy val metals = project
       // For reading classpaths.
       "org.scalameta" %% "symtab" % V.scalameta,
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "com.geirsson" %% "coursier-small" % "1.3.1",
+      "com.geirsson" %% "coursier-small" % "1.3.3",
       // undeclared transitive dependency of coursier-small
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
       // for handling Java futures
