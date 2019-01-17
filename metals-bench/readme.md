@@ -34,3 +34,13 @@ Date: 2018 October 8th, commit 59bda2ac81a497fa168677499bd1a9df60fec5ab
 [info] FuzzyBench.upper                fsmfunctionbuilder    ss   10  0.136 ± 0.005   s/op
 [info] FuzzyBench.upper  abcdefghijklmnopqrstabcdefghijkl    ss   10  0.203 ± 0.012   s/op
 ```
+
+```
+[info] Benchmark                   (query)  Mode  Cnt    Score    Error  Units
+[info] ClasspathFuzzBench.run  InputStream    ss   30   63.669 ±  9.473  ms/op
+[info] ClasspathFuzzBench.run          Str    ss   30  111.698 ± 10.954  ms/op
+[info] ClasspathFuzzBench.run         Like    ss   30  111.270 ± 10.656  ms/op
+[info] ClasspathFuzzBench.run          M.E    ss   30  286.268 ± 55.467  ms/op
+[info] ClasspathFuzzBench.run         File    ss   30  656.876 ± 26.848  ms/op
+[info] ClasspathFuzzBench.run        Files    ss   30  166.028 ± 10.479  ms/op
+```
