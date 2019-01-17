@@ -302,10 +302,12 @@ final class WorkspaceSymbolProvider(
           Symbols.Global(pkg, desc)
         }
       }
-      val buf =
-        mutable.PriorityQueue.empty[Hit](Ordering.by[Hit, Int](_.name.length))
+      val buf = new PriorityQueue[Hit](
+        (a, b) => Integer.compare(a.name.length, b.name.length)
+      )
       for {
         (pkg, bloom) <- inDependencies
+        _ = token.checkCanceled()
         if query.matches(bloom)
         (member, _) <- classpathIndex.dirs(pkg).members
         if member.endsWith(".class")
@@ -315,13 +317,14 @@ final class WorkspaceSymbolProvider(
         isMatch = query.matches(symbol)
         if isMatch
       } {
-        buf += Hit(pkg, member)
+        buf.add(Hit(pkg, member))
       }
       val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
       val isVisited = mutable.Set.empty[AbsolutePath]
       var nonExactMatches = 0
       for {
-        hit <- buf
+        hit <- buf.scalaIterator
+        _ = token.checkCanceled()
         if nonExactMatches < maxNonExactMatches || hit.isExact
         defn <- index.definition(Symbol(hit.toplevel))
         if !isVisited(defn.path)
@@ -347,7 +350,7 @@ final class WorkspaceSymbolProvider(
         )
       }
     }
-//    searchWorkspaceSymbols()
+    searchWorkspaceSymbols()
     searchDependencySymbols()
     result.asScala.toSeq.sortBy(_.getName.length)
   }

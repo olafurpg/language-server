@@ -19,6 +19,7 @@ import java.util.concurrent.CompletionStage
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
+import scala.collection.AbstractIterator
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters
@@ -493,7 +494,7 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   implicit class XtensionClientCapabilities(
       initializeParams: Option[l.InitializeParams]
   ) {
-    val supportsHierarchicalDocumentSymbols =
+    def supportsHierarchicalDocumentSymbols: Boolean =
       (for {
         params <- initializeParams
         capabilities <- Option(params.getCapabilities)
@@ -539,6 +540,13 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       case k.TRAIT => l.SymbolKind.Interface
       case k.INTERFACE => l.SymbolKind.Interface
       case _ => l.SymbolKind.Class
+    }
+  }
+  implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
+    // asScala.foreach doesn't traveres in the order of poll().
+    def scalaIterator: Iterator[A] = new AbstractIterator[A] {
+      override def hasNext: Boolean = !q.isEmpty
+      override def next(): A = q.poll()
     }
   }
 

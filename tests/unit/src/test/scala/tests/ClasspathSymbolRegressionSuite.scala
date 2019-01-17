@@ -91,25 +91,56 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   )
   check(
     "File",
-    """|akka.actor.SupervisorStrategyLowPriorityImplicits Interface
-       |org.apache.spark.sql.LowPrioritySQLImplicits Interface
-       |org.apache.spark.sql.SQLImplicits Class
-       |org.json4s.Implicits Interface
-       |scala.LowPriorityImplicits Class
-       |scala.io.LowPriorityCodecImplicits Interface
-       |scala.math.Fractional.ExtraImplicits Interface
-       |scala.math.Fractional.Implicits Object
-       |scala.math.Integral.ExtraImplicits Interface
-       |scala.math.Integral.Implicits Object
-       |scala.math.LowPriorityOrderingImplicits Interface
-       |scala.math.Numeric.ExtraImplicits Interface
-       |scala.math.Numeric.Implicits Object
-       |scala.math.Ordering.ExtraImplicits Interface
-       |scala.math.Ordering.Implicits Object
-       |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
-       |scala.tools.nsc.typechecker.ContextErrors#TyperContextErrors#TyperErrorGen.MacroExpansionException.InferencerContextErrors#InferErrorGen.PolyAlternativeErrorKind.NamerContextErrors#NamerErrorGen.DuplicatesErrorKinds.ImplicitsContextErrors Interface
-       |scala.tools.nsc.typechecker.Implicits Interface
-       |scala.tools.nsc.typechecker.ImplicitsStats Object
+    """|com.google.protobuf.compiler.PluginProtos#CodeGeneratorResponse#File Class
+       |com.google.protobuf.compiler.PluginProtos#CodeGeneratorResponse#FileOrBuilder Interface
+       |io.buoyant.config.types.File Class
+       |io.buoyant.config.types.FileDeserializer Class
+       |io.buoyant.config.types.FileSerializer Class
+       |org.apache.commons.configuration.AbstractHierarchicalFileConfiguration Class
+       |org.apache.commons.configuration.AbstractHierarchicalFileConfiguration#FileConfigurationDelegate Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileInfoRequestProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileInfoRequestProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileInfoResponseProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileInfoResponseProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileLinkInfoRequestProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileLinkInfoRequestProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileLinkInfoResponseProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#GetFileLinkInfoResponseProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#IsFileClosedRequestProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#IsFileClosedRequestProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#IsFileClosedResponseProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#IsFileClosedResponseProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#ListCorruptFileBlocksRequestProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#ListCorruptFileBlocksRequestProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#ListCorruptFileBlocksResponseProto Class
+       |org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos#ListCorruptFileBlocksResponseProtoOrBuilder Interface
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FileSummary Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FileSummaryOrBuilder Interface
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FilesUnderConstructionSection Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FilesUnderConstructionSection#FileUnderConstructionEntry Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FilesUnderConstructionSection#FileUnderConstructionEntryOrBuilder Interface
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FilesUnderConstructionSectionOrBuilder Interface
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#INodeSection#FileUnderConstructionFeature Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#INodeSection#FileUnderConstructionFeatureOrBuilder Interface
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#INodeSection#INodeFile Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#INodeSection#INodeFileOrBuilder Interface
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#SnapshotDiffSection#FileDiff Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#SnapshotDiffSection#FileDiffOrBuilder Interface
+       |org.apache.hadoop.mapred.SequenceFileAsBinaryInputFormat Class
+       |org.apache.hadoop.mapred.SequenceFileAsBinaryInputFormat#SequenceFileAsBinaryRecordReader Class
+       |org.apache.hadoop.mapred.lib.CombineSequenceFileInputFormat Class
+       |org.apache.hadoop.mapred.lib.CombineSequenceFileInputFormat#SequenceFileRecordReaderWrapper Class
+       |org.apache.hadoop.mapreduce.lib.input.CombineSequenceFileInputFormat Class
+       |org.apache.hadoop.mapreduce.lib.input.CombineSequenceFileInputFormat#SequenceFileRecordReaderWrapper Class
+       |org.apache.hadoop.mapreduce.lib.input.SequenceFileAsBinaryInputFormat Class
+       |org.apache.hadoop.mapreduce.lib.input.SequenceFileAsBinaryInputFormat#SequenceFileAsBinaryRecordReader Class
+       |org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor#ElevatedFileSystem Class
+       |org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor#ElevatedFileSystem#ElevatedRawLocalFilesystem Class
+       |org.jets3t.apps.cockpit.gui.LoginLocalFolderPanel#ProviderCredentialsFileTableModel Class
+       |scala.reflect.io.File Class
+       |scala.reflect.io.File Object
+       |sourcecode.File Class
+       |sourcecode.File Object
        |""".stripMargin
   )
   check(
