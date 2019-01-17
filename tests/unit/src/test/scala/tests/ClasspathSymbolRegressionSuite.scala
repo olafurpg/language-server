@@ -28,4 +28,17 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |""".stripMargin
   )
 
+  check(
+    "FileStream",
+    """|java.io.FileInputStream Class
+       |java.io.FileOutputStream Class
+       |java.util.zip.ZipFile#ZipFileInflaterInputStream Class
+       |java.util.zip.ZipFile#ZipFileInputStream Class
+       |javax.imageio.stream.FileCacheImageInputStream Class
+       |javax.imageio.stream.FileCacheImageOutputStream Class
+       |javax.imageio.stream.FileImageInputStream Class
+       |javax.imageio.stream.FileImageOutputStream Class
+       |""".stripMargin
+  )
+
 }

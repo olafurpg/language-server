@@ -123,6 +123,11 @@ final class WorkspaceSymbolProvider(
       scribe.info(s"memory: $footprint")
     }
   }
+  private def isExcludedPackage(pkg: String): Boolean = {
+    // NOTE(olafur) I can't count how many times I've gotten unwanted results from these packages.
+    pkg.startsWith("com/sun/") ||
+    pkg.startsWith("com/apple/")
+  }
   private def indexClasspath(): Unit = {
     inDependencies.clear()
     val classpath = mutable.Set.empty[AbsolutePath]
@@ -134,6 +139,7 @@ final class WorkspaceSymbolProvider(
     val symtab = classpathIndex.dirs
     for {
       (pkg, element) <- symtab
+      if !isExcludedPackage(pkg)
     } {
       val buf = Fuzzy.bloomFilterSymbolStrings(element.members.keys)
       buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)

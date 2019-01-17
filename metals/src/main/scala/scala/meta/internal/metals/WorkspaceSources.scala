@@ -20,6 +20,8 @@ final class WorkspaceSources(workspace: AbsolutePath) {
       FileIO.withJarFileSystem(workspace, create = false) { root =>
         walkFileTree(root)
       }
+    } else if (!workspace.resolve(".git").isDirectory) {
+      walkFileTree(workspace)
     } else {
       try {
         gitLsFiles()
