@@ -103,7 +103,7 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
         """
           |/metals.json
           |{
-          |  "a": {}
+          |  "a": {"libraryDependencies": ["com.google.guava:guava:27.0.1-jre"]}
           |}
           |/a/src/main/scala/a/A.scala
           |package a
@@ -118,7 +118,18 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
-      _ = pprint.log(server.server.workspaceSymbol("Files"))
+      _ = assertNoDiff(
+        server.server
+          .workspaceSymbol("Files")
+          .map(_.fullPath)
+          .mkString("\n"),
+        """|java.nio.file.Files
+           |com.google.common.io.Files
+           |org.checkerframework.framework.qual.StubFiles
+           |com.google.common.io.MoreFiles
+           |javax.swing.plaf.basic.BasicDirectoryModel#LoadFilesThread
+           |""".stripMargin
+      )
     } yield ()
   }
 
