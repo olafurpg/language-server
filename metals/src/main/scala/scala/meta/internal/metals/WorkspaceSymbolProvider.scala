@@ -2,10 +2,10 @@ package scala.meta.internal.metals
 
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
-import com.google.protobuf.CodedOutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
+import java.util.Comparator
 import java.util.PriorityQueue
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicReference
@@ -57,7 +57,7 @@ final class WorkspaceSymbolProvider(
       members: Array[String]
   )
   private val inDependencies =
-    TrieMap.empty[String, (BloomFilter[CharSequence], Array[String])]
+    TrieMap.empty[String, (BloomFilter[CharSequence], Array[Byte])]
 
   var maxNonExactMatches = 10
 
@@ -132,9 +132,6 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  def deflate(members: Array[String]): Array[Byte] = {
-    val out = CodedOutputStream.newInstance(Array.empty, 0, 0)
-  }
   private def isExcludedPackage(pkg: String): Boolean = {
     // NOTE(olafur) I can't count how many times I've gotten unwanted results from these packages.
     pkg.startsWith("com/sun/") ||
@@ -142,7 +139,6 @@ final class WorkspaceSymbolProvider(
   }
   private def indexClasspath(): Unit = {
     inDependencies.clear()
-    val next = new util.ArrayList[DependencyPackage]()
     val classpath = mutable.Set.empty[AbsolutePath]
     buildTargets.all.foreach { target =>
       classpath ++= target.scalac.classpath
@@ -161,26 +157,33 @@ final class WorkspaceSymbolProvider(
       }
       val members =
         classdir.members.keys.iterator.filter(_.endsWith(".class")).toArray
+      // Sort members for deterministic order for deterministic results.
       util.Arrays.sort(members, String.CASE_INSENSITIVE_ORDER)
-      // For members for deterministic order.
-      next.add(DependencyPackage(pkg, bloom, members))
-    }
-    next.asScala.foreach { d =>
-//      inDependencies(d.name) = d.bloom -> Array.empty // d.members
-      inDependencies(d.name) = d.bloom -> d.members
-      pprint.log(d.members.take(2))
+      // Compress members because they make up the bulk of memory usage in the classpath index.
+      // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
+      // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
+      // so we should try to keep each of them as small as possible.
+      val compressedMembers = Compression.compress(members)
+      inDependencies(pkg) = (bloom, compressedMembers)
     }
   }
 
-//  private def sortPackagesByReferences(): Unit = {
-//    inDependencies.sort { (a, b) =>
-//      val isReferencedA = isReferencedPackage(a.name)
-//      val isReferencedB = isReferencedPackage(b.name)
-//      val byReference = -java.lang.Boolean.compare(isReferencedA, isReferencedB)
-//      if (byReference != 0) byReference
-//      else a.name.compare(b.name)
-//    }
-//  }
+  private val byReferenceThenAlphabeticalComparator = new Comparator[String] {
+    override def compare(a: String, b: String): Int = {
+      val isReferencedA = isReferencedPackage(a)
+      val isReferencedB = isReferencedPackage(b)
+      val byReference =
+        -java.lang.Boolean.compare(isReferencedA, isReferencedB)
+      if (byReference != 0) byReference
+      else a.compare(b)
+    }
+  }
+
+  private def packagesSortedByReferences(): Array[String] = {
+    val packages = inDependencies.keys.toArray
+    util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
+    packages
+  }
   private def indexSourceDirectories(): Unit = {
     for {
       dir <- buildTargets.sourceDirectories
@@ -339,11 +342,14 @@ final class WorkspaceSymbolProvider(
       val buf = new PriorityQueue[Hit](
         (a, b) => Integer.compare(a.name.length, b.name.length)
       )
-//      sortPackagesByReferences()
+
+      val packages = packagesSortedByReferences()
       for {
-        (pkg, (bloom, members)) <- inDependencies // .asScala
+        pkg <- packages.iterator
+        (bloom, memberBytes) = inDependencies(pkg)
         _ = token.checkCanceled()
         if query.matches(bloom)
+        members = Compression.decompress(memberBytes)
         member <- members
         if member.endsWith(".class")
         name = member.subSequence(0, member.length - ".class".length)
