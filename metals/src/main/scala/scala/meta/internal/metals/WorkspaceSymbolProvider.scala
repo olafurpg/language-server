@@ -96,9 +96,8 @@ final class WorkspaceSymbolProvider(
       )
     }
     if (statistics.isMemory) {
-      scribe.info(
-        s"memory: ${Memory.footprint(inDependencies)} ${Memory.footprint(classpathIndex)}"
-      )
+      scribe.info(s"memory: ${Memory.footprint(classpathIndex)}")
+      scribe.info(s"memory: ${Memory.footprint(inDependencies)}")
     }
   }
 
@@ -138,10 +137,10 @@ final class WorkspaceSymbolProvider(
       ClasspathIndex(Classpath(classpath.toList), includeJdk = true)
     val symtab = classpathIndex.dirs
     for {
-      (pkg, element) <- symtab
+      (pkg, classdir) <- symtab
       if !isExcludedPackage(pkg)
     } {
-      val buf = Fuzzy.bloomFilterSymbolStrings(element.members.keys)
+      val buf = Fuzzy.bloomFilterSymbolStrings(classdir.members.keys)
       buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)
       val bloom = BloomFilters.create(buf.size)
       buf.foreach { key =>
@@ -285,7 +284,7 @@ final class WorkspaceSymbolProvider(
         val falsePositiveRatio =
           ((falsePositives.toDouble / visitsCount) * 100).toInt
         scribe.info(
-          s"workspace-symbol: query '${query}' returned ${result.size()} results in $timer from workspace, " +
+          s"workspace-symbol: query '${query.query}' returned ${result.size()} results in $timer from workspace, " +
             s"visited ${visitsCount} files (${falsePositiveRatio}% false positives)"
         )
       }
@@ -349,7 +348,7 @@ final class WorkspaceSymbolProvider(
       }
       if (statistics.isWorkspaceSymbol) {
         scribe.info(
-          s"workspace-symbol: query '${query}' returned ${buf.size} results from classpath in $timer"
+          s"workspace-symbol: query '${query.query}' returned ${buf.size} results from classpath in $timer"
         )
       }
     }
