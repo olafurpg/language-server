@@ -10,14 +10,13 @@ import java.nio.file.Files
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Memory
-import scala.meta.internal.{semanticdb => s}
-import scala.{meta => m}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.Classpath
+import scala.{meta => m}
 
 /**
  *  Equivalent to scala.meta.internal.metals.MetalsEnrichments
@@ -111,6 +110,7 @@ object MetalsTestEnrichments {
   }
 
   implicit class XtensionDocumentSymbolOccurrence(info: l.SymbolInformation) {
+    def fullPath: String = s"${info.getContainerName}${info.getName}"
     def toSymbolOccurrence: s.SymbolOccurrence = {
       val startRange = info.getLocation.getRange.getStart
       val endRange = info.getLocation.getRange.getEnd

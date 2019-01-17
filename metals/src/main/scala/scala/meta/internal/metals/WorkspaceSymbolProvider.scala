@@ -4,6 +4,7 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util
 import java.util.PriorityQueue
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicReference
@@ -44,12 +45,17 @@ final class WorkspaceSymbolProvider(
     workspace: AbsolutePath,
     statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
-    val index: OnDemandSymbolIndex
+    val index: OnDemandSymbolIndex,
+    isReferencedPackage: String => Boolean
 )(implicit ec: ExecutionContext) {
   private val files = new WorkspaceSources(workspace)
   private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  private var classpathIndex = ClasspathIndex(Classpath(Nil))
-  private val inDependencies = TrieMap.empty[String, BloomFilter[CharSequence]]
+  case class DependencyPackage(
+      name: String,
+      bloom: BloomFilter[CharSequence],
+      members: Seq[String]
+  )
+  private val inDependencies = new util.ArrayList[DependencyPackage]()
 
   var maxNonExactMatches = 10
 
@@ -96,7 +102,6 @@ final class WorkspaceSymbolProvider(
       )
     }
     if (statistics.isMemory) {
-      scribe.info(s"memory: ${Memory.footprint(classpathIndex)}")
       scribe.info(s"memory: ${Memory.footprint(inDependencies)}")
     }
   }
@@ -133,11 +138,10 @@ final class WorkspaceSymbolProvider(
     buildTargets.all.foreach { target =>
       classpath ++= target.scalac.classpath
     }
-    classpathIndex =
+    val classpathIndex =
       ClasspathIndex(Classpath(classpath.toList), includeJdk = true)
-    val symtab = classpathIndex.dirs
     for {
-      (pkg, classdir) <- symtab
+      (pkg, classdir) <- classpathIndex.dirs
       if !isExcludedPackage(pkg)
     } {
       val buf = Fuzzy.bloomFilterSymbolStrings(classdir.members.keys)
@@ -146,7 +150,19 @@ final class WorkspaceSymbolProvider(
       buf.foreach { key =>
         bloom.put(key)
       }
-      inDependencies(pkg) = bloom
+      val members = classdir.members.keys.toArray
+      util.Arrays.sort(members, String.CASE_INSENSITIVE_ORDER)
+      // For members for deterministic order.
+      inDependencies.add(DependencyPackage(pkg, bloom, members))
+    }
+    // For packages for deterministic order. We may want to refine the ordering at some point to
+    // prioritize packages that have at least one reference in this workspace.
+    inDependencies.sort { (a, b) =>
+      val isReferencedA = isReferencedPackage(a.name)
+      val isReferencedB = isReferencedPackage(b.name)
+      val byReference = java.lang.Boolean.compare(isReferencedA, isReferencedB)
+      if (byReference != 0) byReference
+      else a.name.compare(b.name)
     }
   }
   private def indexSourceDirectories(): Unit = {
@@ -308,18 +324,18 @@ final class WorkspaceSymbolProvider(
         (a, b) => Integer.compare(a.name.length, b.name.length)
       )
       for {
-        (pkg, bloom) <- inDependencies
+        pkg <- inDependencies.asScala
         _ = token.checkCanceled()
-        if query.matches(bloom)
-        (member, _) <- classpathIndex.dirs(pkg).members
+        if query.matches(pkg.bloom)
+        member <- pkg.members
         if member.endsWith(".class")
         name = member.subSequence(0, member.length - ".class".length)
         if name.charAt(name.length - 1) != '$'
-        symbol = new ConcatSequence(pkg, name)
+        symbol = new ConcatSequence(pkg.name, name)
         isMatch = query.matches(symbol)
         if isMatch
       } {
-        buf.add(Hit(pkg, member))
+        buf.add(Hit(pkg.name, member))
       }
       val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
       val isVisited = mutable.Set.empty[AbsolutePath]

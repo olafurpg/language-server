@@ -175,12 +175,6 @@ class MetalsLanguageServer(
         () => userConfig
       )
     )
-    workspaceSymbols = new WorkspaceSymbolProvider(
-      workspace,
-      config.statistics,
-      buildTargets,
-      definitionIndex
-    )
     bloopServers = new BloopServers(
       sh,
       workspace,
@@ -229,6 +223,13 @@ class MetalsLanguageServer(
       semanticdbs,
       buffers,
       definitionProvider
+    )
+    workspaceSymbols = new WorkspaceSymbolProvider(
+      workspace,
+      config.statistics,
+      buildTargets,
+      definitionIndex,
+      pkg => referencesProvider.referencedPackages.mightContain(pkg)
     )
     doctor = new Doctor(
       workspace,
