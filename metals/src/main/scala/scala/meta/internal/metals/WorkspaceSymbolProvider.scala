@@ -48,8 +48,7 @@ final class WorkspaceSymbolProvider(
   private var classpathIndex = ClasspathIndex(Classpath(Nil))
   private val inDependencies = TrieMap.empty[String, BloomFilter[CharSequence]]
 
-  var defaultMaxClasspathResults = 10
-  var extraMaxClasspathResults = 40
+  var maxNonExactMatches = 10
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -323,7 +322,7 @@ final class WorkspaceSymbolProvider(
       var nonExactMatches = 0
       for {
         hit <- buf
-        if nonExactMatches < defaultMaxClasspathResults
+        if nonExactMatches < maxNonExactMatches || hit.isExact
         defn <- index.definition(Symbol(hit.toplevel))
         if !isVisited(defn.path)
       } {

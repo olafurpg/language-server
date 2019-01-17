@@ -17,7 +17,6 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def check(query: String, expected: String): Unit = {
     test(query) {
       val result = symbols.search(query)
-      pprint.log(result.length)
       val obtained =
         if (result.length > 100) s"${result.length} results"
         else {

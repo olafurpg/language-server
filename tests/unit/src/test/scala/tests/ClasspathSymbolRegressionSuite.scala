@@ -14,55 +14,141 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
 
   check(
     "Map.Entry",
-    """|java.util.Map#Entry Interface
-       |java.util.TreeMap#AscendingSubMap#AscendingEntrySetView Class
-       |java.util.TreeMap#DescendingSubMap#DescendingEntrySetView Class
-       |java.util.TreeMap#Entry Class
-       |java.util.TreeMap#EntryIterator Class
-       |java.util.TreeMap#EntrySet Class
-       |java.util.TreeMap#EntrySpliterator Class
-       |java.util.TreeMap#NavigableSubMap#DescendingSubMapEntryIterator Class
-       |java.util.TreeMap#NavigableSubMap#EntrySetView Class
-       |java.util.TreeMap#NavigableSubMap#SubMapEntryIterator Class
-       |java.util.TreeMap#PrivateEntryIterator Class
+    """|com.google.common.collect.ImmutableMapEntry#NonTerminalImmutableBiMapEntry Class
+       |com.google.common.collect.ImmutableMapEntry#NonTerminalImmutableMapEntry Class
+       |com.google.common.collect.MapMakerInternalMap#AbstractStrongKeyEntry Class
+       |com.google.common.collect.MapMakerInternalMap#AbstractWeakKeyEntry Class
+       |com.google.common.collect.MapMakerInternalMap#DummyInternalEntry Class
+       |com.google.common.collect.MapMakerInternalMap#EntryIterator Class
+       |com.google.common.collect.MapMakerInternalMap#EntrySet Class
+       |com.google.common.collect.MapMakerInternalMap#InternalEntry Interface
+       |com.google.common.collect.MapMakerInternalMap#InternalEntryHelper Interface
+       |com.google.common.collect.MapMakerInternalMap#StrongKeyDummyValueEntry Class
+       |com.google.common.collect.MapMakerInternalMap#StrongKeyStrongValueEntry Class
+       |com.google.common.collect.MapMakerInternalMap#StrongKeyWeakValueEntry Class
+       |com.google.common.collect.MapMakerInternalMap#StrongValueEntry Interface
+       |com.google.common.collect.MapMakerInternalMap#WeakKeyDummyValueEntry Class
+       |com.google.common.collect.MapMakerInternalMap#WeakKeyStrongValueEntry Class
+       |com.google.common.collect.MapMakerInternalMap#WeakKeyWeakValueEntry Class
+       |com.google.common.collect.MapMakerInternalMap#WeakValueEntry Interface
+       |com.google.common.collect.MapMakerInternalMap#WriteThroughEntry Class
+       |com.google.common.reflect.MutableTypeToInstanceMap#UnmodifiableEntry Class
+       |io.netty.util.collection.ShortCollections#UnmodifiableMap#EntryImpl Class
+       |io.netty.util.internal.chmv8.ConcurrentHashMapV8#EntryIterator Class
+       |io.netty.util.internal.chmv8.ConcurrentHashMapV8#EntrySetView Class
+       |io.netty.util.internal.chmv8.ConcurrentHashMapV8#EntrySpliterator Class
+       |io.netty.util.internal.chmv8.ConcurrentHashMapV8#ForEachEntryTask Class
+       |io.netty.util.internal.chmv8.ConcurrentHashMapV8#ForEachTransformedEntryTask Class
+       |io.netty.util.internal.chmv8.ConcurrentHashMapV8#MapEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#AbstractReferenceEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#EntryFactory Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#EntryIterator Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#EntrySet Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#NullEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#ReferenceEntry Interface
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#SoftEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#SoftEvictableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#SoftExpirableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#SoftExpirableEvictableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#StrongEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#StrongEvictableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#StrongExpirableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#StrongExpirableEvictableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#WeakEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#WeakEvictableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#WeakExpirableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#WeakExpirableEvictableEntry Class
+       |jersey.repackaged.com.google.common.collect.MapMakerInternalMap#WriteThroughEntry Class
+       |org.apache.commons.collections.map.AbstractInputCheckedMapDecorator#EntrySet Class
+       |org.apache.commons.collections.map.AbstractInputCheckedMapDecorator#EntrySetIterator Class
+       |org.apache.commons.collections.map.AbstractInputCheckedMapDecorator#MapEntry Class
+       |org.apache.commons.collections.map.AbstractReferenceMap#ReferenceEntry Class
+       |org.apache.commons.collections.map.AbstractReferenceMap#ReferenceEntrySet Class
+       |org.apache.commons.collections.map.AbstractReferenceMap#ReferenceEntrySetIterator Class
+       |org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap#EntryIterator Class
+       |org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap#EntrySet Class
+       |org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap#HashEntry Class
+       |org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap#SimpleEntry Class
+       |org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap#WriteThroughEntry Class
        |""".stripMargin
   )
 
   check(
     "FileStream",
-    """|java.io.FileInputStream Class
-       |java.io.FileOutputStream Class
-       |java.util.zip.ZipFile#ZipFileInflaterInputStream Class
-       |java.util.zip.ZipFile#ZipFileInputStream Class
-       |javax.imageio.stream.FileCacheImageInputStream Class
-       |javax.imageio.stream.FileCacheImageOutputStream Class
-       |javax.imageio.stream.FileImageInputStream Class
-       |javax.imageio.stream.FileImageOutputStream Class
+    """|javassist.CtClass#DelayedFileOutputStream Class
+       |org.apache.avro.file.DataFileWriter#BufferedFileOutputStream Class
+       |org.apache.commons.compress.compressors.pack200.TempFileCachingStreamBridge Class
+       |org.apache.hadoop.fs.RawLocalFileSystem#LocalFSFileInputStream Class
+       |org.apache.hadoop.fs.RawLocalFileSystem#LocalFSFileOutputStream Class
+       |org.apache.hadoop.fs.shell.Display#AvroFileInputStream Class
+       |org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream Class
+       |org.apache.hadoop.io.file.tfile.BoundedRangeFileInputStream Class
+       |org.apache.spark.io.NioBufferedFileInputStream Class
+       |org.apache.spark.sql.execution.streaming.CompactibleFileStreamLog Class
+       |org.apache.spark.sql.execution.streaming.CompactibleFileStreamLog Object
+       |org.jets3t.service.io.SegmentedRepeatableFileInputStream Class
+       |""".stripMargin
+  )
+  check(
+    "File",
+    """|akka.actor.SupervisorStrategyLowPriorityImplicits Interface
+       |org.apache.spark.sql.LowPrioritySQLImplicits Interface
+       |org.apache.spark.sql.SQLImplicits Class
+       |org.json4s.Implicits Interface
+       |scala.LowPriorityImplicits Class
+       |scala.io.LowPriorityCodecImplicits Interface
+       |scala.math.Fractional.ExtraImplicits Interface
+       |scala.math.Fractional.Implicits Object
+       |scala.math.Integral.ExtraImplicits Interface
+       |scala.math.Integral.Implicits Object
+       |scala.math.LowPriorityOrderingImplicits Interface
+       |scala.math.Numeric.ExtraImplicits Interface
+       |scala.math.Numeric.Implicits Object
+       |scala.math.Ordering.ExtraImplicits Interface
+       |scala.math.Ordering.Implicits Object
+       |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
+       |scala.tools.nsc.typechecker.ContextErrors#TyperContextErrors#TyperErrorGen.MacroExpansionException.InferencerContextErrors#InferErrorGen.PolyAlternativeErrorKind.NamerContextErrors#NamerErrorGen.DuplicatesErrorKinds.ImplicitsContextErrors Interface
+       |scala.tools.nsc.typechecker.Implicits Interface
+       |scala.tools.nsc.typechecker.ImplicitsStats Object
        |""".stripMargin
   )
   check(
     "Files",
-    """|java.io.FileInputStream Class
-       |java.io.FileOutputStream Class
-       |java.util.zip.ZipFile#ZipFileInflaterInputStream Class
-       |java.util.zip.ZipFile#ZipFileInputStream Class
-       |javax.imageio.stream.FileCacheImageInputStream Class
-       |javax.imageio.stream.FileCacheImageOutputStream Class
-       |javax.imageio.stream.FileImageInputStream Class
-       |javax.imageio.stream.FileImageOutputStream Class
+    """|com.google.common.io.Files Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FilesUnderConstructionSection Class
+       |org.apache.hadoop.hdfs.server.namenode.FsImageProto#FilesUnderConstructionSectionOrBuilder Interface
+       |org.apache.hadoop.mapred.MROutputFiles Class
+       |org.apache.hadoop.mapred.Utils#OutputFileUtils#OutputFilesFilter Class
+       |org.apache.hadoop.mapred.YarnOutputFiles Class
+       |org.apache.hadoop.mapreduce.JobSubmissionFiles Class
+       |org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor#ElevatedFileSystem#ElevatedRawLocalFilesystem Class
+       |org.apache.parquet.Files Class
+       |org.apache.spark.sql.execution.command.ListFilesCommand Class
+       |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
+       |org.langmeta.internal.io.ListFiles Class
+       |scala.tools.nsc.interactive.CompilerControl#FilesDeletedItem Class
        |""".stripMargin
   )
 
   check(
     "Implicits",
-    """|org.apache.spark.sql.LowPrioritySQLImplicits Interface
+    """|akka.actor.SupervisorStrategyLowPriorityImplicits Interface
+       |org.apache.spark.sql.LowPrioritySQLImplicits Interface
        |org.apache.spark.sql.SQLImplicits Class
        |org.json4s.Implicits Interface
-       |scala.collection.convert.ToJavaImplicits Interface
-       |scala.collection.convert.ToScalaImplicits Interface
-       |scala.sys.process.ProcessImplicits Interface
-       |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits1 Interface
-       |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
+       |scala.LowPriorityImplicits Class
+       |scala.io.LowPriorityCodecImplicits Interface
+       |scala.math.Fractional.ExtraImplicits Interface
+       |scala.math.Fractional.Implicits Object
+       |scala.math.Integral.ExtraImplicits Interface
+       |scala.math.Integral.Implicits Object
+       |scala.math.LowPriorityOrderingImplicits Interface
+       |scala.math.Numeric.ExtraImplicits Interface
+       |scala.math.Numeric.Implicits Object
+       |scala.math.Ordering.ExtraImplicits Interface
+       |scala.math.Ordering.Implicits Object
+       |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
+       |scala.tools.nsc.typechecker.ContextErrors#TyperContextErrors#TyperErrorGen.MacroExpansionException.InferencerContextErrors#InferErrorGen.PolyAlternativeErrorKind.NamerContextErrors#NamerErrorGen.DuplicatesErrorKinds.ImplicitsContextErrors Interface
        |scala.tools.nsc.typechecker.Implicits Interface
        |scala.tools.nsc.typechecker.ImplicitsStats Object
        |""".stripMargin

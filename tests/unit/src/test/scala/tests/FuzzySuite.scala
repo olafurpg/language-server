@@ -39,6 +39,7 @@ object FuzzySuite extends BaseSuite {
   checkNO("FoxBar", "a/FooxBar#")
   checkOK("FooxBar", "a/FooxBar#")
   checkNO("FooxBr", "a/FooxBar#")
+  checkNO("Files", "a/FileStream#")
 
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim
