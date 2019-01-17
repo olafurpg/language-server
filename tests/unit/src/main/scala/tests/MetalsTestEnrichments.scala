@@ -1,18 +1,38 @@
 package tests
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.{semanticdb => s}
 import scala.{meta => m}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.io.Classpath
 
 /**
  *  Equivalent to scala.meta.internal.metals.MetalsEnrichments
  *  but only for tests
  */
 object MetalsTestEnrichments {
+  implicit class XtensionTestBuildTargets(wsp: WorkspaceSymbolProvider) {
+    def indexLibrary(library: Library): Unit = {
+      library.sources().entries.foreach(s => wsp.index.addSourceJar(s))
+      val item = new ScalacOptionsItem(
+        new BuildTargetIdentifier(""),
+        Nil.asJava,
+        library.classpath().entries.map(_.toURI.toString).asJava,
+        ""
+      )
+      wsp.buildTargets.addScalacOptions(
+        new ScalacOptionsResult(List(item).asJava)
+      )
+    }
+  }
   implicit class XtensionTestLspRange(range: l.Range) {
     def formatMessage(
         severity: String,

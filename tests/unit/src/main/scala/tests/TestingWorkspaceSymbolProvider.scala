@@ -11,7 +11,7 @@ object TestingWorkspaceSymbolProvider {
   def apply(
       workspace: AbsolutePath,
       buildTargets: BuildTargets = new BuildTargets,
-      statistics: StatisticsConfig = StatisticsConfig.all,
+      statistics: StatisticsConfig = StatisticsConfig.default,
       index: OnDemandSymbolIndex = OnDemandSymbolIndex()
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(

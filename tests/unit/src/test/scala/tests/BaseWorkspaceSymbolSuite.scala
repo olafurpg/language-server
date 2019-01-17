@@ -2,12 +2,16 @@ package tests
 
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
+import tests.MetalsTestEnrichments._
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath
+  def libraries: List[Library] = Nil
   lazy val symbols: WorkspaceSymbolProvider = {
     val p = TestingWorkspaceSymbolProvider(workspace)
     p.indexWorkspace()
+    libraries.foreach(p.indexLibrary)
+    p.onBuildTargetsUpdate()
     p
   }
   def check(query: String, expected: String): Unit = {

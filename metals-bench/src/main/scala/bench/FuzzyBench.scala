@@ -1,14 +1,7 @@
 package bench
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
-import com.geirsson.coursiersmall.CoursierSmall
-import com.geirsson.coursiersmall.Dependency
-import com.geirsson.coursiersmall.Settings
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
-import scala.meta.internal.metals.MetalsEnrichments._
 import org.eclipse.lsp4j.SymbolInformation
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -19,13 +12,12 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
-import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 import tests.Libraries
+import tests.MetalsTestEnrichments._
 import tests.TestingWorkspaceSymbolProvider
 
 @State(Scope.Benchmark)
@@ -58,30 +50,14 @@ class WorkspaceFuzzBench {
 
 @State(Scope.Benchmark)
 class ClasspathFuzzBench {
-  var buildTargets = new BuildTargets()
   var symbols: WorkspaceSymbolProvider = _
   var tmp: AbsolutePath = _
 
   @Setup
   def setup(): Unit = {
     tmp = AbsolutePath(Files.createTempDirectory("metals"))
-    val index = OnDemandSymbolIndex()
-    symbols = TestingWorkspaceSymbolProvider(
-      tmp,
-      buildTargets = buildTargets,
-      statistics = StatisticsConfig.all,
-      index = index
-    )
-    val sources = Libraries.suite.flatMap(_.sources().entries).distinct
-    val classpath = Libraries.suite.flatMap(_.classpath().entries).distinct
-    sources.foreach(s => index.addSourceJar(s))
-    val item = new ScalacOptionsItem(
-      new BuildTargetIdentifier(""),
-      Nil.asJava,
-      classpath.map(_.toURI.toString).asJava,
-      ""
-    )
-    buildTargets.addScalacOptions(new ScalacOptionsResult(List(item).asJava))
+    symbols = TestingWorkspaceSymbolProvider(tmp)
+    Libraries.suite.foreach(symbols.indexLibrary)
     symbols.onBuildTargetsUpdate()
   }
 
@@ -90,7 +66,7 @@ class ClasspathFuzzBench {
     RecursivelyDelete(tmp)
   }
 
-  @Param(Array("InputStream", "Str", "Like"))
+  @Param(Array("InputStream", "Str", "Like", "M.E"))
   var query: String = _
 
   @Benchmark

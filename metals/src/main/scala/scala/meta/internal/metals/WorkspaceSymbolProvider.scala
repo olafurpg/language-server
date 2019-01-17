@@ -40,8 +40,8 @@ import scala.util.control.NonFatal
 final class WorkspaceSymbolProvider(
     workspace: AbsolutePath,
     statistics: StatisticsConfig,
-    buildTargets: BuildTargets,
-    index: OnDemandSymbolIndex
+    val buildTargets: BuildTargets,
+    val index: OnDemandSymbolIndex
 )(implicit ec: ExecutionContext) {
   private val files = new WorkspaceSources(workspace)
   private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]

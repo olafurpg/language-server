@@ -31,9 +31,10 @@ import java.lang.StringBuilder
  *
  * Glossary and conventions used in this file:
  * - query, what the user typed to look up a symbol.
- * - symbol, a SemanticDB Java or Scala symbol (https://scalameta.org/docs/semanticdb/specification.html).
+ * - symbol, a SemanticDB Java/Scala symbol (https://scalameta.org/docs/semanticdb/specification.html)
+ *   or a java.util.zip.ZipEntry name pointing to a classfile.
  * - delimiter, one of the characters '.' or '/' or '#' that separate package/class/object/trait names
- *   in SemanticDB symbols.
+ *   in SemanticDB symbols, or '$' that separates inner classes in classfile names.
  * - name, characters between delimiters like "io" in "java/io/InputStream".
  * - qa, the start index in the query string.
  * - qb, the end index in the query string.
@@ -57,7 +58,7 @@ object Fuzzy {
       var continue = true
       while (curr >= 0 && continue) {
         string.charAt(curr) match {
-          case '.' | '/' | '#' =>
+          case '.' | '/' | '#' | '$' =>
             continue = false
           case _ =>
             curr -= 1
@@ -84,14 +85,14 @@ object Fuzzy {
       }
     }
     val endOfSymbolDelimiter = symbol.charAt(symbol.length - 1) match {
-      case '.' | '/' | '#' => 1
+      case '.' | '/' | '#' | '$' => 1
       case _ => 0
     }
     loopDelimiters(query.length, symbol.length - endOfSymbolDelimiter)
   }
 
   // Compares two names like query "InStr" and "InputFileStream".
-  // The substring are guaranteed to not have delimiters like '.' or '/' or '#'.
+  // The substring are guaranteed to not have delimiters.
   private def matchesName(
       query: CharSequence,
       qa: Int,
@@ -144,7 +145,7 @@ object Fuzzy {
       while (i < symbol.length) {
         val ch = symbol.charAt(i)
         ch match {
-          case '.' | '/' | '#' =>
+          case '.' | '/' | '#' | '$' =>
             delimiter = i + 1
           case _ =>
             if (ch.isUpper) {
@@ -172,7 +173,7 @@ object Fuzzy {
     while (i < query.length) {
       val ch = query.charAt(i)
       ch match {
-        case '.' | '/' | '#' =>
+        case '.' | '/' | '#' | '$' =>
           result.add(query.subSequence(border, i))
           border = i + 1
         case _ =>
@@ -187,7 +188,7 @@ object Fuzzy {
       i += 1
     }
     query.last match {
-      case '.' | '/' | '#' =>
+      case '.' | '/' | '#' | '$' =>
       case _ =>
         result.add(query.subSequence(border, query.length))
     }

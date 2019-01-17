@@ -1,6 +1,8 @@
 package tests
 
 import bench.AkkaSources
+import java.nio.file.Files
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
 
 object WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
