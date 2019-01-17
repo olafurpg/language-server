@@ -88,12 +88,14 @@ final class ReferenceProvider(
       )
       index(file) = bloom
       td.documents.foreach { d =>
-        d.occurrences.foreach(o => bloom.put(o.symbol))
+        d.occurrences.foreach { o =>
+          if (o.symbol.endsWith("/")) {
+            referencedPackages.put(o.symbol)
+          }
+          bloom.put(o.symbol)
+        }
         d.synthetics.foreach { synthetic =>
           Synthetics.foreachSymbol(synthetic) { sym =>
-            if (sym.endsWith("/")) {
-              referencedPackages.mightContain(sym)
-            }
             bloom.put(sym)
             Synthetics.Continue
           }

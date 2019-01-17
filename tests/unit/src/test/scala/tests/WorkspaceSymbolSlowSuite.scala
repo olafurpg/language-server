@@ -7,8 +7,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import tests.MetalsTestEnrichments._
 
 object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
-//  override def serverConfig: MetalsServerConfig =
-//    super.serverConfig.copy(statistics = StatisticsConfig.all)
+
   testAsync("basic") {
     cleanWorkspace()
     for {
@@ -95,6 +94,31 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
         assert(obtained.length == 1)
         assert(obtained.head.head.fullPath == "a.b.PazQux.Inner")
       }
+    } yield ()
+  }
+
+  testAsync("referenced-package") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |import java.nio.file._
+          |
+          |object Main {
+          |  def main(): Unit = {
+          |    Files.readAllBytes(Paths.get("metals.json"))
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ = pprint.log(server.server.workspaceSymbol("Files"))
     } yield ()
   }
 
