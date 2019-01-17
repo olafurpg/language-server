@@ -37,6 +37,9 @@ import scala.meta.io.Classpath
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 
+/**
+ * Implements workspace/symbol for both workspace sources and dependency classpath.
+ */
 final class WorkspaceSymbolProvider(
     workspace: AbsolutePath,
     statistics: StatisticsConfig,
@@ -323,7 +326,7 @@ final class WorkspaceSymbolProvider(
       val isVisited = mutable.Set.empty[AbsolutePath]
       var nonExactMatches = 0
       for {
-        hit <- buf.scalaIterator
+        hit <- buf.pollingIterator
         _ = token.checkCanceled()
         if nonExactMatches < maxNonExactMatches || hit.isExact
         defn <- index.definition(Symbol(hit.toplevel))

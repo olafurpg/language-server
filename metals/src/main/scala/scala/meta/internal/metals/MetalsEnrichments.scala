@@ -542,9 +542,9 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       case _ => l.SymbolKind.Class
     }
   }
+
   implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
-    // asScala.foreach doesn't traveres in the order of poll().
-    def scalaIterator: Iterator[A] = new AbstractIterator[A] {
+    def pollingIterator: Iterator[A] = new AbstractIterator[A] {
       override def hasNext: Boolean = !q.isEmpty
       override def next(): A = q.poll()
     }

@@ -1,14 +1,16 @@
 package tests
 
+import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 import tests.MetalsTestEnrichments._
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath
+  def statistics = StatisticsConfig.default
   def libraries: List[Library] = Nil
   lazy val symbols: WorkspaceSymbolProvider = {
-    val p = TestingWorkspaceSymbolProvider(workspace)
+    val p = TestingWorkspaceSymbolProvider(workspace, statistics = statistics)
     p.indexWorkspace()
     p.indexLibraries(libraries)
     p.onBuildTargetsUpdate()
