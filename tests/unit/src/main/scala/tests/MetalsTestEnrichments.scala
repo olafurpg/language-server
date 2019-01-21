@@ -10,6 +10,7 @@ import java.nio.file.Files
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
@@ -34,6 +35,9 @@ object MetalsTestEnrichments {
   }
   implicit class XtensionTestBuildTargets(wsp: WorkspaceSymbolProvider) {
     def indexLibraries(libraries: Seq[Library]): Unit = {
+      JdkSources(None).foreach { zip =>
+        wsp.index.addSourceJar(zip)
+      }
       libraries.foreach(
         _.sources.entries.foreach(s => wsp.index.addSourceJar(s))
       )

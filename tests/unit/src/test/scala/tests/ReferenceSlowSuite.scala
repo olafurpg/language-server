@@ -2,6 +2,7 @@ package tests
 
 object ReferenceSlowSuite extends BaseSlowSuite("reference") {
   testAsync("case-class") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """
@@ -44,6 +45,7 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
   }
 
   testAsync("synthetic") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """
