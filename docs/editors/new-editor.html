@@ -47,8 +47,7 @@ generous stack size and memory options.</p>
   --java-opt -XX:+UseG1GC \
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
-  --java-opt -Xms1G \
-  --java-opt -Xmx4G \
+  --java-opt -Xms100m \
   org.scalameta:metals_2.12:0.4.0-SNAPSHOT -o metals -f
 </code></pre>
 <p>See <a href="#metals-server-properties">Metals server properties</a> for additional system
@@ -80,9 +79,9 @@ is missing in LSP but improves the user experience.</li>
 <p>The Metals language server is configured through JVM system properties. A system
 property is passed to the server like this:</p>
 <pre><code class="hljs css language-sh"><span class="hljs-comment"># with `java` binary</span>
-java -Dmetals.file-watcher=auto ...
+java -Dmetals.statistics=all ...
 <span class="hljs-comment"># with `coursier bootstrap`</span>
-coursier bootstrap --java-opt -Dmetals.file-watcher=auto ...
+coursier bootstrap --java-opt -Dmetals.statistics=all ...
 </code></pre>
 <p>The system properties control how Metals handles certain LSP endpoints. For
 example, in vim-lsc the <code>window/logMessage</code> notification is always displayed in
@@ -95,16 +94,20 @@ higher-priority messages to the logs.</p>
 <li><code>on</code>: emit very detailed logs, should only be used when debugging problems.</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="dmetalsfile-watcher"></a><a href="#dmetalsfile-watcher" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.file-watcher</code></h3>
+<p>This option is no longer used by Metals.</p>
+<h3><a class="anchor" aria-hidden="true" id="dmetalsglob-syntax"></a><a href="#dmetalsglob-syntax" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.glob-syntax</code></h3>
+<p>Controls the glob syntax for registering file watchers on absolute directories.
+Registration happens via <code>client/registerCapability</code> for the
+<a href="#workspacedidchangewatchedfiles"><code>workspace/didChangeWatchedFiles</code></a> method, if
+the editor client supports it.</p>
 <p>Possible values:</p>
 <ul>
-<li><code>auto</code> (default): use editor file watcher if it is supported, otherwise use
-Metals built-in file watcher. The editor declares whether it supports file
-watching by setting
-<code>InitializeParams.capabilities.workspace.didChangeWatchedFiles=true</code> during
-the <code>initialize</code> hand-shake.</li>
-<li><code>custom</code>: the client will send <code>workspace/didChangeWatchedFiles</code> notifications
-even if <code>capabilities.workspace.didChangeWatchedFiles=false</code> during the
-<code>initialize</code> hand-shake.</li>
+<li><code>uri</code> (default): URI-encoded file paths, with forward slash <code>/</code> for file
+separators regardless of the operating system. Includes <code>file://</code> prefix.</li>
+<li><code>vscode</code>: use regular Path.toString for the absolute directory parts (<code>/</code> on
+macOS+Linux and <code>\</code> on Windows) and forward slashes <code>/</code> for relative parts.
+For example, <code>C:\Users\IEUser\workspace\project/*.{scala,sbt,properties}</code>.
+This mode is used by the VS Code client.</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="dmetalsstatus-bar"></a><a href="#dmetalsstatus-bar" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.status-bar</code></h3>
 <p>Possible values:</p>
@@ -121,6 +124,13 @@ notifications. Used by vim-lsc at the moment.</li>
 <li><code>on</code>: the <code>metals/slowTask</code> request is fully supported.</li>
 <li><code>status-bar</code>: the <code>metals/slowTask</code> request is not supported, but send updates
 about slow tasks via <code>metals/status</code>.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="dmetalsinput-box"></a><a href="#dmetalsinput-box" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.input-box</code></h3>
+<p>Possible values:</p>
+<ul>
+<li><code>off</code> (default): the <code>metals/inputBox</code> request is not supported. In this case,
+Metals tries to fallback to <code>window/showMessageRequest</code> when possible.</li>
+<li><code>on</code>: the <code>metals/inputBox</code> request is fully supported.</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="dmetalsexecute-client-command"></a><a href="#dmetalsexecute-client-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.execute-client-command</code></h3>
 <p>Possible values:</p>
@@ -169,6 +179,18 @@ status bar messages, as supported by th
 by the Atom status bar.</li>
 <li><code>unicode</code>: use unicode emojis like 🚀 for status bar messages.</li>
 </ul>
+<h3><a class="anchor" aria-hidden="true" id="dmetalsexit-on-shutdown"></a><a href="#dmetalsexit-on-shutdown" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.exit-on-shutdown</code></h3>
+<p>Possible values:</p>
+<ul>
+<li><code>off</code> (default): run <code>System.exit</code> only on the <code>exit</code> notification, as
+required by the LSP specification.</li>
+<li><code>on</code>: run <code>System.exit</code> after the <code>shutdown</code> request, going against the LSP
+specification. This option is enabled by default for Sublime Text to prevent
+the Metals process from staying alive after Sublime Text is quit with <code>Cmd+Q</code>.
+It's not possible for Sublime Text packages to register a callback when the
+editor is quit. See <a href="https://github.com/tomv564/LSP/issues/410">LSP#410</a> for
+more details.</li>
+</ul>
 <h3><a class="anchor" aria-hidden="true" id="dmetalsbloop-protocol"></a><a href="#dmetalsbloop-protocol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.bloop-protocol</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -186,29 +208,40 @@ with a comma separated list of the following supported values:</p>
 requests.</li>
 </ul>
 <p>Set the value to <code>-Dmetals.statistics=all</code> to enable all statistics.</p>
+<h3><a class="anchor" aria-hidden="true" id="dmetalsh2auto-server"></a><a href="#dmetalsh2auto-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.h2.auto-server</code></h3>
+<p>Possible values:</p>
+<ul>
+<li><code>on</code> (default): use
+<a href="http://www.h2database.com/html/features.html#auto_mixed_mode">H2 <code>AUTO_SERVER=TRUE</code> mode</a>
+to support multiple concurrent Metals servers in the same workspace. If this
+option is enabled, the Metals H2 database communicate to other concurrently
+running Metals servers via TCP through a free port. In case of failure to
+establish a <code>AUTO_SERVER=TRUE</code> connection, Metals falls back to
+<code>AUTO_SERVER=FALSE</code>.</li>
+<li><code>off</code>: do not use use <code>AUTO_SERVER=TRUE</code>. By disabling this option, it's not
+possible to run concurrent Metals servers in the same workspace directory. For
+example, it's not possible to have both VS Code and Vim installed with Metals
+running in the same directory. In case there are multiple Metals servers
+running in the same workspace directory, Metals falls back to using an
+in-memory database resulting in a degraded user experience.</li>
+</ul>
 <h3><a class="anchor" aria-hidden="true" id="dmetalsjava-home"></a><a href="#dmetalsjava-home" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.java-home</code></h3>
 <p>The Java Home directory used for indexing JDK sources and locating the <code>java</code> binary.</p>
 <p><strong>Default</strong>: <code>JAVA_HOME</code> environment variable with fallback to <code>user.home</code> system property.</p>
 <p><strong>Note</strong>: this property can also be defined as user configuration option <a href="#java-home-directory">Java Home directory</a>.</p>
-<h3><a class="anchor" aria-hidden="true" id="dmetalssbt-launcher"></a><a href="#dmetalssbt-launcher" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.sbt-launcher</code></h3>
-<p>Optional sbt-launch.jar launcher to use when running <code>sbt bloopInstall</code>.</p>
-<p><strong>Default</strong>: Metals embedded sbt-launch.jar.</p>
-<p><strong>Note</strong>: this property can also be defined as user configuration option <a href="#sbt-launcher-jar">sbt launcher jar</a>.</p>
-<h3><a class="anchor" aria-hidden="true" id="dmetalssbt-options"></a><a href="#dmetalssbt-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.sbt-options</code></h3>
-<p>Additional space separated JVM options used for the <code>sbt bloopInstall</code> step.
-By default, Metals respects custom options in <code>.jvmopts</code> and <code>.sbtopts</code> of the workspace root directory,
-it's recommended to use those instead of customizing this setting. The benefit of <code>.jvmopts</code> and <code>.sbtopts</code>
-is that it's respected by other tools such as IntelliJ.</p>
-<p><strong>Default</strong>: empty string <code>&quot;&quot;</code>.</p>
-<p><strong>Note</strong>: this property can also be defined as user configuration option <a href="#sbt-jvm-options">sbt JVM options</a>.</p>
 <h3><a class="anchor" aria-hidden="true" id="dmetalssbt-script"></a><a href="#dmetalssbt-script" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.sbt-script</code></h3>
-<p>Custom <code>sbt</code> executable to use for running <code>sbt bloopInstall</code>, overrides
-<code>sbt-options</code> and <code>sbt-launcher</code> options.</p>
-<p>By default, Metals uses <code>java -jar sbt-launch.jar</code> to launch sbt while respecting
-<code>.jvmopts</code> and <code>.sbtopts</code>. In case this option is defined, then Metals
-executes the configured sbt script instead.</p>
+<p>Optional absolute path to an <code>sbt</code> executable to use for running <code>sbt bloopInstall</code>.
+By default, Metals uses <code>java -jar sbt-launch.jar</code> with an embedded launcher while respecting
+<code>.jvmopts</code> and <code>.sbtopts</code>. Update this setting if your <code>sbt</code> script requires more customizations
+like using environment variables.</p>
 <p><strong>Default</strong>: empty string <code>&quot;&quot;</code>.</p>
 <p><strong>Note</strong>: this property can also be defined as user configuration option <a href="#sbt-script">sbt script</a>.</p>
+<h3><a class="anchor" aria-hidden="true" id="dmetalsscalafmt-config-path"></a><a href="#dmetalsscalafmt-config-path" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.scalafmt-config-path</code></h3>
+<p>Optional custom path to the .scalafmt.conf file.
+Should be relative to the workspace root directory and use forward slashes / for file
+separators (even on Windows).</p>
+<p><strong>Default</strong>: .scalafmt.conf</p>
+<p><strong>Note</strong>: this property can also be defined as user configuration option <a href="#scalafmt-config-path">Scalafmt config path</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="metals-user-configuration"></a><a href="#metals-user-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Metals user configuration</h2>
 <p>Users can customize the Metals server through the LSP
 <code>workspace/didChangeConfiguration</code> notification. Unlike server properties, it is
@@ -229,40 +262,28 @@ takes precedence.</p>
   }
 }
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="sbt-launcher-jar"></a><a href="#sbt-launcher-jar" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sbt launcher jar</h3>
-<p>Optional sbt-launch.jar launcher to use when running <code>sbt bloopInstall</code>.</p>
-<p><strong>Default</strong>: Metals embedded sbt-launch.jar.</p>
-<p><strong>Example</strong>:</p>
-<pre><code class="hljs css language-json">{
-  <span class="hljs-attr">"metals"</span>: {
-    <span class="hljs-attr">"sbt-launcher"</span>: <span class="hljs-string">"/usr/local/Cellar/sbt/1.2.6/libexec/bin/sbt-launch.jar"</span>
-  }
-}
-</code></pre>
-<h3><a class="anchor" aria-hidden="true" id="sbt-jvm-options"></a><a href="#sbt-jvm-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sbt JVM options</h3>
-<p>Additional space separated JVM options used for the <code>sbt bloopInstall</code> step.
-By default, Metals respects custom options in <code>.jvmopts</code> and <code>.sbtopts</code> of the workspace root directory,
-it's recommended to use those instead of customizing this setting. The benefit of <code>.jvmopts</code> and <code>.sbtopts</code>
-is that it's respected by other tools such as IntelliJ.</p>
-<p><strong>Default</strong>: empty string <code>&quot;&quot;</code>.</p>
-<p><strong>Example</strong>:</p>
-<pre><code class="hljs css language-json">{
-  <span class="hljs-attr">"metals"</span>: {
-    <span class="hljs-attr">"sbt-options"</span>: <span class="hljs-string">"-Dsbt.override.build.repos=true -Divy.home=/home/ivy-cache"</span>
-  }
-}
-</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="sbt-script"></a><a href="#sbt-script" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sbt script</h3>
-<p>Custom <code>sbt</code> executable to use for running <code>sbt bloopInstall</code>, overrides
-<code>sbt-options</code> and <code>sbt-launcher</code> options.</p>
-<p>By default, Metals uses <code>java -jar sbt-launch.jar</code> to launch sbt while respecting
-<code>.jvmopts</code> and <code>.sbtopts</code>. In case this option is defined, then Metals
-executes the configured sbt script instead.</p>
+<p>Optional absolute path to an <code>sbt</code> executable to use for running <code>sbt bloopInstall</code>.
+By default, Metals uses <code>java -jar sbt-launch.jar</code> with an embedded launcher while respecting
+<code>.jvmopts</code> and <code>.sbtopts</code>. Update this setting if your <code>sbt</code> script requires more customizations
+like using environment variables.</p>
 <p><strong>Default</strong>: empty string <code>&quot;&quot;</code>.</p>
 <p><strong>Example</strong>:</p>
 <pre><code class="hljs css language-json">{
   <span class="hljs-attr">"metals"</span>: {
     <span class="hljs-attr">"sbt-script"</span>: <span class="hljs-string">"/usr/local/bin/sbt"</span>
+  }
+}
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="scalafmt-config-path"></a><a href="#scalafmt-config-path" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Scalafmt config path</h3>
+<p>Optional custom path to the .scalafmt.conf file.
+Should be relative to the workspace root directory and use forward slashes / for file
+separators (even on Windows).</p>
+<p><strong>Default</strong>: .scalafmt.conf</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="hljs css language-json">{
+  <span class="hljs-attr">"metals"</span>: {
+    <span class="hljs-attr">"scalafmt-config-path"</span>: <span class="hljs-string">"project/.scalafmt.conf"</span>
   }
 }
 </code></pre>
@@ -295,6 +316,25 @@ indexing itself is cheap.</p>
 <p><strong>Command</strong>: <code>&quot;doctor-run&quot;</code></p>
 <p><strong>Arguments</strong>: <code>null</code></p>
 <p>Open the Metals doctor to troubleshoot potential problems.</p>
+<h3><a class="anchor" aria-hidden="true" id="cascade-compile"></a><a href="#cascade-compile" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cascade compile</h3>
+<p><strong>Command</strong>: <code>&quot;compile-cascade&quot;</code></p>
+<p><strong>Arguments</strong>: <code>null</code></p>
+<p>Compile the current file along with all build targets in this workspace that depend on it.</p>
+<p>By default, Metals compiles only the current build target and its dependencies when saving a file.
+Run the cascade compile task to additionally compile the inverse dependencies of the current build target.
+For example, if you change the API in main sources and run cascade compile then it will also compile the
+test sources that depend on main.</p>
+<h3><a class="anchor" aria-hidden="true" id="cancel-compilation"></a><a href="#cancel-compilation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cancel compilation</h3>
+<p><strong>Command</strong>: <code>&quot;compile-cancel&quot;</code></p>
+<p><strong>Arguments</strong>: <code>null</code></p>
+<p>Cancel the currently ongoing compilation, if any.</p>
+<h3><a class="anchor" aria-hidden="true" id="switch-build-server"></a><a href="#switch-build-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Switch build server</h3>
+<p><strong>Command</strong>: <code>&quot;bsp-switch&quot;</code></p>
+<p><strong>Arguments</strong>: <code>null</code></p>
+<p>Prompt the user to select a new build server to connect to.</p>
+<p>This command does nothing in case there are less than two installed build
+servers on the computer. In case the user has multiple BSP servers installed
+then Metals will prompt the user to select which server to use.</p>
 <h2><a class="anchor" aria-hidden="true" id="metals-client-commands"></a><a href="#metals-client-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Metals client commands</h2>
 <p>The Metals server can send one of the following client commands if the client
 supports the <code>metals/executeClientCommand</code> notification,</p>
@@ -421,6 +461,49 @@ trigger an action inside the editor. This notification is a copy of the
 <li>method: <code>metals/executeClientCommand</code></li>
 <li>params: <code>ExecuteCommandParams</code>, as defined in LSP.</li>
 </ul>
+<h3><a class="anchor" aria-hidden="true" id="metals-inputbox"></a><a href="#metals-inputbox" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>metals/inputBox</code></h3>
+<p>The Metals input box request is sent from the server to the client to let the
+user provide a string value for a given prompt. Unlike
+<code>window/showMessageRequest</code>, the <code>metals/inputBox</code> request allows the user to
+provide a custom response instead of picking a pre-selected value.</p>
+<p><em>Request</em>:</p>
+<ul>
+<li>method: <code>metals/inputBox</code></li>
+<li>params: <code>MetalsInputBoxParams</code> defined as follows. Note, matches
+<a href="https://code.visualstudio.com/api/references/vscode-api#InputBoxOptions"><code>InputBoxOptions</code></a>
+in the Visual Studio Code API:</li>
+</ul>
+<pre><code class="hljs css language-ts"><span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> MetalsInputBoxParams {
+  <span class="hljs-comment">/**
+   * The value to prefill in the input box.
+   */</span>
+  value?: <span class="hljs-built_in">string</span>;
+  <span class="hljs-comment">/**
+   * The text to display underneath the input box.
+   */</span>
+  prompt?: <span class="hljs-built_in">string</span>;
+  <span class="hljs-comment">/**
+   * An optional string to show as place holder in the input box to guide the user what to type.
+   */</span>
+  placeHolder?: <span class="hljs-built_in">string</span>;
+  <span class="hljs-comment">/**
+   * Set to `true` to show a password prompt that will not show the typed value.
+   */</span>
+  password?: <span class="hljs-built_in">boolean</span>;
+  <span class="hljs-comment">/**
+   * Set to `true` to keep the input box open when focus moves to another part of the editor or to another window.
+   */</span>
+  ignoreFocusOut?: <span class="hljs-built_in">boolean</span>;
+}
+</code></pre>
+<ul>
+<li>result: <code>MetalsInputBoxResult</code> defined as follows:</li>
+</ul>
+<pre><code class="hljs css language-ts"><span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> MetalsInputBoxResult {
+  value?: <span class="hljs-built_in">string</span>;
+  cancelled?: <span class="hljs-built_in">boolean</span>;
+}
+</code></pre>
 <h2><a class="anchor" aria-hidden="true" id="language-server-protocol"></a><a href="#language-server-protocol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Language Server Protocol</h2>
 <p>Consult the
 <a href="https://microsoft.github.io/language-server-protocol/specification">LSP specification</a>
@@ -479,12 +562,58 @@ marked as read-only to prevent the user from editing them.</li>
 <li>The destination location can either be a Scala or Java source file. It is
 recommended to have a Java language server installed to navigate Java sources.</li>
 </ul>
+<h3><a class="anchor" aria-hidden="true" id="textdocument-references"></a><a href="#textdocument-references" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>textDocument/references</code></h3>
+<p>Metals finds symbol references for workspace sources but not external library
+dependencies.</p>
+<p>LSP does not support streaming references so when project sources have not been
+compiled at the point of a request, Metals returns immediately with potentially
+incomplete results and triggers a background cascade compilation to find new
+symbol references. If new symbol references are discovered after the background
+compilation completes, Metals sends a notification via <code>metals/status</code> and
+<code>window/logMessage</code> asking the user to run &quot;find references&quot; again.</p>
+<h3><a class="anchor" aria-hidden="true" id="textdocument-documentsymbol"></a><a href="#textdocument-documentsymbol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>textDocument/documentSymbol</code></h3>
+<p>Returns <code>DocumentSymbol[]</code> if the client declares support for hierarchical
+document symbol or <code>SymbolInformation[]</code> otherwise.</p>
+<h3><a class="anchor" aria-hidden="true" id="textdocument-formatting"></a><a href="#textdocument-formatting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>textDocument/formatting</code></h3>
+<p>Formats the sources with the <a href="https://scalameta.org/scalafmt/">Scalafmt</a> version
+that is declared in <code>.scalafmt.conf</code>.</p>
+<ul>
+<li>when <code>.scalafmt.conf</code> is missing, Metals sends a <code>window/showMessageRequest</code>
+to create the file.</li>
+<li>when <code>.scalafmt.conf</code> exists but doesn't declare a <code>version</code> setting, Metals
+sends a <code>metals/inputBox</code> when supported (with fallback to
+<code>window/showMessageRequest</code> when unsupported) to prepend <code>version=$VERSION</code> to
+the <code>.scalafmt.conf</code> file.</li>
+<li>the first format request is usually slow because Metals needs to download
+Scalafmt artifacts from Maven Central. While the download happens, Metals adds
+a message in the status bar via <code>metals/status</code> and detailed download progress
+information is logged to <code>.metals/metals.log</code>.</li>
+</ul>
 <h3><a class="anchor" aria-hidden="true" id="workspace-didchangewatchedfiles"></a><a href="#workspace-didchangewatchedfiles" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>workspace/didChangeWatchedFiles</code></h3>
-<p>Same as <code>didSave</code>, triggers compilation and analyses if the build needs to be
-re-imported. File watching notifications are optional, the Metals server should
-function normally without file watching notifications. However, file watching
-notifications improve the user experience especially when file contents change
-outside of the editor such as during <code>git checkout</code>.</p>
+<p>Optional. Metals uses a built-in file watcher for critical functionality such as
+Goto Definition so it is OK if an editor does not send
+<code>workspace/didChangeWatchedFiles</code> notifications.</p>
+<p>Metals listens to <code>workspace/didChangeWatchedFiles</code> notifications from the
+editor for nice-to-have but non-critical file watching events. Metals
+automatically registers for the following glob patterns if the editor supports
+dynamic registration for file watching.</p>
+<pre><code class="hljs css language-json">{
+  <span class="hljs-attr">"watchers"</span>: [
+    {
+      <span class="hljs-attr">"globPattern"</span>: <span class="hljs-string">"file:///to/workspace/*.sbt"</span>
+    },
+    {
+      <span class="hljs-attr">"globPattern"</span>: <span class="hljs-string">"file:///to/workspace/project/*.{scala,sbt}"</span>
+    },
+    {
+      <span class="hljs-attr">"globPattern"</span>: <span class="hljs-string">"file:///to/workspace/project/build.properties"</span>
+    }
+  ]
+}
+</code></pre>
+<p>The editor is responsible for manually watching these file patterns if the
+editor does not support dynamic file watching registration but can still send
+<code>workspace/didChangeWatchedFiles</code> notifications.</p>
 <h3><a class="anchor" aria-hidden="true" id="workspace-executecommands"></a><a href="#workspace-executecommands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>workspace/executeCommands</code></h3>
 <p>Used to trigger a <a href="#metals-server-commands">Metals server command</a>.</p>
 <h3><a class="anchor" aria-hidden="true" id="workspace-didchangeconfiguration"></a><a href="#workspace-didchangeconfiguration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>workspace/didChangeConfiguration</code></h3>
@@ -500,7 +629,7 @@ non-critical notifications, see <code>metals/status</code>.</p>
 <p>Used to send critical and actionable notifications to the user. To notify the
 user about long running tasks that can be cancelled, the extension
 <code>metals/slowTask</code> is used instead.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/emacs.html"><span class="arrow-prev">← </span><span>Emacs</span></a><a class="docs-next button" href="/metals/docs/build-tools/overview.html"><span>Build Tools Overview</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#starting-the-server">Starting the server</a></li><li><a href="#metals-server-properties">Metals server properties</a><ul class="toc-headings"><li><a href="#dmetalsverbose"><code>-Dmetals.verbose</code></a></li><li><a href="#dmetalsfile-watcher"><code>-Dmetals.file-watcher</code></a></li><li><a href="#dmetalsstatus-bar"><code>-Dmetals.status-bar</code></a></li><li><a href="#dmetalsslow-task"><code>-Dmetals.slow-task</code></a></li><li><a href="#dmetalsexecute-client-command"><code>-Dmetals.execute-client-command</code></a></li><li><a href="#dmetalsshow-message"><code>-Dmetals.show-message</code></a></li><li><a href="#dmetalsshow-message-request"><code>-Dmetals.show-message-request</code></a></li><li><a href="#dmetalshttp"><code>-Dmetals.http</code></a></li><li><a href="#dmetalsicons"><code>-Dmetals.icons</code></a></li><li><a href="#dmetalsbloop-protocol"><code>-Dmetals.bloop-protocol</code></a></li><li><a href="#dmetalsstatistics"><code>-Dmetals.statistics</code></a></li><li><a href="#dmetalsjava-home"><code>-Dmetals.java-home</code></a></li><li><a href="#dmetalssbt-launcher"><code>-Dmetals.sbt-launcher</code></a></li><li><a href="#dmetalssbt-options"><code>-Dmetals.sbt-options</code></a></li><li><a href="#dmetalssbt-script"><code>-Dmetals.sbt-script</code></a></li></ul></li><li><a href="#metals-user-configuration">Metals user configuration</a><ul class="toc-headings"><li><a href="#java-home-directory">Java Home directory</a></li><li><a href="#sbt-launcher-jar">sbt launcher jar</a></li><li><a href="#sbt-jvm-options">sbt JVM options</a></li><li><a href="#sbt-script">sbt script</a></li></ul></li><li><a href="#metals-server-commands">Metals server commands</a><ul class="toc-headings"><li><a href="#import-build">Import build</a></li><li><a href="#connect-to-build-server">Connect to build server</a></li><li><a href="#scan-sources">Scan sources</a></li><li><a href="#run-doctor">Run doctor</a></li></ul></li><li><a href="#metals-client-commands">Metals client commands</a><ul class="toc-headings"><li><a href="#run-doctor-1">Run doctor</a></li><li><a href="#toggle-logs">Toggle logs</a></li><li><a href="#open-problems">Open problems</a></li></ul></li><li><a href="#metals-http-client">Metals HTTP client</a></li><li><a href="#metals-lsp-extensions">Metals LSP extensions</a><ul class="toc-headings"><li><a href="#metals-slowtask"><code>metals/slowTask</code></a></li><li><a href="#metals-status"><code>metals/status</code></a></li><li><a href="#metals-didfocustextdocument"><code>metals/didFocusTextDocument</code></a></li><li><a href="#metals-executeclientcommand"><code>metals/executeClientCommand</code></a></li></ul></li><li><a href="#language-server-protocol">Language Server Protocol</a><ul class="toc-headings"><li><a href="#initialize"><code>initialize</code></a></li><li><a href="#initialized"><code>initialized</code></a></li><li><a href="#shutdown"><code>shutdown</code></a></li><li><a href="#exit"><code>exit</code></a></li><li><a href="#cancelrequest"><code>$/cancelRequest</code></a></li><li><a href="#client-registercapability"><code>client/registerCapability</code></a></li><li><a href="#textdocument-didopen"><code>textDocument/didOpen</code></a></li><li><a href="#textdocument-didchange"><code>textDocument/didChange</code></a></li><li><a href="#textdocument-didclose"><code>textDocument/didClose</code></a></li><li><a href="#textdocument-didsave"><code>textDocument/didSave</code></a></li><li><a href="#textdocument-publishdiagnostics"><code>textDocument/publishDiagnostics</code></a></li><li><a href="#textdocument-definition"><code>textDocument/definition</code></a></li><li><a href="#workspace-didchangewatchedfiles"><code>workspace/didChangeWatchedFiles</code></a></li><li><a href="#workspace-executecommands"><code>workspace/executeCommands</code></a></li><li><a href="#workspace-didchangeconfiguration"><code>workspace/didChangeConfiguration</code></a></li><li><a href="#window-logmessage"><code>window/logMessage</code></a></li><li><a href="#window-showmessage"><code>window/showMessage</code></a></li><li><a href="#window-showmessagerequest"><code>window/showMessageRequest</code></a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2018 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/emacs.html"><span class="arrow-prev">← </span><span>Emacs</span></a><a class="docs-next button" href="/metals/docs/build-tools/overview.html"><span>Overview</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#starting-the-server">Starting the server</a></li><li><a href="#metals-server-properties">Metals server properties</a><ul class="toc-headings"><li><a href="#dmetalsverbose"><code>-Dmetals.verbose</code></a></li><li><a href="#dmetalsfile-watcher"><code>-Dmetals.file-watcher</code></a></li><li><a href="#dmetalsglob-syntax"><code>-Dmetals.glob-syntax</code></a></li><li><a href="#dmetalsstatus-bar"><code>-Dmetals.status-bar</code></a></li><li><a href="#dmetalsslow-task"><code>-Dmetals.slow-task</code></a></li><li><a href="#dmetalsinput-box"><code>-Dmetals.input-box</code></a></li><li><a href="#dmetalsexecute-client-command"><code>-Dmetals.execute-client-command</code></a></li><li><a href="#dmetalsshow-message"><code>-Dmetals.show-message</code></a></li><li><a href="#dmetalsshow-message-request"><code>-Dmetals.show-message-request</code></a></li><li><a href="#dmetalshttp"><code>-Dmetals.http</code></a></li><li><a href="#dmetalsicons"><code>-Dmetals.icons</code></a></li><li><a href="#dmetalsexit-on-shutdown"><code>-Dmetals.exit-on-shutdown</code></a></li><li><a href="#dmetalsbloop-protocol"><code>-Dmetals.bloop-protocol</code></a></li><li><a href="#dmetalsstatistics"><code>-Dmetals.statistics</code></a></li><li><a href="#dmetalsh2auto-server"><code>-Dmetals.h2.auto-server</code></a></li><li><a href="#dmetalsjava-home"><code>-Dmetals.java-home</code></a></li><li><a href="#dmetalssbt-script"><code>-Dmetals.sbt-script</code></a></li><li><a href="#dmetalsscalafmt-config-path"><code>-Dmetals.scalafmt-config-path</code></a></li></ul></li><li><a href="#metals-user-configuration">Metals user configuration</a><ul class="toc-headings"><li><a href="#java-home-directory">Java Home directory</a></li><li><a href="#sbt-script">sbt script</a></li><li><a href="#scalafmt-config-path">Scalafmt config path</a></li></ul></li><li><a href="#metals-server-commands">Metals server commands</a><ul class="toc-headings"><li><a href="#import-build">Import build</a></li><li><a href="#connect-to-build-server">Connect to build server</a></li><li><a href="#scan-sources">Scan sources</a></li><li><a href="#run-doctor">Run doctor</a></li><li><a href="#cascade-compile">Cascade compile</a></li><li><a href="#cancel-compilation">Cancel compilation</a></li><li><a href="#switch-build-server">Switch build server</a></li></ul></li><li><a href="#metals-client-commands">Metals client commands</a><ul class="toc-headings"><li><a href="#run-doctor-1">Run doctor</a></li><li><a href="#toggle-logs">Toggle logs</a></li><li><a href="#open-problems">Open problems</a></li></ul></li><li><a href="#metals-http-client">Metals HTTP client</a></li><li><a href="#metals-lsp-extensions">Metals LSP extensions</a><ul class="toc-headings"><li><a href="#metals-slowtask"><code>metals/slowTask</code></a></li><li><a href="#metals-status"><code>metals/status</code></a></li><li><a href="#metals-didfocustextdocument"><code>metals/didFocusTextDocument</code></a></li><li><a href="#metals-executeclientcommand"><code>metals/executeClientCommand</code></a></li><li><a href="#metals-inputbox"><code>metals/inputBox</code></a></li></ul></li><li><a href="#language-server-protocol">Language Server Protocol</a><ul class="toc-headings"><li><a href="#initialize"><code>initialize</code></a></li><li><a href="#initialized"><code>initialized</code></a></li><li><a href="#shutdown"><code>shutdown</code></a></li><li><a href="#exit"><code>exit</code></a></li><li><a href="#cancelrequest"><code>$/cancelRequest</code></a></li><li><a href="#client-registercapability"><code>client/registerCapability</code></a></li><li><a href="#textdocument-didopen"><code>textDocument/didOpen</code></a></li><li><a href="#textdocument-didchange"><code>textDocument/didChange</code></a></li><li><a href="#textdocument-didclose"><code>textDocument/didClose</code></a></li><li><a href="#textdocument-didsave"><code>textDocument/didSave</code></a></li><li><a href="#textdocument-publishdiagnostics"><code>textDocument/publishDiagnostics</code></a></li><li><a href="#textdocument-definition"><code>textDocument/definition</code></a></li><li><a href="#textdocument-references"><code>textDocument/references</code></a></li><li><a href="#textdocument-documentsymbol"><code>textDocument/documentSymbol</code></a></li><li><a href="#textdocument-formatting"><code>textDocument/formatting</code></a></li><li><a href="#workspace-didchangewatchedfiles"><code>workspace/didChangeWatchedFiles</code></a></li><li><a href="#workspace-executecommands"><code>workspace/executeCommands</code></a></li><li><a href="#workspace-didchangeconfiguration"><code>workspace/didChangeConfiguration</code></a></li><li><a href="#window-logmessage"><code>window/logMessage</code></a></li><li><a href="#window-showmessage"><code>window/showMessage</code></a></li><li><a href="#window-showmessagerequest"><code>window/showMessageRequest</code></a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
