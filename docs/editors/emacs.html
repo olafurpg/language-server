@@ -48,8 +48,8 @@ Note that 2.10.x and 2.13.0-M5 are not supported.</p>
 </code></pre>
 <p>Next, update your Emacs configuration to load <code>lsp-scala</code> along with its
 dependencies</p>
-<pre><code class="hljs css language-el"><span class="hljs-comment">;; Add melpa-stable to your packages repositories</span>
-(<span class="hljs-name">add-to-list</span> 'package-archives '(<span class="hljs-string">"melpa-stable"</span> . <span class="hljs-string">"https://stable.melpa.org/packages/"</span>) <span class="hljs-literal">t</span>)
+<pre><code class="hljs css language-el"><span class="hljs-comment">;; Add melpa to your packages repositories</span>
+(<span class="hljs-name">add-to-list</span> 'package-archives '(<span class="hljs-string">"melpa"</span> . <span class="hljs-string">"https://melpa.org/packages/"</span>) <span class="hljs-literal">t</span>)
 
 <span class="hljs-comment">;; Enable defer and ensure by default for use-package</span>
 (<span class="hljs-name">setq</span> use-package-always-defer <span class="hljs-literal">t</span>
@@ -73,16 +73,17 @@ dependencies</p>
 (<span class="hljs-name">use-package</span> flycheck
   <span class="hljs-symbol">:init</span> (<span class="hljs-name">global-flycheck-mode</span>))
 
-(<span class="hljs-name">use-package</span> lsp-mode
-  <span class="hljs-symbol">:pin</span> melpa-stable)
+(<span class="hljs-name">use-package</span> lsp-mode)
 
 (<span class="hljs-name">use-package</span> lsp-ui
-  <span class="hljs-symbol">:pin</span> melpa-stable
   <span class="hljs-symbol">:hook</span> (<span class="hljs-name">lsp-mode</span> . lsp-ui-mode))
 
 (<span class="hljs-name">use-package</span> lsp-scala
   <span class="hljs-symbol">:load-path</span> <span class="hljs-string">"~/path/to/lsp-scala"</span>
-  <span class="hljs-symbol">:hook</span> (<span class="hljs-name">scala-mode</span> . lsp-scala-enable))
+  <span class="hljs-symbol">:after</span> scala-mode
+  <span class="hljs-symbol">:demand</span> <span class="hljs-literal">t</span>
+  <span class="hljs-comment">;; Optional - enable lsp-scala automatically in scala files</span>
+  <span class="hljs-symbol">:hook</span> (<span class="hljs-name">scala-mode</span> . lsp))
 </code></pre>
 <blockquote>
 <p>You may need to disable other packages like <code>ensime</code> or sbt server to prevent
@@ -101,12 +102,12 @@ not exist yet.</p>
 <tbody>
 <tr>
 <td>0.4.0-SNAPSHOT</td>
-<td>23 Jan 2019 16:04</td>
+<td>24 Jan 2019 09:27</td>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
 <td>0.4.0-SNAPSHOT</td>
-<td>23 Jan 2019 16:04</td>
+<td>24 Jan 2019 09:27</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>

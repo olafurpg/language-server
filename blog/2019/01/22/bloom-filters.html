@@ -48,7 +48,7 @@ blockquote {
 </style>
 <h2><a class="anchor" aria-hidden="true" id="bloom-filters"></a><a href="#bloom-filters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Bloom filters</h2>
 <p><a href="https://en.wikipedia.org/wiki/Bloom_filter">Bloom filters</a> are a probabilistic
-data structure that implement space-efficient sets. The difference between a
+data structure that implements space-efficient sets. The difference between a
 bloom filter and a regular set such as <code>HashSet</code> is that bloom filters have the
 following limitations:</p>
 <ul>
@@ -56,11 +56,10 @@ following limitations:</p>
 occasionally return true even when the element is not a member of the set.</li>
 <li>when creating a bloom filter, you must provide an estimate for how many
 elements will be added to the set. A large estimate results in lower false
-positive rates for the <code>contains(element)</code> method at cost of higher space
+positive rates for the <code>contains(element)</code> method at the cost of higher space
 usage. Conversely, a low estimate results in lower memory usage at the cost of
 higher false positives for the <code>contains(element)</code> method.</li>
-<li>you can't iterate through the elements of a bloom filter. Once inserted, an
-element cannot be recovered from the bloom filter.</li>
+<li>you can't iterate through the elements of a bloom filter.</li>
 </ul>
 <p>In exchange for these limitations, bloom filters are able to compress a large
 number of elements into a small number of bits. Due to their space-efficiency,
@@ -86,7 +85,8 @@ looking for references to a given symbol, we skip files when their accompanying
 bloom filter is guaranteed not to contain a reference to that symbol. False
 positive results from the bloom filter are not a problem because they only slow
 down the response but don't compromise the correctness of the final result.</p>
-<p>Concretely, Metals keeps an in-memory map where keys are paths in the workspace.</p>
+<p>Concretely, Metals keeps an in-memory map where keys are paths to source files
+in the workspace.</p>
 <pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> references: <span class="hljs-type">Map</span>[<span class="hljs-type">Path</span>, <span class="hljs-type">BloomFilter</span>[<span class="hljs-type">Symbol</span>]]
 </code></pre>
 <p>The values represent the set of
@@ -102,13 +102,13 @@ contain the query symbol.</p>
 <span class="hljs-keyword">for</span> {
   (path, bloom) &lt;- references
   <span class="hljs-keyword">if</span> bloom.mightContain(query)
-  symbolOccurrence &lt;- readSemanticdbOccurrences(path)
+  symbolOccurrence &lt;- readSemanticdbOccurrences(path) <span class="hljs-comment">// read from disk</span>
   <span class="hljs-keyword">if</span> isSameSymbol(query, symbolOccurrence)
 } <span class="hljs-keyword">yield</span> symbolOccurrence
 </code></pre>
 <p>In the actual Metals implementation, we additionally take care of adjusting
 positions of the results in case the source file contents have changed since the
-SemanticDB snapshot was produced.</p>
+SemanticDB file was created.</p>
 <h2><a class="anchor" aria-hidden="true" id="fuzzy-symbol-search"></a><a href="#fuzzy-symbol-search" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fuzzy symbol search</h2>
 <p>The &quot;fuzzy symbol search&quot; feature allows you to navigate to a symbol definition
 in the workspace sources or library dependencies by typing the symbol's name.</p>
@@ -116,7 +116,7 @@ in the workspace sources or library dependencies by typing the symbol's name.</p
 <p>The search is fuzzy, meaning the query doesn't have to be an exact match or a
 substring match with the target symbol. For example, we want the query <code>ReaSer</code>
 to match the symbol <code>ReactDOMServer</code>. Additionally, all-lowercase queries are
-case-insensitive so that searching for <code>nelis</code> matches the symbol
+treated as case-insensitive so that searching for <code>nelis</code> matches the symbol
 <code>NonEmptyList</code>.</p>
 <p>Like with find symbol references, the challenge when implementing fuzzy symbol
 search is that we have little time to respond and a lot of symbols to search.
@@ -129,13 +129,13 @@ indexes, one for workspace sources and another one for the library classpath.</p
 <p>The first index is a map keyed by source files in the workspace.</p>
 <pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> inWorkspace: <span class="hljs-type">Map</span>[<span class="hljs-type">Path</span>, <span class="hljs-type">BloomFilter</span>[<span class="hljs-type">String</span>]]
 </code></pre>
-<p>The values of the index is the set of all possible sub-queries that match
-symbols defined in that source file. For example, consider the code below.</p>
+<p>The values of the map is the set of all possible sub-queries that match symbols
+defined in that source file. For example, consider the code below.</p>
 <pre><code class="hljs css language-scala"><span class="hljs-keyword">package</span> data
 <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NonEmptyListSpec</span> </span>{ ... }
 <span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Props</span> </span>{ ... }
 </code></pre>
-<p>For this source file, we insert the following strings into the index.</p>
+<p>For this source file, we insert the following sub-queries into the index.</p>
 <pre><code class="hljs css language-txt"><span class="hljs-built_in">d</span>
 da
 dat
@@ -162,20 +162,21 @@ Props
 </code></pre>
 <p>When searching for a query like <code>NoLi</code>, we split the query into the words <code>No</code>
 and <code>Li</code> and visit only files whose bloom filter contains all of those exact
-words. We include trigrams of the uppercase characters to further reduce the
-search state for queries like <code>NELS</code> that have few lowercase character.</p>
-<p>For all-lowercase queries, we return the union of multiple capitalization
-combinations in order to support case-insensitive searches. For example, the
-query <code>nels</code> returns all results matching any of the following queries.</p>
-<pre><code class="hljs css language-txt"><span class="hljs-attribute">nels
-Nels
-NEls
-NeLs
-NelS
-NELs
-NElS
-NeLS
-NELS</span>
+sub-queries. We include trigrams of the uppercase characters to further reduce
+the search state for queries like <code>NELS</code> that have few lowercase character.</p>
+<p>For all-lowercase queries, we return the union of results from multiple
+capitalization combinations in order to support case-insensitive searches. For
+example, the query <code>neli</code> returns all results matching any of the following
+queries.</p>
+<pre><code class="hljs css language-txt"><span class="hljs-attribute">neli
+Neli
+NEli
+NeLi
+NelI
+NELi
+NElI
+NeLI
+NELI</span>
 </code></pre>
 <p>To implement the search, we iterate through all entries of the in-memory map and
 only visit the source files on disk whose bloom filter might contain a match for
@@ -200,7 +201,7 @@ file paths.</p>
 </code></pre>
 <p>Unlike the workspace sources index, the library classpath index does not need to
 be incrementally updated when files re-compile. The bloom filters in the values
-of the map use the same word-splitting technique as the bloom filters in the
+of the map use the same sub-query technique as the bloom filters in the
 workspace sources index. For each bloom filter, we additionally store a listing
 of all members of that package. If a query matches a given bloom filter, we test
 the fuzzy search against all members of the package.</p>
@@ -264,12 +265,12 @@ editor.</p>
 <span class="hljs-keyword">time:</span> found 1002 results for query 'actor' in 0.54s
 <span class="hljs-keyword">time:</span> found 3974 results for query 'S' in 1.98s
 </code></pre>
-<p>Response times range from 13ms up to 2s depending on the query. Queries with
-typos like <code>ConfigSEr</code> have 0 results and respond instantly, while generic
-queries like <code>S</code> have ~4k results and take 2 seconds to respond. Observe that
-all-lowercase queries like <code>actorref</code> are slower than capitalized queries like
-<code>ActorRef</code>, which is expected because we test multiple capitalization
-combinations for case-insensitive searches.</p>
+<p>Response times range from 13ms up to 2s depending on the query and number of
+results. Queries with typos like <code>ConfigSEr</code> have 0 results and respond
+instantly, while generic queries like <code>S</code> have ~4k results and take 2 seconds to
+respond. Observe that all-lowercase queries like <code>actorref</code> are slower than
+capitalized queries like <code>ActorRef</code>, which is expected because we test multiple
+capitalization combinations for case-insensitive searches.</p>
 <h3><a class="anchor" aria-hidden="true" id="memory-usage"></a><a href="#memory-usage" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Memory usage</h3>
 <p>Next, we look at the memory usage of the bloom filter indexes. The numbers are
 computed with <a href="https://openjdk.java.net/projects/code-tools/jol/">JOL</a>
@@ -325,9 +326,9 @@ dependencies compared to Akka.</p>
 <p>Click on image to interactively explore the flamegraph.</p>
 </blockquote>
 <p>Computing the bloom filter indexes for find symbol references and fuzzy symbol
-search takes proportionally even less time in the Prisma project compared to
-Akka. The Prisma project is a good representation for projects with less than
-100k lines of code but a large number of library dependencies.</p>
+search takes proportionally even less time in Prisma compared to Akka. The
+Prisma project is a good representation for projects with less than 100k lines
+of code and a large number of library dependencies.</p>
 <h2><a class="anchor" aria-hidden="true" id="conclusion"></a><a href="#conclusion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Conclusion</h2>
 <p>Metals uses three bloom filter indexes to implement the features &quot;find symbol
 references&quot; and &quot;fuzzy symbol search&quot;. On a case study project containing 600k
@@ -350,7 +351,7 @@ eliminating files and packages that are guaranteed not to have relevant results
 for the user query. False positive results slow down response times but don't
 compromise the correctness of the final result.</p>
 <p>Try out Metals today with VS Code, Atom, Vim, Sublime Text or Emacs using the
-installation instructions here:
+installation instructions here
 <a href="https://scalameta.org/metals/docs/editors/overview.html">https://scalameta.org/metals/docs/editors/overview.html</a>.</p>
 <p>The indexer is working when the status bar says <code>Indexing⠋</code>
 <img src="https://i.imgur.com/6VLPu9c.gif" alt="Indexing status bar"></p>
