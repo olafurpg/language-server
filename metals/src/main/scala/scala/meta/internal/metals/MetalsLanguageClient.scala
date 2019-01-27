@@ -44,6 +44,8 @@ trait MetalsLanguageClient extends LanguageClient {
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult]
 
+  @JsonNotification("metalsTreeView/didChange")
+  def metalsTreeViewDidChange(params: MetalsTreeViewParams): Unit
   def shutdown(): Unit = {}
 
 }
@@ -88,4 +90,16 @@ case class MetalsInputBoxResult(
     // value=null when cancelled=true
     @Nullable value: String = null,
     @Nullable cancelled: java.lang.Boolean = null
+)
+
+case class MetalsTreeViewParams(
+    uri: String
+)
+case class MetalsTreeViewResult(
+    nodes: Array[MetalsTreeItem]
+)
+case class MetalsTreeItem(
+    uri: String,
+    label: String,
+    isCollapsible: java.lang.Boolean
 )

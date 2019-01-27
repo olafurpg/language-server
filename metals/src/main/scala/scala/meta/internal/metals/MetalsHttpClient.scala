@@ -61,6 +61,12 @@ final class MetalsHttpClient(
       params: ExecuteCommandParams
   ): Unit = {}
 
+  override def metalsTreeViewDidChange(
+      params: MetalsTreeViewParams
+  ): Unit = {
+    underlying.metalsTreeViewDidChange(params)
+  }
+
   override def telemetryEvent(value: Any): Unit =
     underlying.telemetryEvent(value)
   override def publishDiagnostics(diagnostics: PublishDiagnosticsParams): Unit =

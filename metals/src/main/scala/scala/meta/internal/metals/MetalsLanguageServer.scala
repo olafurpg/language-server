@@ -508,6 +508,27 @@ class MetalsLanguageServer(
     }
   }
 
+  @JsonRequest("metalsTreeView/getChildren")
+  def treeViewGetChildren(
+      params: MetalsTreeViewParams
+  ): CompletableFuture[MetalsTreeViewResult] = {
+    CompletableFuture.completedFuture {
+      params.uri match {
+        case null =>
+          MetalsTreeViewResult(
+            Array(
+              buildClient.compileTreeItem
+            )
+          )
+        case "compile" =>
+          MetalsTreeViewResult(buildClient.treeViewItems)
+        case _ =>
+          scribe.warn(s"unexpected uri $params")
+          MetalsTreeViewResult(Array.empty)
+      }
+    }
+  }
+
   @JsonNotification("textDocument/didChange")
   def didChange(
       params: DidChangeTextDocumentParams

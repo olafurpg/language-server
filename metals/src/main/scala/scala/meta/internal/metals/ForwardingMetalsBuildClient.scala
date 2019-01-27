@@ -21,7 +21,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
  * A build client that forwards notifications from the build server to the language client.
  */
 final class ForwardingMetalsBuildClient(
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     config: MetalsServerConfig,
@@ -31,6 +31,8 @@ final class ForwardingMetalsBuildClient(
     with Cancelable {
 
   private case class Compilation(
+      uri: String,
+      displayName: String,
       timer: Timer,
       promise: Promise[CompileReport],
       isNoOp: Boolean,
@@ -76,6 +78,26 @@ final class ForwardingMetalsBuildClient(
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}
 
+  def reloadTreeView(): Unit = {
+    languageClient.metalsTreeViewDidChange(MetalsTreeViewParams("compile"))
+  }
+
+  def treeViewItems: Array[MetalsTreeItem] = {
+    compilations.values.iterator.map { c =>
+      MetalsTreeItem(
+        c.uri,
+        s"${c.displayName} ${c.timer} (${c.progress.percentage}%)",
+        false
+      )
+    }.toArray
+  }
+  val compile = "compile"
+  def compileTreeItem = MetalsTreeItem(
+    compile,
+    "Compilation",
+    true
+  )
+
   @JsonNotification("build/taskStart")
   def buildTaskStart(params: TaskStartParams): Unit = {
     params.getDataKind match {
@@ -94,7 +116,13 @@ final class ForwardingMetalsBuildClient(
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
           val isNoOp = params.getMessage.startsWith("Start no-op compilation")
-          val compilation = Compilation(new Timer(time), promise, isNoOp)
+          val compilation = Compilation(
+            info.getId.getUri,
+            info.getDisplayName,
+            new Timer(time),
+            promise,
+            isNoOp
+          )
 
           compilations(task.getTarget) = compilation
           statusBar.trackFuture(
@@ -103,6 +131,7 @@ final class ForwardingMetalsBuildClient(
             showTimer = true,
             progress = Some(compilation.progress)
           )
+          reloadTreeView()
         }
       case _ =>
     }
@@ -144,6 +173,7 @@ final class ForwardingMetalsBuildClient(
               )
             )
           }
+          reloadTreeView()
         }
       case _ =>
     }
@@ -168,6 +198,7 @@ final class ForwardingMetalsBuildClient(
           report <- compilations.get(buildTarget)
         } yield {
           report.progress.update(params.getProgress, params.getTotal)
+          reloadTreeView()
         }
       case _ =>
     }

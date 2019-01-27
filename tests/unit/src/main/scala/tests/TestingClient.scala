@@ -24,6 +24,7 @@ import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.MetalsStatusParams
+import scala.meta.internal.metals.MetalsTreeViewParams
 import scala.meta.io.AbsolutePath
 import tests.MetalsTestEnrichments._
 import tests.TestOrderings._
@@ -53,6 +54,11 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       None
   }
 
+  override def metalsTreeViewDidChange(
+      params: MetalsTreeViewParams
+  ): Unit = {
+    pprint.log(params)
+  }
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {

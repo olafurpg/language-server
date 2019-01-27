@@ -118,6 +118,12 @@ final class ConfiguredLanguageClient(
     }
   }
 
+  override def metalsTreeViewDidChange(
+      params: MetalsTreeViewParams
+  ): Unit = {
+    underlying.metalsTreeViewDidChange(params)
+  }
+
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
