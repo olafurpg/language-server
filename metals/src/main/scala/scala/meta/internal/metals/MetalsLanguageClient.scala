@@ -45,7 +45,7 @@ trait MetalsLanguageClient extends LanguageClient {
   ): CompletableFuture[MetalsInputBoxResult]
 
   @JsonNotification("metalsTreeView/didChange")
-  def metalsTreeViewDidChange(params: MetalsTreeViewParams): Unit
+  def metalsTreeViewDidChange(params: MetalsTreeItem): Unit
   def shutdown(): Unit = {}
 
 }

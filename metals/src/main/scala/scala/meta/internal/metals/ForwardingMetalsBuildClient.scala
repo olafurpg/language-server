@@ -37,7 +37,14 @@ final class ForwardingMetalsBuildClient(
       promise: Promise[CompileReport],
       isNoOp: Boolean,
       progress: TaskProgress = TaskProgress.empty
-  )
+  ) {
+    def toTreeItem =
+      MetalsTreeItem(
+        uri,
+        s"${displayName} ${timer} (${progress.percentage}%)",
+        false
+      )
+  }
 
   private val compilations = TrieMap.empty[BuildTargetIdentifier, Compilation]
   private val hasReportedError = Collections.newSetFromMap(
@@ -78,18 +85,21 @@ final class ForwardingMetalsBuildClient(
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}
 
-  def reloadTreeView(): Unit = {
-    languageClient.metalsTreeViewDidChange(MetalsTreeViewParams("compile"))
+  def reloadTreeView(compilation: Compilation): Unit = {
+    languageClient.metalsTreeViewDidChange(compilation.toTreeItem)
   }
 
   def treeViewItems: Array[MetalsTreeItem] = {
-    compilations.values.iterator.map { c =>
-      MetalsTreeItem(
-        c.uri,
-        s"${c.displayName} ${c.timer} (${c.progress.percentage}%)",
-        false
-      )
-    }.toArray
+    buildTargets.all
+      .map { i =>
+        MetalsTreeItem(
+          i.info.getId.getUri,
+          i.info.getDisplayName,
+          false
+        )
+      }
+      .toArray
+      .sortBy(_.label)
   }
   val compile = "compile"
   def compileTreeItem = MetalsTreeItem(
@@ -131,7 +141,7 @@ final class ForwardingMetalsBuildClient(
             showTimer = true,
             progress = Some(compilation.progress)
           )
-          reloadTreeView()
+          reloadTreeView(compilation)
         }
       case _ =>
     }
@@ -173,7 +183,7 @@ final class ForwardingMetalsBuildClient(
               )
             )
           }
-          reloadTreeView()
+          reloadTreeView(compilation)
         }
       case _ =>
     }
@@ -195,10 +205,10 @@ final class ForwardingMetalsBuildClient(
           uri = uriElement.getAsJsonPrimitive
           if uri.isString
           buildTarget = new BuildTargetIdentifier(uri.getAsString)
-          report <- compilations.get(buildTarget)
+          compilation <- compilations.get(buildTarget)
         } yield {
-          report.progress.update(params.getProgress, params.getTotal)
-          reloadTreeView()
+          compilation.progress.update(params.getProgress, params.getTotal)
+          reloadTreeView(compilation)
         }
       case _ =>
     }

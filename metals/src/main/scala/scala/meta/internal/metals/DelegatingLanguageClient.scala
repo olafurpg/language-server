@@ -85,7 +85,7 @@ class DelegatingLanguageClient(
   }
 
   override def metalsTreeViewDidChange(
-      params: MetalsTreeViewParams
+      params: MetalsTreeItem
   ): Unit = {
     underlying.metalsTreeViewDidChange(params)
   }

@@ -28,6 +28,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.MetalsStatusParams
+import scala.meta.internal.metals.MetalsTreeItem
 import scala.meta.internal.metals.MetalsTreeViewParams
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
@@ -94,7 +95,7 @@ object BspCli {
           params: ExecuteCommandParams
       ): Unit = {}
       override def metalsTreeViewDidChange(
-          params: MetalsTreeViewParams
+          params: MetalsTreeItem
       ): Unit = {}
       override def metalsStatus(params: MetalsStatusParams): Unit = ()
       override def metalsSlowTask(
