@@ -105,8 +105,32 @@ lazy val V = new {
 
 skip.in(publish) := true
 
+lazy val interfaces = project
+  .in(file("pc/interfaces"))
+  .settings(
+    moduleName := "pc-interfaces",
+    libraryDependencies ++= List(
+      "com.lihaoyi" %% "pprint" % "0.5.3",
+      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0"
+    ),
+    crossVersion := CrossVersion.disabled
+  )
+lazy val pc = project
+  .in(file("pc/core"))
+  .settings(
+    moduleName := "pc",
+    crossVersion := CrossVersion.full,
+    crossScalaVersions := List(V.scala212, V.scala211),
+    libraryDependencies ++= List(
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value,
+      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
+    )
+  )
+  .dependsOn(interfaces)
+
 lazy val mtags = project
   .settings(
+    moduleName := "mtags",
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
@@ -185,7 +209,7 @@ lazy val metals = project
       "scala212" -> V.scala212
     )
   )
-  .dependsOn(mtags)
+  .dependsOn(pc, mtags)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -223,6 +247,7 @@ lazy val input = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "io.circe" %% "circe-derivation-annotations" % "0.9.0-M5"
     ),
+    scalacOptions += "-P:semanticdb:synthetics:on",
     addCompilerPlugin(
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     )
@@ -256,7 +281,7 @@ lazy val unit = project
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )
-  .dependsOn(metals)
+  .dependsOn(metals, pc)
   .enablePlugins(BuildInfoPlugin)
 lazy val slow = project
   .in(file("tests/slow"))
