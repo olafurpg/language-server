@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import com.thoughtworks.qdox._
 import com.thoughtworks.qdox.model.JavaClass
+import com.thoughtworks.qdox.model.JavaConstructor
 import com.thoughtworks.qdox.model.JavaField
 import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
@@ -97,16 +98,39 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       visitMembers(cls.getFields)
     }
 
+  def visitConstructor(
+      ctor: JavaConstructor,
+      disambiguator: String,
+      pos: Position,
+      properties: Int
+  ): Unit = {
+    super.ctor(disambiguator, pos, 0)
+  }
+
   def visitConstructors(cls: JavaClass): Unit = {
     val overloads = new OverloadDisambiguator()
-    cls.getConstructors.asScala.foreach { ctor =>
-      val name = cls.getName
-      val disambiguator = overloads.disambiguator(name)
-      val pos = toRangePosition(ctor.lineNumber, name)
-      withOwner() {
-        super.ctor(disambiguator, pos, 0)
+    cls.getConstructors
+      .iterator()
+      .asScala
+      .filterNot(_.isPrivate)
+      .foreach { ctor =>
+        val name = cls.getName
+        val disambiguator = overloads.disambiguator(name)
+        val pos = toRangePosition(ctor.lineNumber, name)
+        withOwner() {
+          visitConstructor(ctor, disambiguator, pos, 0)
+        }
       }
-    }
+  }
+
+  def visitMethod(
+      method: JavaMethod,
+      name: String,
+      disambiguator: String,
+      pos: Position,
+      properties: Int
+  ): Unit = {
+    super.method(name, disambiguator, pos, properties)
   }
 
   def visitMethods(cls: JavaClass): Unit = {
@@ -122,7 +146,7 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       val disambiguator = overloads.disambiguator(name)
       val pos = toRangePosition(method.lineNumber, name)
       withOwner() {
-        super.method(name, disambiguator, pos, 0)
+        visitMethod(method, name, disambiguator, pos, 0)
       }
     }
   }

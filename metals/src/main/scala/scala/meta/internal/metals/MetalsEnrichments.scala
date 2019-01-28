@@ -172,6 +172,17 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     }
   }
 
+  implicit class XtensionPositionLspInverse(pos: l.Position) {
+    def toMeta(input: m.Input): m.Position = {
+      m.Position.Range(
+        input,
+        pos.getLine,
+        pos.getCharacter,
+        pos.getLine,
+        pos.getCharacter
+      )
+    }
+  }
   implicit class XtensionPositionLsp(pos: m.Position) {
     def toSemanticdb: s.Range = {
       new s.Range(
@@ -232,6 +243,8 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       path.getFileName.toString.endsWith(".semanticdb")
   }
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
+
+    def filename: String = path.toNIO.getFileName.toString
 
     def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
 

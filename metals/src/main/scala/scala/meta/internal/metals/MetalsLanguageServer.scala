@@ -96,6 +96,7 @@ class MetalsLanguageServer(
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
   private val definitionIndex = newSymbolIndex()
+  private val symbolIndexer = new MetalsSymbolIndexer(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
@@ -127,6 +128,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
+  private var completionProvider: CompletionProvider = _
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
@@ -241,6 +243,11 @@ class MetalsLanguageServer(
       statusBar,
       warnings
     )
+    completionProvider = new CompletionProvider(
+      buildTargets,
+      buffers,
+      symbolIndexer
+    )
     formattingProvider = new FormattingProvider(
       workspace,
       buffers,
@@ -302,6 +309,13 @@ class MetalsLanguageServer(
       )
       capabilities.setDefinitionProvider(true)
       capabilities.setReferencesProvider(true)
+      capabilities.setHoverProvider(true)
+      capabilities.setSignatureHelpProvider(
+        new SignatureHelpOptions(List("(", "[").asJava)
+      )
+      capabilities.setCompletionProvider(
+        new CompletionOptions(false, List(".").asJava)
+      )
       capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
@@ -631,8 +645,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/hover is not supported.")
-      null
+      completionProvider.hover(params).orNull
     }
 
   @JsonRequest("textDocument/documentHighlight")
@@ -766,8 +779,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/completion is not supported.")
-      null
+      completionProvider.completions(params).orNull
     }
 
   @JsonRequest("textDocument/signatureHelp")
@@ -775,8 +787,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/signatureHelp is not supported.")
-      null
+      completionProvider.signatureHelp(params).orNull
     }
 
   @JsonRequest("textDocument/codeAction")
