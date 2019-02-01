@@ -110,7 +110,7 @@ lazy val mtags = project
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
-      "org.scalameta" %% "scalameta" % V.scalameta
+      "org.scalameta" %% "contrib" % V.scalameta
     )
   )
 
