@@ -9,6 +9,7 @@ object Scaladoc {
         ScaladocParser.parseScaladoc(c)
     }
     pprint.log(docstrings)
+    docstrings.last
     code
   }
 }
@@ -27,23 +28,13 @@ object ScaladocSuite extends BaseSuite {
       |/**
       | * @define description A number
       | */
-      |trait Numbers {
-      |  /**
-      |   * @param a $description
-      |   */
-      | def number: Int
+      |/**
+      |  * @param a $description
+      |  */
       |}
     """.stripMargin,
     """
-      |/**
-      | * @define description A number
-      | */
-      |trait Numbers {
-      |  /**
-      |   * @param a A number
-      |   */
-      | def number: Int
-      |}
+      |@param a A number
       |""".stripMargin
   )
 
