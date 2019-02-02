@@ -1,5 +1,11 @@
 package example
 
+// import Java
+
 object User {
-  // List[String](1).head.map()
+  val x = Map.empty[Int, String]
+  x.collect {
+    case (a, b) =>
+      b.length
+  }
 }
