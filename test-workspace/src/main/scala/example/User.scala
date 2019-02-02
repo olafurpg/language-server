@@ -1,5 +1,11 @@
 package example
 
+// import Java
+
 object User {
-  // List[String](1).head.map()
+  val x = {
+
+    2
+  }
+  // List(1, 2, 3).map(a => )
 }

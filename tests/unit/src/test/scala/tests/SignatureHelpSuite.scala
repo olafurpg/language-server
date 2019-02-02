@@ -136,6 +136,34 @@ object SignatureHelpSuite extends BasePCSuite {
        |  @param ifEmpty String
        |""".stripMargin
   )
+  checkDoc(
+    "curry3",
+    """
+      |object a {
+      |  List(1).foldLeft(0) {
+      |   case @@
+      |  }
+      |}
+    """.stripMargin,
+    """|
+       |foldLeft[B](z: B)(op: (B, A) => B): B
+       |                  ^^^^^^^^^^^^^^^
+       |  @param op (Int, Int) => Int
+       |""".stripMargin
+  )
+  checkDoc(
+    "curry4",
+    """
+      |object a {
+      |  def curry(a: Int, b: Int)(c: Int) = a
+      |  curry(1)(3@@)
+      |}
+    """.stripMargin,
+    """|
+       |curry(a: Int, b: Int)(c: Int): Int
+       |                      ^^^^^^
+       |""".stripMargin
+  )
   check(
     "erroneous",
     """
@@ -387,6 +415,44 @@ object SignatureHelpSuite extends BasePCSuite {
        |  @param T <T> the class of the objects in the set
        |  @param o o the sole object to be stored in the returned set.
        |""".stripMargin
+  )
+  check(
+    "error1",
+    """
+      |object a {
+      |  Map[Int](1 @@-> "").map {
+      |  }
+      |}
+    """.stripMargin,
+    ""
+  )
+  check(
+    "for",
+    """
+      |object a {
+      |  for {
+      |    i <- Option(1)
+      |    j < 1.to(i)
+      |    if i > j
+      |    k@@ = i + j
+      |    l <- j.to(k)
+      |  } yield l
+      |}
+    """.stripMargin,
+    """|flatMap[B](f: A => Option[B]): Option[B]
+       |           ^^^^^^^^^^^^^^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "curry",
+    """
+      |object a {
+      |  Map[Int](1 @@-> "").map {
+      |  }
+      |}
+    """.stripMargin,
+    ""
   )
   // TODO: stress curried arguments with incomplete arg lists like `foo(a, b)(d)` where `c` is missing from
   // `foo(a, b, c)`.

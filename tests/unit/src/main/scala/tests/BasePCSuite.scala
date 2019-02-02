@@ -15,4 +15,13 @@ abstract class BasePCSuite extends BaseSuite {
   override def afterAll(): Unit = {
     pc.shutdown()
   }
+
+  def params(code: String): (String, Int) = {
+    val code2 = code.replaceAllLiterally("@@", "")
+    val offset = code.indexOf("@@")
+    if (offset < 0) {
+      fail("missing @@")
+    }
+    (code2, offset)
+  }
 }

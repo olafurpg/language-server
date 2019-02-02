@@ -2,7 +2,7 @@ package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
-import scala.collection.mutable
+import scala.collection.JavaConverters._
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.tools.nsc.interactive.Global
@@ -22,11 +22,8 @@ class CompletionProvider(compiler: Global) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
-    val isUsedLabel = mutable.Set.empty[String]
-    val buf = new java.util.ArrayList[CompletionItem]()
     val (kind, results) = safeCompletionsAt(position)
-    val items = new CompletionItems(kind)
-    results
+    val items = results
       .sortBy {
         case TypeMember(sym, _, true, inherited, viaView) =>
           // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
@@ -37,21 +34,17 @@ class CompletionProvider(compiler: Global) {
       }
       .iterator
       .zipWithIndex
-      .foreach {
+      .map {
         case (r, idx) =>
           val label = r.symNameDropLocal.decoded
-          if (!isUsedLabel(label)) {
-            isUsedLabel += label
-            val item = new CompletionItem(label)
-            item.setPreselect(true)
-            item.setDetail(r.sym.signatureString)
-            item.setKind(completionItemKind(r))
-            item.setSortText(f"${idx}%05d")
-            buf.add(item)
-          }
+          val item = new CompletionItem(label)
+          item.setPreselect(true)
+          item.setDetail(r.sym.signatureString)
+          item.setKind(completionItemKind(r))
+          item.setSortText(f"${idx}%05d")
+          item
       }
-    items.setItems(buf)
-    items
+    new CompletionItems(kind, items.toSeq.asJava)
   }
 
   private def isFunction(symbol: Symbol): Boolean = {
@@ -120,9 +113,12 @@ class CompletionProvider(compiler: Global) {
       val completions = completionsAt(position)
       val items = completions.matchingResults().distinct
       val kind = completions match {
-        case _: CompletionResult.ScopeMembers => LookupKind.Scope
-        case _: CompletionResult.TypeMembers => LookupKind.Type
-        case _ => LookupKind.None
+        case _: CompletionResult.ScopeMembers =>
+          LookupKind.Scope
+        case _: CompletionResult.TypeMembers =>
+          LookupKind.Type
+        case _ =>
+          LookupKind.None
       }
       (kind, items)
     } catch {

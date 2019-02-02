@@ -5,43 +5,89 @@ import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
-import scala.collection.concurrent.TrieMap
-import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc
-import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
-import scala.meta.pc.SymbolVisitor
-import scala.tools.nsc.interactive.Global
-import scala.util.control.NonFatal
 
-class SignatureHelpProvider(val compiler: Global, indexer: SymbolIndexer) {
+class SignatureHelpProvider(
+    val compiler: ScalaCompiler,
+    indexer: SymbolIndexer
+) {
   import compiler._
 
-  lazy val semanticdbOps: SemanticdbOps {
-    val global: compiler.type
-  } = new SemanticdbOps {
-    val global: compiler.type = compiler
+  def signatureHelp(
+      filename: String,
+      text: String,
+      offset: Int
+  ): SignatureHelp = {
+    val unit = ScalaPC.addCompilationUnit(
+      global = compiler,
+      code = text,
+      filename = filename,
+      cursor = cursor(offset, text)
+    )
+    val pos = unit.position(offset)
+    compiler.typeCheck(unit)
+    EnclosingMethodCall
+      .fromPosition(pos, unit.body.asInstanceOf[compiler.Tree])
+      .map(toSignatureHelp)
+      .getOrElse(new SignatureHelp())
   }
 
-  case class Callsite(
-      qual: Tree,
-      // TODO(olafur) use List instead of Array.
-      tparams: Array[Tree],
-      argss: Array[Array[Tree]]
+  case class Arg(
+      tree: Tree,
+      paramsIndex: Int,
+      paramIndex: Int
   ) {
-    def margss: Array[Array[Tree]] =
-      if (tparams.isEmpty) argss
-      else tparams +: argss
+    def matches(param: Symbol, i: Int, j: Int): Boolean =
+      paramsIndex == i && {
+        paramIndex == j ||
+        (paramIndex > j && definitions.isRepeatedParamType(param.tpe))
+      }
   }
-  object curry {
-    def unapply(tree: Tree): Option[Callsite] = tree match {
+
+  // A method call like `function[A, B](a, b)(c, d)`
+  case class MethodCall(
+      qual: Tree,
+      symbol: Symbol,
+      tparams: List[Tree],
+      argss: List[List[Tree]]
+  ) {
+    def alternatives: List[Symbol] = symbol match {
+      case o: ModuleSymbol =>
+        o.info.member(compiler.nme.apply).alternatives
+      case o: ClassSymbol =>
+        o.info.member(compiler.termNames.CONSTRUCTOR).alternatives
+      case m: MethodSymbol =>
+        m.owner.asClass.info.member(symbol.name).alternatives
+      case _ =>
+        symbol.alternatives
+    }
+    def nonOverload: Symbol =
+      alternatives.headOption.getOrElse(symbol)
+    def gparamss: List[List[Symbol]] = {
+      if (symbol.typeParams.isEmpty) nonOverload.paramLists
+      else nonOverload.typeParams :: nonOverload.paramLists
+    }
+    def all: List[List[Tree]] =
+      if (tparams.isEmpty) argss
+      else tparams :: argss
+    def paramTree(i: Int, j: Int): List[Tree] =
+      all.lift(i).flatMap(_.lift(j)).toList
+    def margss: List[List[Tree]] = {
+      all
+    }
+  }
+  object MethodCall {
+    def unapply(tree: Tree): Option[MethodCall] = tree match {
+      case TypeApply(qual, targs) =>
+        Some(MethodCall(qual, treeSymbol(tree), targs, Nil))
       case Apply(qual, args) =>
         var tparams: List[Tree] = Nil
         def loop(
             t: Tree,
             paramss: List[List[Symbol]],
             accum: List[List[Tree]]
-        ): List[List[Tree]] =
+        ): List[List[Tree]] = {
           (t, paramss) match {
             case (Apply(qual0, args0), _ :: tail) =>
               loop(qual0, tail, args0 :: accum)
@@ -51,19 +97,22 @@ class SignatureHelpProvider(val compiler: Global, indexer: SymbolIndexer) {
             case _ =>
               accum
           }
-        val argss = qual.symbol.paramss match {
+        }
+        val symbol = treeSymbol(tree)
+        val argss = symbol.paramss match {
           case _ :: tail =>
             loop(qual, tail, args :: Nil)
           case _ =>
             args :: Nil
         }
-        Some(Callsite(qual, tparams.toArray, argss.map(_.toArray).toArray))
-      case TypeApply(qual, targs) =>
-        Some(Callsite(qual, targs.toArray, Array.empty))
+        Some(MethodCall(qual, symbol, tparams, argss))
       case _ => None
     }
   }
 
+  // Returns a cursor offset only if the cursor is between parentheses or brackets:
+  // Example where we add a cursor      : foo(@@)
+  // Example where we don't add a cursor: foo(arg@@)
   def cursor(offset: Int, text: String): Option[Int] =
     if (offset > 0 && offset < text.length) {
       text.charAt(offset - 1) match {
@@ -81,293 +130,231 @@ class SignatureHelpProvider(val compiler: Global, indexer: SymbolIndexer) {
       None
     }
 
-  def methodInfo(symbol: Symbol): Option[MethodInformation] = {
-    val sym = semanticdbSymbol(symbol)
-    methodInfos.get(sym).orElse {
-      if (!symbol.isJava) None
-      else {
-        index(sym)
-        methodInfos.get(sym)
-      }
+  // Extractor for both term and type applications like `foo(1)` and foo[T]`
+  object TreeApply {
+    def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
+      case TypeApply(qual, args) => Some(qual -> args)
+      case Apply(qual, args) => Some(qual -> args)
+      case _ => None
     }
   }
 
-  def semanticdbSymbol(symbol: Symbol): String = {
-    import semanticdbOps._
-    symbol.toSemantic
+  case class EnclosingMethodCall(
+      call: MethodCall,
+      activeArg: Arg
+  ) {
+    def alternatives: List[Symbol] = call.alternatives
+    def symbol: Symbol = call.symbol
   }
 
-  def index(symbol: String): Unit = {
-    indexer.visit(
-      symbol,
-      new SymbolVisitor {
-        override def visitMethod(method: MethodInformation): Unit = {
-          methodInfos(method.symbol()) = method
-        }
-      }
-    )
+  object EnclosingMethodCall {
+    def fromPosition(pos: Position, body: Tree): Option[EnclosingMethodCall] =
+      new MethodCallTraverser(pos).fromTree(body)
   }
 
-  val methodInfos = TrieMap.empty[String, MethodInformation]
-  class RetryTypecheck extends Traverser {
-    override def traverse(tree: compiler.Tree): Unit = {
-      super.traverse(tree)
-      if (tree.symbol == NoSymbol) {
-        tree match {
-          case TypeApply(fun, _) =>
-            retryTypecheck(fun)
-          case _ =>
-            retryTypecheck(tree)
-        }
-      }
-    }
-  }
-  class StripTypeApplyTransformer extends Transformer {
-    override def transform(tree: compiler.Tree): compiler.Tree = {
-      tree match {
-        case TypeApply(fun, args) if fun.symbol == NoSymbol =>
-          fun
-        case _ =>
-          super.transform(tree)
-      }
-    }
-  }
-
-  def retryTypecheckAll(tree: Tree): Unit = {
-    val x = new StripTypeApplyTransformer().transform(tree)
-    retryTypecheck(x)
-  }
-
-  // Tries to re-typecheck the tree standalone. Sometimes the compiler fails to typecheck
-  // for example TypeApply nodes when the type paramter list is incomplete but the compiler
-  // is able to typecheck the standalone TypeApply qualifiers.
-  def retryTypecheck(tree: Tree): Unit = {
-    val context = compiler.doLocateContext(tree.pos)
-    val old = compiler.typer.context
-    compiler.typer.context = context
-    try {
-      val typed = compiler.typer.typed(tree)
-      if (typed.tpe != null) {
-        tree.setType(typed.tpe)
-        tree.symbol = typed.symbol
-      }
-    } catch {
-      case NonFatal(_) => // do nothing
-    } finally {
-      compiler.typer.context = old
-    }
-  }
-
-  def signatureHelp(
-      filename: String,
-      text: String,
-      offset: Int
-  ): SignatureHelp = {
-    val unit = ScalaPC.addCompilationUnit(
-      global = compiler,
-      code = text,
-      filename = filename,
-      cursor = cursor(offset, text)
-    )
-    val pos = unit.position(offset)
-    compiler.typeCheck(unit)
-    var parent: Symbol = NoSymbol
-    compiler.typedTreeAt(pos)
-    var activeCallsite: Callsite = null
-    var activeParameter: Int = -1
-    var activeArg: Tree = EmptyTree
-    val traverser = new compiler.Traverser {
-      def isEligible(tree: Tree): Boolean = {
-        !tree.pos.isTransparent && tree.tpe != null
-      }
-      def visit(tree: Tree): Unit = {
-        tree match {
-          case curry(site @ Callsite(qual, targs, argss)) =>
-            for {
-              (arg, i) <- Iterator(targs.iterator, argss.iterator.flatten).flatten.zipWithIndex
-            } {
-              if (arg.pos.includes(pos)) {
-                activeCallsite = site
-                activeParameter = i
-                activeArg = arg
-                parent = treeSymbol(tree)
-              }
-              traverse(arg)
-            }
-            super.traverse(qual)
-          case _ =>
-            super.traverse(tree)
-        }
-      }
-      object Ap {
-        def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
-          case TypeApply(qual, args) => Some(qual -> args)
-          case Apply(qual, args) => Some(qual -> args)
-          case _ => None
-        }
-      }
-      def treeSymbol(tree0: Tree): Symbol = {
-        def selectQualifier(tree: Tree): Option[Select] = tree match {
-          case t: Select => Some(t)
-          case Ap(qual, _) => selectQualifier(qual)
-          case _ => None
-        }
-        if (tree0.symbol != NoSymbol && !tree0.symbol.isError) {
-          tree0.symbol
+  // A traverser that finds the nearest enclosing method call for a given position.
+  class MethodCallTraverser(pos: Position) extends Traverser {
+    private var activeCallsite: MethodCall = _
+    private var activeArg: Arg = _
+    def fromTree(body: Tree): Option[EnclosingMethodCall] = {
+      traverse(body)
+      if (activeCallsite == null) {
+        None
+      } else {
+        if (activeCallsite.alternatives.isEmpty) {
+          None
         } else {
-          val completionFallback = for {
-            sel @ Select(_, nme) <- selectQualifier(tree0)
-            completion <- completionsAt(sel.pos.focus) match {
-              case t: CompletionResult.TypeMembers =>
-                t.results.find(_.sym.name == nme)
-              case _ =>
-                None
-            }
-            if !completion.sym.isErroneous
-          } yield completion.sym
-          completionFallback.getOrElse {
-            val qual = tree0 match {
-              case Ap(q @ Select(New(_), _), _) => q
-              case _ => tree0
-            }
-            compiler.typedTreeAt(qual.pos).symbol
-          }
-        }
-      }
-      override def traverse(tree: compiler.Tree): Unit = {
-        if (isEligible(tree) && tree.pos.includes(pos)) {
-          visit(tree)
-        }
-      }
-    }
-    traverser.traverse(unit.body.asInstanceOf[compiler.Tree])
-    val alternatives = parent match {
-      case o: ModuleSymbol =>
-        o.info.member(compiler.nme.apply).alternatives
-      case o: ClassSymbol =>
-        o.info.member(compiler.termNames.CONSTRUCTOR).alternatives
-      case null =>
-        Nil
-      case m: MethodSymbol =>
-        m.owner.asClass.info.member(parent.name).alternatives
-      case _ =>
-        parent.alternatives
-    }
-    val activeParent =
-      if (parent.isOverloaded) parent.alternatives.head
-      else parent
-    if (alternatives.isEmpty) {
-      null
-    } else {
-      var activeSignature = -1
-      val infos = alternatives.iterator.zipWithIndex.collect {
-        case (method: MethodSymbol, i) =>
-          val isActiveSignature = method == activeParent
-          val mparamss =
-            if (method.typeParams.isEmpty) method.paramLists
-            else method.typeParams :: method.paramLists
-          val paramss = mparamss.map(_.toArray).toArray
-          if (isActiveSignature) {
-            activeSignature = i
-            val paramCount = math.max(0, mparamss.foldLeft(-1)(_ + _.length))
-            activeParameter = math.min(activeParameter, paramCount)
-          }
-          val argssA = activeCallsite.margss.iterator.flatten.toArray
-          val argss = argssA.lift
-          val info = methodInfo(method)
-          val infoParamsA: Seq[pc.ParameterInformation] = info match {
-            case Some(value) =>
-              value.typeParameters().asScala ++
-                value.parameters().asScala
-            case None =>
-              IndexedSeq.empty
-          }
-          val infoParams = infoParamsA.lift
-          var k = 0
-          val paramLabels: Seq[Seq[ParameterInformation]] =
-            paramss.indices.map { i =>
-              val params = paramss(i)
-              params.indices.map { j =>
-                val index = k
-                k += 1
-                val param = params(j)
-                val paramInfo = infoParams(index)
-                val name = paramInfo match {
-                  case Some(value) => value.name()
-                  case None => param.nameString
-                }
-                val label =
-                  if (param.isTypeParameter) {
-                    name
-                  } else {
-                    val default =
-                      if (param.isParamWithDefault) " = {}"
-                      else ""
-                    if (isActiveSignature) {
-                      val tpe = param.info.toLongString
-                      s"$name: $tpe$default"
-                    } else {
-                      s"$name: ${param.info.toLongString}$default"
-                    }
-                  }
-                val docstring =
-                  paramInfo.map(_.docstring().orElse("")).getOrElse("")
-                val lparam = new ParameterInformation(label, docstring)
-                // TODO(olafur): use LSP 3.14.0 ParameterInformation.label offsets instead of strings
-                // once this issue is fixed https://github.com/eclipse/lsp4j/issues/300
-                if (isActiveSignature && index == activeParameter) {
-                  argss(index) match {
-                    case Some(a) if !a.tpe.isErroneous =>
-                      val tpe = a.tpe.widen.toLongString
-                      val typeString =
-                        if (tpe.endsWith("=> Null")) {
-                          tpe.stripSuffix("=> Null") + "=> ???"
-                        } else {
-                          tpe
-                        }
-                      if (!lparam.getLabel.endsWith(typeString)) {
-                        val content = new MarkupContent()
-                        content.setKind("markdown")
-                        content.setValue(
-                          "```scala\n" + typeString + "\n```\n" + docstring
-                        )
-                        lparam.setDocumentation(content)
-                      }
-                    case _ =>
-                  }
-                }
-                lparam
-              }
-            }
-          val methodSignature = paramLabels.iterator.zipWithIndex
-            .map {
-              case (params, i) =>
-                if (method.typeParams.nonEmpty && i == 0) {
-                  params.map(_.getLabel).mkString("[", ", ", "]")
-                } else {
-                  params.map(_.getLabel).mkString("(", ", ", ")")
-                }
-            }
-            .mkString(
-              method.nameString,
-              "",
-              s": ${method.returnType.toLongString}"
+          Some(
+            EnclosingMethodCall(
+              activeCallsite,
+              activeArg
             )
-          new SignatureInformation(
-            methodSignature,
-            info.fold("")(_.docstring()),
-            paramLabels.iterator.flatten.toSeq.asJava
           )
-      }.toIndexedSeq
-      val help = new SignatureHelp()
-      help.setSignatures(infos.asJava)
-      if (activeSignature >= 0) {
-        help.setActiveSignature(activeSignature)
+        }
       }
-      if (activeParameter >= 0) {
-        help.setActiveParameter(activeParameter)
+    }
+    override def traverse(tree: compiler.Tree): Unit = {
+      if (isEligible(tree) && tree.pos.includes(pos)) {
+        visit(tree)
       }
-      help
+    }
+    def isEligible(tree: Tree): Boolean = {
+      !tree.pos.isTransparent && tree.tpe != null
+    }
+    def visit(tree: Tree): Unit = tree match {
+      case MethodCall(call) =>
+        for {
+          (args, i) <- call.margss.zipWithIndex
+          (tree, j) <- args.zipWithIndex
+        } {
+          if (tree.pos.includes(pos)) {
+            activeCallsite = call
+            activeArg = Arg(tree, i, j)
+          }
+          traverse(tree)
+        }
+        super.traverse(call.qual)
+      case _ =>
+        super.traverse(tree)
     }
   }
+
+  // Same as `tree.symbol` but tries to recover from type errors
+  // by using the completions API.
+  def treeSymbol(tree0: Tree): Symbol = {
+    if (tree0.symbol != NoSymbol && !tree0.symbol.isError) {
+      tree0.symbol
+    } else {
+      def applyQualifier(tree: Tree): Option[RefTree] = tree match {
+        case t: RefTree => Some(t)
+        case TreeApply(qual, _) => applyQualifier(qual)
+        case _ =>
+          None
+      }
+      val completionFallback = for {
+        qual <- applyQualifier(tree0)
+        completion <- completionsAt(qual.pos.focus).results
+          .find(_.sym.name == qual.name)
+        if !completion.sym.isErroneous
+      } yield completion.sym
+      completionFallback.getOrElse {
+        val qual = tree0 match {
+          case TreeApply(q @ Select(New(_), _), _) => q
+          case _ => tree0
+        }
+        compiler.typedTreeAt(qual.pos).symbol
+      }
+    }
+  }
+
+  case class ParamIndex(j: Int, param: Symbol)
+
+  def toSignatureHelp(t: EnclosingMethodCall): SignatureHelp = {
+    val activeParent =
+      if (t.symbol.isOverloaded) t.symbol.alternatives.head
+      else t.symbol
+    var activeSignature: Integer = null
+    var activeParameter: Integer = null
+    val infos = t.alternatives.zipWithIndex.collect {
+      case (method: MethodSymbol, i) =>
+        val isActiveSignature = method == activeParent
+        if (isActiveSignature) {
+          activeSignature = i
+          val gparamss = for {
+            (params, i) <- this.mparamss(method).zipWithIndex
+            (param, j) <- params.zipWithIndex
+          } yield (param, i, j)
+          val activeIndex = gparamss.zipWithIndex.collectFirst {
+            case ((param, i, j), flat) if t.activeArg.matches(param, i, j) =>
+              flat
+          }
+          activeIndex match {
+            case Some(value) =>
+              val paramCount = math.max(0, gparamss.length - 1)
+              activeParameter = math.min(value, paramCount)
+            case _ =>
+          }
+        }
+        toSignatureInformation(t, method, isActiveSignature)
+    }
+    new SignatureHelp(infos.asJava, activeSignature, activeParameter)
+  }
+
+  def mparamss(method: MethodSymbol): List[List[compiler.Symbol]] =
+    if (method.typeParams.isEmpty) method.paramLists
+    else method.typeParams :: method.paramLists
+
+  def toSignatureInformation(
+      t: EnclosingMethodCall,
+      method: MethodSymbol,
+      isActiveSignature: Boolean
+  ): SignatureInformation = {
+    val mparamss = this.mparamss(method)
+    def arg(i: Int, j: Int): Option[Tree] =
+      t.call.all.lift(i).flatMap(_.lift(j))
+    val info = methodInfo(method)
+    val infoParamsA: Seq[pc.ParameterInformation] = info match {
+      case Some(value) =>
+        value.typeParameters().asScala ++
+          value.parameters().asScala
+      case None =>
+        IndexedSeq.empty
+    }
+    val infoParams = infoParamsA.lift
+    var k = 0
+    val paramLabels = mparamss.zipWithIndex.map {
+      case (params, i) =>
+        params.zipWithIndex.map {
+          case (param, j) =>
+            val index = k
+            k += 1
+            val paramInfo = infoParams(index)
+            val name = paramInfo match {
+              case Some(value) => value.name()
+              case None => param.nameString
+            }
+            val label =
+              if (param.isTypeParameter) {
+                name
+              } else {
+                val default =
+                  if (param.isParamWithDefault) " = {}"
+                  else ""
+                if (isActiveSignature) {
+                  val tpe = param.info.toLongString
+                  s"$name: $tpe$default"
+                } else {
+                  s"$name: ${param.info.toLongString}$default"
+                }
+              }
+            val docstring =
+              paramInfo.map(_.docstring().orElse("")).getOrElse("")
+            val lparam = new ParameterInformation(label, docstring)
+            // TODO(olafur): use LSP 3.14.0 ParameterInformation.label offsets instead of strings
+            // once this issue is fixed https://github.com/eclipse/lsp4j/issues/300
+            if (isActiveSignature && t.activeArg.matches(param, i, j)) {
+              arg(i, j) match {
+                case Some(a) if !a.tpe.isErroneous =>
+                  val tpe = a.tpe.widen.toLongString
+                  val typeString =
+                    if (tpe.endsWith("=> Null")) {
+                      tpe.stripSuffix("=> Null") + "=> ???"
+                    } else {
+                      tpe
+                    }
+                  if (!lparam.getLabel.endsWith(typeString)) {
+                    val content = new MarkupContent()
+                    content.setKind("markdown")
+                    content.setValue(
+                      "```scala\n" + typeString + "\n```\n" + docstring
+                    )
+                    lparam.setDocumentation(content)
+                  }
+                case _ =>
+              }
+            }
+            lparam
+        }
+    }
+    val methodSignature = paramLabels.iterator.zipWithIndex
+      .map {
+        case (params, i) =>
+          if (method.typeParams.nonEmpty && i == 0) {
+            params.map(_.getLabel).mkString("[", ", ", "]")
+          } else {
+            params.map(_.getLabel).mkString("(", ", ", ")")
+          }
+      }
+      .mkString(
+        method.nameString,
+        "",
+        s": ${method.returnType.toLongString}"
+      )
+    new SignatureInformation(
+      methodSignature,
+      info.fold("")(_.docstring()),
+      paramLabels.iterator.flatten.toSeq.asJava
+    )
+  }
+
 }
