@@ -9,6 +9,7 @@ case class User(
 )
 
 object User {
-  def user(name: String, age: Int) = age
-  user("", age = 42)
+  def user(name: String, age: Int): Int = age
+  def user(name: String, age: Int, street: Int): Int = age
+  def bar = user(street = 42, name = "", age = 2)
 }
