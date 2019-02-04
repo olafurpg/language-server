@@ -43,7 +43,7 @@ object SignatureHelpSuite extends BasePCSuite {
             out
               .append(signature.getLabel)
               .append("\n")
-            if (result.getActiveSignature == i) {
+            if (result.getActiveSignature == i && result.getActiveParameter != null) {
               val param = signature.getParameters.get(result.getActiveParameter)
               val column = signature.getLabel.indexOf(param.getLabel)
               if (column < 0) {
@@ -119,8 +119,9 @@ object SignatureHelpSuite extends BasePCSuite {
       |  Option(1).fold("")(_ => @@)
       |}
     """.stripMargin,
-    """|fold[B](ifEmpty: => B)(f: A => B): B
-       |                       ^^^^^^^^^
+    """|
+       |fold[B](ifEmpty: => B)(f: Int => B): B
+       |                       ^^^^^^^^^^^
        |  @param f Int => ???
        |""".stripMargin
   )
@@ -131,7 +132,8 @@ object SignatureHelpSuite extends BasePCSuite {
       |  Option(1).fold("@@")
       |}
     """.stripMargin,
-    """|fold[B](ifEmpty: => B)(f: A => B): B
+    """|
+       |fold[B](ifEmpty: => B)(f: Int => B): B
        |        ^^^^^^^^^^^^^
        |  @param ifEmpty String
        |""".stripMargin
@@ -146,8 +148,8 @@ object SignatureHelpSuite extends BasePCSuite {
       |}
     """.stripMargin,
     """|
-       |foldLeft[B](z: B)(op: (B, A) => B): B
-       |                  ^^^^^^^^^^^^^^^
+       |foldLeft[B](z: B)(op: (B, Int) => B): B
+       |                  ^^^^^^^^^^^^^^^^^
        |  @param op (Int, Int) => Int
        |""".stripMargin
   )
@@ -171,8 +173,8 @@ object SignatureHelpSuite extends BasePCSuite {
       |  Option(1).fold("")(_ => a@@)
       |}
     """.stripMargin,
-    """|fold[B](ifEmpty: => B)(f: A => B): B
-       |                       ^^^^^^^^^
+    """|fold[B](ifEmpty: => B)(f: Int => B): B
+       |                       ^^^^^^^^^^^
        |""".stripMargin
   )
   checkDoc(
@@ -182,8 +184,9 @@ object SignatureHelpSuite extends BasePCSuite {
       |  List(1).map(x => @@)
       |}
     """.stripMargin,
-    """|map[B, That](f: A => B)(bf: scala.collection.generic.CanBuildFrom[List[A],B,That]): That
-       |             ^^^^^^^^^
+    """|
+       |map[B, That](f: Int => B)(bf: scala.collection.generic.CanBuildFrom[List[Int],B,That]): That
+       |             ^^^^^^^^^^^
        |  @param f Int => ???
        |""".stripMargin
   )
@@ -194,8 +197,8 @@ object SignatureHelpSuite extends BasePCSuite {
       |  List(1).map(@@)
       |}
     """.stripMargin,
-    """|map[B, That](f: A => B)(bf: scala.collection.generic.CanBuildFrom[List[A],B,That]): That
-       |             ^^^^^^^^^
+    """|map[B, That](f: Int => B)(bf: scala.collection.generic.CanBuildFrom[List[Int],B,That]): That
+       |             ^^^^^^^^^^^
        |""".stripMargin
   )
   check(
@@ -235,8 +238,8 @@ object SignatureHelpSuite extends BasePCSuite {
       |  }
       |}
     """.stripMargin,
-    """|collect[B](pf: PartialFunction[A,B]): Option[B]
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^
+    """|collect[B](pf: PartialFunction[Int,B]): Option[B]
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin
   )
   check(
@@ -439,20 +442,20 @@ object SignatureHelpSuite extends BasePCSuite {
       |  } yield l
       |}
     """.stripMargin,
-    """|flatMap[B](f: A => Option[B]): Option[B]
-       |           ^^^^^^^^^^^^^^^^^
+    """|flatMap[B](f: Int => Option[B]): Option[B]
+       |           ^^^^^^^^^^^^^^^^^^^
        |""".stripMargin
   )
 
   check(
-    "null",
+    "bounds",
     """
       |object a {
-      |  Map.empty[Int, String].applyOrElse(@@)
+      |  Map.empty[Int, String].applyOrElse(1@@)
       |}
     """.stripMargin,
-    """|applyOrElse[K1, V1](x: K1, default: K1 => V1): V1
-       |                    ^^^^^
+    """|applyOrElse[K1 <: Int, V1 >: String](x: K1, default: K1 => V1): V1
+       |                                     ^^^^^
        |""".stripMargin
   )
 
