@@ -16,7 +16,7 @@ import scala.collection.JavaConverters._
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.ParameterInformation
 
-class QdoxMethodInformation(
+class MetalsMethodInformation(
     val symbol: String,
     val name: String,
     val docstring: String,
@@ -34,9 +34,9 @@ class QdoxMethodInformation(
   }
 }
 
-object QdoxMethodInformation {
+object MetalsMethodInformation {
   def fromMethod(symbol: String, method: JavaMethod): MethodInformation = {
-    new QdoxMethodInformation(
+    new MetalsMethodInformation(
       symbol,
       method.getName,
       method.getComment,
@@ -48,7 +48,7 @@ object QdoxMethodInformation {
       symbol: String,
       method: JavaConstructor
   ): MethodInformation = {
-    new QdoxMethodInformation(
+    new MetalsMethodInformation(
       symbol,
       method.getName,
       method.getComment,
@@ -57,7 +57,11 @@ object QdoxMethodInformation {
     )
   }
   def param(name: String, docstring: String): ParameterInformation =
-    new ParamInformation(name, Optional.ofNullable(docstring))
+    new MetalsParameterInformation(
+      name,
+      if (docstring == null) "" else docstring,
+      ""
+    )
   def typeParameters[D <: JavaGenericDeclaration](
       method: JavaAnnotatedElement,
       tparams: util.List[JavaTypeVariable[D]]
@@ -86,7 +90,10 @@ object QdoxMethodInformation {
 
 }
 
-class ParamInformation(val name: String, val docstring: Optional[String])
-    extends ParameterInformation {
+class MetalsParameterInformation(
+    val name: String,
+    val docstring: String,
+    val defaultValue: String
+) extends ParameterInformation {
   override def toString: String = name
 }
