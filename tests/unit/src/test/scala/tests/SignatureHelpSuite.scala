@@ -445,7 +445,19 @@ object SignatureHelpSuite extends BasePCSuite {
   )
 
   check(
-    "curry",
+    "null",
+    """
+      |object a {
+      |  Map.empty[Int, String].applyOrElse(@@)
+      |}
+    """.stripMargin,
+    """|applyOrElse[K1, V1](x: K1, default: K1 => V1): V1
+       |                    ^^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "error",
     """
       |object a {
       |  Map[Int](1 @@-> "").map {

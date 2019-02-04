@@ -3,9 +3,9 @@ package example
 // import Java
 
 object User {
-  val x = {
-
-    2
+  val x = Map.empty[Int, String]
+  x.collect {
+    case (a, b) =>
+      b.length
   }
-  // List(1, 2, 3).map(a => )
 }

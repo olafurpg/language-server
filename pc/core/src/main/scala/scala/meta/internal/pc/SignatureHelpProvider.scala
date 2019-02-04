@@ -41,7 +41,8 @@ class SignatureHelpProvider(
     def matches(param: Symbol, i: Int, j: Int): Boolean =
       paramsIndex == i && {
         paramIndex == j ||
-        (paramIndex > j && definitions.isRepeatedParamType(param.tpe))
+        (param.tpe != null && paramIndex > j &&
+        definitions.isRepeatedParamType(param.tpe))
       }
   }
 
@@ -314,7 +315,7 @@ class SignatureHelpProvider(
             // once this issue is fixed https://github.com/eclipse/lsp4j/issues/300
             if (isActiveSignature && t.activeArg.matches(param, i, j)) {
               arg(i, j) match {
-                case Some(a) if !a.tpe.isErroneous =>
+                case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
                   val tpe = a.tpe.widen.toLongString
                   val typeString =
                     if (tpe.endsWith("=> Null")) {
