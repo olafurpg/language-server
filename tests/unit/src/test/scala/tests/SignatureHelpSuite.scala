@@ -479,7 +479,7 @@ object SignatureHelpSuite extends BasePCSuite {
       |  User(age = 1, @@)
       |}
     """.stripMargin,
-    """|apply([age: Int = {}], [name: String = {}]): User
+    """|apply(<age: Int = {}>, <name: String = {}>): User
        |                       ^^^^^^^^^^^^^^^^^^^
        |""".stripMargin
   )
@@ -495,6 +495,16 @@ object SignatureHelpSuite extends BasePCSuite {
        |                         ^^^^^^^^^^^^^
        |""".stripMargin
   )
-  // TODO: stress curried arguments with incomplete arg lists like `foo(a, b)(d)` where `c` is missing from
-  // `foo(a, b, c)`.
+  check(
+    "named2",
+    """
+      |object A {
+      |  def user(name: String, age: Int) = age
+      |  user(na@@me = "", age = 42)
+      |}
+    """.stripMargin,
+    """|user(name: String, age: Int): Int
+       |     ^^^^^^^^^^^^
+       |""".stripMargin
+  )
 }
