@@ -59,12 +59,16 @@ class ScalaCompiler(
 
   def methodInfo(symbol: Symbol): Option[MethodInformation] = {
     val sym = compiler.semanticdbSymbol(symbol)
-    methodInfos.get(sym).orElse {
-      if (!symbol.isJava) None
-      else {
+    methodInfos.get(sym) match {
+      case Some(null) => None
+      case s: Some[t] => s
+      case None =>
         index(sym)
-        methodInfos.get(sym)
-      }
+        val result = methodInfos.get(sym)
+        if (result.isEmpty) {
+          methodInfos.put(sym, null)
+        }
+        result
     }
   }
 
@@ -72,11 +76,6 @@ class ScalaCompiler(
     indexer.visit(
       symbol,
       new SymbolVisitor {
-        override def visitInput(filename: String, text: String): Unit = {
-          if (filename.endsWith(".scala")) {
-            pprint.log(filename)
-          }
-        }
         override def visitMethod(method: MethodInformation): Unit = {
           methodInfos(method.symbol()) = method
         }

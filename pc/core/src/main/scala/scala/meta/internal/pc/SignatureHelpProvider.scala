@@ -207,6 +207,7 @@ class SignatureHelpProvider(
         }
       }
     }
+
     def toVisit(tree: Tree): Option[Tree] = {
       if (tree.tpe == null) None
       else {
@@ -338,7 +339,10 @@ class SignatureHelpProvider(
   ): SignatureInformation = {
     def arg(i: Int, j: Int): Option[Tree] =
       t.call.all.lift(i).flatMap(_.lift(j))
-    val info = methodInfo(method)
+    val info = methodInfo(
+      if (!method.isJava && method.isPrimaryConstructor) method.owner
+      else method
+    )
     val infoParamsA: Seq[pc.ParameterInformation] = info match {
       case Some(value) =>
         value.typeParameters().asScala ++
@@ -387,8 +391,15 @@ class SignatureHelpProvider(
                 name + param.info.toLongString
               } else {
                 val default =
-                  if (param.isParamWithDefault) " = {}"
-                  else ""
+                  if (param.isParamWithDefault) {
+                    val defaultValue = paramInfo.map(_.defaultValue()) match {
+                      case Some(value) if !value.isEmpty => value
+                      case _ => "{}"
+                    }
+                    s" = $defaultValue"
+                  } else {
+                    ""
+                  }
                 if (isActiveSignature) {
                   val tpe = param.info.toLongString
                   s"$name: $tpe$default"
@@ -396,8 +407,7 @@ class SignatureHelpProvider(
                   s"$name: ${param.info.toLongString}$default"
                 }
               }
-            val docstring =
-              paramInfo.map(_.docstring().orElse("")).getOrElse("")
+            val docstring = paramInfo.map(_.docstring()).getOrElse("")
             val byNameLabel =
               if (isByNamedOrdered) s"<$label>"
               else label

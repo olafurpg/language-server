@@ -19,7 +19,7 @@ class JavaSymbolIndexer(input: Input.VirtualFile) extends SymbolIndexer {
           properties: Int
       ): Unit = {
         visitor.visitMethod(
-          QdoxMethodInformation.fromConstructor(
+          MetalsMethodInformation.fromConstructor(
             symbol(Descriptor.Method("<init>", disambiguator)),
             ctor
           )
@@ -33,7 +33,7 @@ class JavaSymbolIndexer(input: Input.VirtualFile) extends SymbolIndexer {
           properties: Int
       ): Unit = {
         visitor.visitMethod(
-          QdoxMethodInformation.fromMethod(
+          MetalsMethodInformation.fromMethod(
             symbol(Descriptor.Method(name, disambiguator)),
             method
           )
