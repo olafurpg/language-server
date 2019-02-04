@@ -215,15 +215,26 @@ class SignatureHelpProvider(
     }
     def visit(tree: Tree): Unit = tree match {
       case MethodCall(call) =>
+        var start = call.qual.pos
         for {
           (args, i) <- call.margss.zipWithIndex
-          (tree, j) <- args.zipWithIndex
+          (arg, j) <- args.zipWithIndex
         } {
-          if (tree.pos.includes(pos)) {
-            activeCallsite = call
-            activeArg = Arg(tree, i, j)
+          if (arg.pos.isRange) {
+            // NOTE(olafur): We don't use `arg.pos` because it does not enclose the full
+            // range from the previous argument. Instead, we use
+            val argPos = arg.pos.withStart(math.min(arg.pos.start, start.end))
+//            println(argPos.lineContent)
+//            val indent = argPos.focusStart.column
+//            print(" " * indent)
+//            println("^" * (argPos.end - argPos.start))
+            start = arg.pos
+            if (argPos.includes(pos)) {
+              activeCallsite = call
+              activeArg = Arg(arg, i, j)
+            }
           }
-          traverse(tree)
+          traverse(arg)
         }
         super.traverse(call.qual)
       case _ =>
@@ -369,7 +380,7 @@ class SignatureHelpProvider(
             val docstring =
               paramInfo.map(_.docstring().orElse("")).getOrElse("")
             val byNameLabel =
-              if (isByNamedOrdered) s"[$label]"
+              if (isByNamedOrdered) s"<$label>"
               else label
             val lparam = new ParameterInformation(byNameLabel, docstring)
             // TODO(olafur): use LSP 3.14.0 ParameterInformation.label offsets instead of strings
