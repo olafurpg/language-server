@@ -122,25 +122,45 @@ class SignatureHelpProvider(
     }
   }
 
-  // Returns a cursor offset only if the cursor is between parentheses or brackets:
-  // Example where we add a cursor      : foo(@@)
-  // Example where we don't add a cursor: foo(arg@@)
-  def cursor(offset: Int, text: String): Option[Int] =
-    if (offset > 0 && offset < text.length) {
-      text.charAt(offset - 1) match {
-        case '(' | '[' =>
-          text.charAt(offset) match {
-            case ')' | ']' =>
-              Some(offset)
-            case _ =>
-              None
+  // Returns a cursor offset only if the cursor is between two delimiters
+  // Insert cursor:
+  //  foo(@@)
+  //  foo(@@,)
+  //  foo(1,@@)
+  // Don't insert cursor:
+  //  foo(a@@)
+  def cursor(offset: Int, text: String): Option[Int] = {
+    if (offset >= text.length) return None
+    var leadingDelimiter = offset - 1
+    while (leadingDelimiter > 0 && text.charAt(leadingDelimiter).isWhitespace) {
+      leadingDelimiter -= 1
+    }
+    if (leadingDelimiter >= 0) {
+      text.charAt(leadingDelimiter) match {
+        case '(' | '[' | ',' =>
+          var trailingDelimiter = offset
+          while (trailingDelimiter < text.length &&
+            text.charAt(trailingDelimiter).isWhitespace) {
+            trailingDelimiter += 1
           }
+          if (trailingDelimiter < text.length) {
+            text.charAt(trailingDelimiter) match {
+              case ')' | ']' | ',' =>
+                Some(offset)
+              case _ =>
+                None
+            }
+          } else {
+            None
+          }
+
         case _ =>
           None
       }
     } else {
       None
     }
+  }
 
   // Extractor for both term and type applications like `foo(1)` and foo[T]`
   object TreeApply {
@@ -276,7 +296,6 @@ class SignatureHelpProvider(
   }
 
   def mparamss(method: Type): List[List[compiler.Symbol]] = {
-//    pprint.log(method)
     if (method.typeParams.isEmpty) method.paramLists
     else method.typeParams :: method.paramLists
   }
@@ -301,7 +320,30 @@ class SignatureHelpProvider(
     var k = 0
     val paramLabels = mparamss.zipWithIndex.map {
       case (params, i) =>
-        params.zipWithIndex.map {
+        val byName: Map[Name, Int] =
+          if (isActiveSignature) {
+            (for {
+              args <- t.call.all.lift(i).toList
+              (AssignOrNamedArg(Ident(arg), _), argIndex) <- args.zipWithIndex
+            } yield arg -> argIndex).toMap
+          } else {
+            Map.empty[Name, Int]
+          }
+        def byNamedArgumentPosition(symbol: Symbol): Int = {
+          byName.getOrElse(symbol.name, Int.MaxValue)
+        }
+        val sortedByName = params.zipWithIndex
+          .sortBy {
+            case (sym, pos) =>
+              (byNamedArgumentPosition(sym), pos)
+          }
+          .map {
+            case (sym, _) => sym
+          }
+        val isByNamedOrdered = sortedByName.zip(params).exists {
+          case (a, b) => a != b
+        }
+        sortedByName.zipWithIndex.map {
           case (param, j) =>
             val index = k
             k += 1
@@ -326,7 +368,10 @@ class SignatureHelpProvider(
               }
             val docstring =
               paramInfo.map(_.docstring().orElse("")).getOrElse("")
-            val lparam = new ParameterInformation(label, docstring)
+            val byNameLabel =
+              if (isByNamedOrdered) s"[$label]"
+              else label
+            val lparam = new ParameterInformation(byNameLabel, docstring)
             // TODO(olafur): use LSP 3.14.0 ParameterInformation.label offsets instead of strings
             // once this issue is fixed https://github.com/eclipse/lsp4j/issues/300
             if (isActiveSignature && t.activeArg.matches(param, i, j)) {

@@ -125,6 +125,7 @@ object SignatureHelpSuite extends BasePCSuite {
        |  @param f Int => ???
        |""".stripMargin
   )
+
   checkDoc(
     "curry2",
     """
@@ -468,6 +469,31 @@ object SignatureHelpSuite extends BasePCSuite {
       |}
     """.stripMargin,
     ""
+  )
+
+  check(
+    "named",
+    """
+      |case class User(name: String = "John", age: Int = 42)
+      |object A {
+      |  User(age = 1, @@)
+      |}
+    """.stripMargin,
+    """|apply([age: Int = {}], [name: String = {}]): User
+       |                       ^^^^^^^^^^^^^^^^^^^
+       |""".stripMargin
+  )
+  check(
+    "named1",
+    """
+      |case class User(name: String = "John", age: Int = 42)
+      |object A {
+      |  User(name = "", @@)
+      |}
+    """.stripMargin,
+    """|apply(name: String = {}, age: Int = {}): User
+       |                         ^^^^^^^^^^^^^
+       |""".stripMargin
   )
   // TODO: stress curried arguments with incomplete arg lists like `foo(a, b)(d)` where `c` is missing from
   // `foo(a, b, c)`.
