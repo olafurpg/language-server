@@ -53,18 +53,29 @@ class SignatureHelpProvider(
       tparams: List[Tree],
       argss: List[List[Tree]]
   ) {
+    def qualTpe: Type = {
+      val fromOverload = qual.tpe match {
+        case OverloadedType(pre, alts) =>
+          val toFind = nonOverload
+          pre.memberType(alts.find(_ == toFind).getOrElse(alts.head))
+        case tpe => tpe
+      }
+      if (fromOverload == null) symbol.info
+      else fromOverload
+    }
     def alternatives: List[Symbol] = symbol match {
       case o: ModuleSymbol =>
         o.info.member(compiler.nme.apply).alternatives
       case o: ClassSymbol =>
         o.info.member(compiler.termNames.CONSTRUCTOR).alternatives
       case m: MethodSymbol =>
-        m.owner.asClass.info.member(symbol.name).alternatives
+        m.owner.info.member(symbol.name).alternatives
       case _ =>
         symbol.alternatives
     }
     def nonOverload: Symbol =
-      alternatives.headOption.getOrElse(symbol)
+      if (!symbol.isOverloaded) symbol
+      else alternatives.headOption.getOrElse(symbol)
     def gparamss: List[List[Symbol]] = {
       if (symbol.typeParams.isEmpty) nonOverload.paramLists
       else nonOverload.typeParams :: nonOverload.paramLists
@@ -88,25 +99,25 @@ class SignatureHelpProvider(
             t: Tree,
             paramss: List[List[Symbol]],
             accum: List[List[Tree]]
-        ): List[List[Tree]] = {
+        ): (Tree, List[List[Tree]]) = {
           (t, paramss) match {
             case (Apply(qual0, args0), _ :: tail) =>
               loop(qual0, tail, args0 :: accum)
-            case (TypeApply(_, args0), _) =>
+            case (TypeApply(qual0, args0), _) =>
               tparams = args0
-              accum
+              (qual0, accum)
             case _ =>
-              accum
+              (qual, accum)
           }
         }
         val symbol = treeSymbol(tree)
-        val argss = symbol.paramss match {
+        val (refQual, argss) = symbol.paramss match {
           case _ :: tail =>
             loop(qual, tail, args :: Nil)
           case _ =>
-            args :: Nil
+            (qual, args :: Nil)
         }
-        Some(MethodCall(qual, symbol, tparams, argss))
+        Some(MethodCall(refQual, symbol, tparams, argss))
       case _ => None
     }
   }
@@ -231,46 +242,51 @@ class SignatureHelpProvider(
   case class ParamIndex(j: Int, param: Symbol)
 
   def toSignatureHelp(t: EnclosingMethodCall): SignatureHelp = {
-    val activeParent =
-      if (t.symbol.isOverloaded) t.symbol.alternatives.head
-      else t.symbol
+    val activeParent = t.call.nonOverload
     var activeSignature: Integer = null
     var activeParameter: Integer = null
     val infos = t.alternatives.zipWithIndex.collect {
       case (method: MethodSymbol, i) =>
         val isActiveSignature = method == activeParent
-        if (isActiveSignature) {
-          activeSignature = i
-          val gparamss = for {
-            (params, i) <- this.mparamss(method).zipWithIndex
-            (param, j) <- params.zipWithIndex
-          } yield (param, i, j)
-          val activeIndex = gparamss.zipWithIndex.collectFirst {
-            case ((param, i, j), flat) if t.activeArg.matches(param, i, j) =>
-              flat
+        val paramss: List[List[Symbol]] =
+          if (!isActiveSignature) {
+            mparamss(method.info)
+          } else {
+            activeSignature = i
+            val paramss = this.mparamss(t.call.qualTpe)
+            val gparamss = for {
+              (params, i) <- paramss.zipWithIndex
+              (param, j) <- params.zipWithIndex
+            } yield (param, i, j)
+            val activeIndex = gparamss.zipWithIndex.collectFirst {
+              case ((param, i, j), flat) if t.activeArg.matches(param, i, j) =>
+                flat
+            }
+            activeIndex match {
+              case Some(value) =>
+                val paramCount = math.max(0, gparamss.length - 1)
+                activeParameter = math.min(value, paramCount)
+              case _ =>
+            }
+            paramss
           }
-          activeIndex match {
-            case Some(value) =>
-              val paramCount = math.max(0, gparamss.length - 1)
-              activeParameter = math.min(value, paramCount)
-            case _ =>
-          }
-        }
-        toSignatureInformation(t, method, isActiveSignature)
+        toSignatureInformation(t, method, paramss, isActiveSignature)
     }
     new SignatureHelp(infos.asJava, activeSignature, activeParameter)
   }
 
-  def mparamss(method: MethodSymbol): List[List[compiler.Symbol]] =
+  def mparamss(method: Type): List[List[compiler.Symbol]] = {
+//    pprint.log(method)
     if (method.typeParams.isEmpty) method.paramLists
     else method.typeParams :: method.paramLists
+  }
 
   def toSignatureInformation(
       t: EnclosingMethodCall,
       method: MethodSymbol,
+      mparamss: List[List[Symbol]],
       isActiveSignature: Boolean
   ): SignatureInformation = {
-    val mparamss = this.mparamss(method)
     def arg(i: Int, j: Int): Option[Tree] =
       t.call.all.lift(i).flatMap(_.lift(j))
     val info = methodInfo(method)
@@ -296,7 +312,7 @@ class SignatureHelpProvider(
             }
             val label =
               if (param.isTypeParameter) {
-                name
+                name + param.info.toLongString
               } else {
                 val default =
                   if (param.isParamWithDefault) " = {}"
