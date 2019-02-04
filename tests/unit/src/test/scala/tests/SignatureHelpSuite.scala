@@ -507,4 +507,18 @@ object SignatureHelpSuite extends BasePCSuite {
        |     ^^^^^^^^^^^^
        |""".stripMargin
   )
+  check(
+    "named3",
+    """
+      |object A {
+      |  def user(name: String, age: Int): Int = age
+      |  def user(name: String, age: Int, street: Int): Int = age
+      |  def x = user(str@@eet = 42, name = "", age = 2)
+      |}
+    """.stripMargin,
+    """|user(name: String, age: Int, street: Int): Int
+       |     ^^^^^^^^^^^^
+       |user(name: String, age: Int): Int
+       |""".stripMargin
+  )
 }

@@ -90,35 +90,37 @@ class SignatureHelpProvider(
     }
   }
   object MethodCall {
-    def unapply(tree: Tree): Option[MethodCall] = tree match {
-      case TypeApply(qual, targs) =>
-        Some(MethodCall(qual, treeSymbol(tree), targs, Nil))
-      case Apply(qual, args) =>
-        var tparams: List[Tree] = Nil
-        def loop(
-            t: Tree,
-            paramss: List[List[Symbol]],
-            accum: List[List[Tree]]
-        ): (Tree, List[List[Tree]]) = {
-          (t, paramss) match {
-            case (Apply(qual0, args0), _ :: tail) =>
-              loop(qual0, tail, args0 :: accum)
-            case (TypeApply(qual0, args0), _) =>
-              tparams = args0
-              (qual0, accum)
-            case _ =>
-              (qual, accum)
+    def unapply(tree: Tree): Option[MethodCall] = {
+      tree match {
+        case TypeApply(qual, targs) =>
+          Some(MethodCall(qual, treeSymbol(tree), targs, Nil))
+        case Apply(qual, args) =>
+          var tparams: List[Tree] = Nil
+          def loop(
+              t: Tree,
+              paramss: List[List[Symbol]],
+              accum: List[List[Tree]]
+          ): (Tree, List[List[Tree]]) = {
+            (t, paramss) match {
+              case (Apply(qual0, args0), _ :: tail) =>
+                loop(qual0, tail, args0 :: accum)
+              case (TypeApply(qual0, args0), _) =>
+                tparams = args0
+                (qual0, accum)
+              case _ =>
+                (qual, accum)
+            }
           }
-        }
-        val symbol = treeSymbol(tree)
-        val (refQual, argss) = symbol.paramss match {
-          case _ :: tail =>
-            loop(qual, tail, args :: Nil)
-          case _ =>
-            (qual, args :: Nil)
-        }
-        Some(MethodCall(refQual, symbol, tparams, argss))
-      case _ => None
+          val symbol = treeSymbol(tree)
+          val (refQual, argss) = symbol.paramss match {
+            case _ :: tail =>
+              loop(qual, tail, args :: Nil)
+            case _ =>
+              (qual, args :: Nil)
+          }
+          Some(MethodCall(refQual, symbol, tparams, argss))
+        case _ => None
+      }
     }
   }
 
@@ -205,13 +207,33 @@ class SignatureHelpProvider(
         }
       }
     }
-    override def traverse(tree: compiler.Tree): Unit = {
-      if (isEligible(tree) && tree.pos.includes(pos)) {
-        visit(tree)
+    def toVisit(tree: Tree): Option[Tree] = {
+      if (tree.tpe == null) None
+      else {
+        tree match {
+          // Special case: a method call with named arguments like `foo(a = 1, b = 2)` gets desugared into the following:
+          // {
+          //   val x$1 = 1
+          //   val x$2 = 2
+          //   foo(x$1, x$2)
+          // }
+          // In this case, the `foo(x$1, x$2)` has a transparent position, which we don't visit by default, so we
+          // make an exception and visit it nevertheless.
+          case Block(stats, expr)
+              if tree.symbol == null && stats.forall(_.symbol.isArtifact) =>
+            Some(expr)
+          case _ =>
+            if (tree.pos.isTransparent) None
+            else Some(tree)
+        }
       }
     }
-    def isEligible(tree: Tree): Boolean = {
-      !tree.pos.isTransparent && tree.tpe != null
+    override def traverse(tree: compiler.Tree): Unit = {
+      toVisit(tree) match {
+        case Some(value) =>
+          visit(value)
+        case None =>
+      }
     }
     def visit(tree: Tree): Unit = tree match {
       case MethodCall(call) =>
@@ -220,14 +242,11 @@ class SignatureHelpProvider(
           (args, i) <- call.margss.zipWithIndex
           (arg, j) <- args.zipWithIndex
         } {
-          if (arg.pos.isRange) {
+          val realPos = treePos(arg)
+          if (realPos.isRange) {
             // NOTE(olafur): We don't use `arg.pos` because it does not enclose the full
             // range from the previous argument. Instead, we use
-            val argPos = arg.pos.withStart(math.min(arg.pos.start, start.end))
-//            println(argPos.lineContent)
-//            val indent = argPos.focusStart.column
-//            print(" " * indent)
-//            println("^" * (argPos.end - argPos.start))
+            val argPos = realPos.withStart(math.min(arg.pos.start, start.end))
             start = arg.pos
             if (argPos.includes(pos)) {
               activeCallsite = call
