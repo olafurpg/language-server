@@ -1,13 +1,14 @@
 package scala.meta.internal.pc
 
+import java.util.Comparator
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
-import scala.tools.nsc.interactive.Global
 
-class CompletionProvider(compiler: Global) {
+class CompletionProvider(val compiler: ScalaCompiler) {
   import compiler._
 
   def completions(
@@ -22,29 +23,86 @@ class CompletionProvider(compiler: Global) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
-    val (kind, results) = safeCompletionsAt(position)
-    val items = results
-      .sortBy {
-        case TypeMember(sym, _, true, inherited, viaView) =>
-          // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
-          (-computeRelevance(sym, viaView, inherited), sym.nameString)
-        case ScopeMember(sym, _, true, _) =>
-          (-computeRelevance(sym, NoSymbol, inherited = false), sym.nameString)
-        case r => (0, r.sym.nameString)
-      }
-      .iterator
-      .zipWithIndex
-      .map {
-        case (r, idx) =>
-          val label = r.symNameDropLocal.decoded
-          val item = new CompletionItem(label)
-          item.setPreselect(true)
-          item.setDetail(r.sym.signatureString)
-          item.setKind(completionItemKind(r))
-          item.setSortText(f"${idx}%05d")
-          item
-      }
+    val (qual, kind, results) = safeCompletionsAt(position)
+    val items = results.sorted(byRelevance).iterator.zipWithIndex.map {
+      case (r, idx) =>
+        if (r.sym.name.startsWith("Serializable")) {
+          pprint.log(semanticdbSymbol(r.sym))
+        }
+        val label = r.symNameDropLocal.decoded
+        val item = new CompletionItem(label)
+        item.setPreselect(true)
+        val detail = qual match {
+          case Some(tpe) =>
+            // Compute type parameters based on the qualifier.
+            // Example: Map[Int, String].applyOrE@@
+            // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
+            // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
+            r.sym.infoString(tpe.memberType(r.sym))
+          case _ =>
+            if (r.sym.isClass || r.sym.isModuleOrModuleClass) {
+              " " + semanticdbSymbol(r.sym.owner)
+            } else {
+              r.sym.signatureString
+            }
+        }
+        item.setDetail(detail)
+        item.setKind(completionItemKind(r))
+        item.setSortText(f"${idx}%05d")
+        item
+    }
     new CompletionItems(kind, items.toSeq.asJava)
+  }
+
+  private def filterInteresting(completions: List[Member]): List[Member] = {
+    val isUninterestingSymbol = Set[Symbol](
+      // the methods == != ## are arguably "interesting" but they're here becuase
+      // - they're short so completing them doesn't save you keystrokes
+      // - they're available on everything so you
+      definitions.Any_==,
+      definitions.Any_!=,
+      definitions.Any_##,
+      definitions.Object_==,
+      definitions.Object_!=,
+      definitions.Object_##,
+      definitions.Object_eq,
+      definitions.Object_ne,
+      definitions.RepeatedParamClass,
+      definitions.ByNameParamClass,
+      definitions.JavaRepeatedParamClass,
+      definitions.Object_notify,
+      definitions.Object_notifyAll,
+      definitions.Object_notify,
+      definitions.getMemberMethod(definitions.ObjectClass, termNames.wait_),
+      definitions.getMemberMethod(
+        definitions.getMemberClass(
+          definitions.PredefModule,
+          TypeName("ArrowAssoc")
+        ),
+        TermName("→").encode
+      )
+    ).flatMap(_.alternatives)
+    def isSynthetic(sym: Symbol): Boolean = {
+      sym.isJava && sym.isModuleOrModuleClass
+    }
+    val isSeen = mutable.Set.empty[Symbol]
+    val buf = List.newBuilder[Member]
+    def loop(lst: List[Member]): Unit = lst match {
+      case Nil =>
+      case head :: tail =>
+        val companion = head.sym.companion
+        val isNotCompanionSeen = companion == NoSymbol || !isSeen(companion)
+        if (!isSeen(head.sym) &&
+          isNotCompanionSeen &&
+          !isUninterestingSymbol(head.sym) &&
+          !isSynthetic(head.sym)) {
+          isSeen += head.sym
+          buf += head
+        }
+        loop(tail)
+    }
+    loop(completions)
+    buf.result()
   }
 
   private def isFunction(symbol: Symbol): Boolean = {
@@ -53,7 +111,7 @@ class CompletionProvider(compiler: Global) {
     )
   }
 
-  private def completionItemKind(r: CompletionResult#M): CompletionItemKind = {
+  private def completionItemKind(r: Member): CompletionItemKind = {
     import org.eclipse.lsp4j.{CompletionItemKind => k}
     val symbol = r.sym
     val symbolIsFunction = isFunction(symbol)
@@ -104,14 +162,14 @@ class CompletionProvider(compiler: Global) {
 
   private def safeCompletionsAt(
       position: Position
-  ): (LookupKind, List[CompletionResult#M]) = {
+  ): (Option[Type], LookupKind, List[Member]) = {
     def expected(e: Throwable) = {
       println(s"Expected error '${e.getMessage}'")
-      (LookupKind.None, Nil)
+      (None, LookupKind.None, Nil)
     }
     try {
       val completions = completionsAt(position)
-      val items = completions.matchingResults().distinct
+      val items = filterInteresting(completions.matchingResults())
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           LookupKind.Scope
@@ -120,32 +178,60 @@ class CompletionProvider(compiler: Global) {
         case _ =>
           LookupKind.None
       }
-      (kind, items)
+      val qual = completions match {
+        case t: CompletionResult.TypeMembers =>
+          Option(t.qualifier.tpe)
+        case _ =>
+          None
+      }
+      (qual, kind, items)
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>
-        // A quick google search reveals this happens regularly and there is
-        // no general fix for it.
         expected(e)
       case e: ScalaReflectionException
           if e.getMessage.contains("not a module") =>
-        // Do nothing, seems to happen regularly
-        // scala.ScalaReflectionException: value <error: object a> is not a module
-        // at scala.reflect.api.Symbols$SymbolApi.asModule(Symbols.scala:250)
-        // at scala.reflect.api.Symbols$SymbolApi.asModule$(Symbols.scala:250)
         expected(e)
       case e: NullPointerException =>
-        // do nothing, seems to happen regularly
-        // java.lang.NullPointerException: null
-        //   at scala.tools.nsc.Global$GlobalPhase.cancelled(Global.scala:408)
-        //   at scala.tools.nsc.Global$GlobalPhase.applyPhase(Global.scala:418)
-        //   at scala.tools.nsc.Global$Run.$anonfun$compileLate$3(Global.scala:1572)
         expected(e)
       case e: StringIndexOutOfBoundsException =>
-        // NOTE(olafur) Let's log this for now while we are still learning more
-        // about the PC. However, I haven't been able to avoid this exception
-        // in some cases so I suspect it's here to stay until we fix it upstream.
         expected(e)
     }
   }
+
+  implicit val byRelevance = new Ordering[Member] {
+    val relevanceCache = new java.util.HashMap[Member, Int]
+    def relevance(m: Member): Int = {
+      relevanceCache.computeIfAbsent(
+        m, {
+          case TypeMember(sym, _, true, inherited, viaView) =>
+            // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
+            -computeRelevance(sym, viaView, inherited)
+          case ScopeMember(sym, _, true, _) =>
+            -computeRelevance(sym, NoSymbol, inherited = false)
+          case r =>
+            0
+        }
+      )
+    }
+    override def compare(x: Member, y: Member): Int = {
+      val byRelevance = Integer.compare(relevance(x), relevance(y))
+      if (byRelevance != 0) byRelevance
+      else charsequenceComparator.compare(x.sym.name, y.sym.name)
+    }
+  }
+
+  private val charsequenceComparator = new Comparator[CharSequence] {
+    override def compare(o1: CharSequence, o2: CharSequence): Int = {
+      val len = math.min(o1.length(), o2.length())
+      var i = 0
+      while (i < len) {
+        val result = Character.compare(o1.charAt(i), o2.charAt(i))
+        if (result != 0) return result
+        i += 1
+      }
+      Integer.compare(o1.length(), o2.length())
+    }
+  }
+
 }

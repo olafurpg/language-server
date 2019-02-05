@@ -18,7 +18,12 @@ abstract class BasePCSuite extends BaseSuite {
   val myclasspath = this.getClass.getClassLoader
     .asInstanceOf[URLClassLoader]
     .getURLs
+    .iterator
     .map(url => Paths.get(url.toURI))
+    .filter { p =>
+      p.getFileName.toString.contains("scala-library")
+    }
+    .toSeq
   val index = OnDemandSymbolIndex()
   val indexer = new MetalsSymbolIndexer(index)
   val pc = new ScalaPC(myclasspath, Nil, indexer)
