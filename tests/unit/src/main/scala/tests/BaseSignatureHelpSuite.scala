@@ -18,17 +18,13 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
   }
   def check(
       name: String,
-      code: String,
+      original: String,
       expected: String,
       includeDocs: Boolean = false
   ): Unit = {
     test(name) {
-      val code2 = code.replaceAllLiterally("@@", "")
-      val offset = code.indexOf("@@")
-      if (offset < 0) {
-        fail("missing @@")
-      }
-      val result = pc.signatureHelp("A.scala", code2, offset)
+      val (code, offset) = params(original)
+      val result = pc.signatureHelp("A.scala", code, offset)
       val out = new StringBuilder()
       if (result != null) {
         result.getSignatures.asScala.zipWithIndex.foreach {
