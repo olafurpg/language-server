@@ -17,6 +17,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         out
           .append(item.getLabel)
           .append(item.getDetail)
+          .append("\n")
       }
       assertNoDiff(out.toString(), expected)
     }

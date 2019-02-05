@@ -37,10 +37,37 @@ object CompletionFastSuite extends BaseCompletionSuite {
   check(
     "tparam",
     """
-      |object A {
-      |  Map.empty[Int,String].applyOr@@
+      |class Foo[A] {
+      |  def identity[B >: A](a: B): B = a
+      |}
+      |object Foo {
+      |  new Foo[Int].ident@@
       |}""".stripMargin,
-    """|applyOrElse[K1 <: Int, V1 >: String](x: K1,default: K1 => V1): V1
+    """|identity[B >: Int](a: B): B
+       |""".stripMargin
+  )
+
+  check(
+    "tparam1",
+    """
+      |class Foo[A] {
+      |  def identity(a: A): A = a
+      |}
+      |object Foo {
+      |  new Foo[Int].ident@@
+      |}""".stripMargin,
+    """|identity(a: Int): Int
+       |""".stripMargin
+  )
+
+  check(
+    "cursor",
+    """
+      |object A {
+      |  val default = 1
+      |  def@@
+      |}""".stripMargin,
+    """|default: Int
        |""".stripMargin
   )
 }
