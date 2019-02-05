@@ -26,9 +26,6 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     val (qual, kind, results) = safeCompletionsAt(position)
     val items = results.sorted(byRelevance).iterator.zipWithIndex.map {
       case (r, idx) =>
-        if (r.sym.name.startsWith("Serializable")) {
-          pprint.log(semanticdbSymbol(r.sym))
-        }
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
         item.setPreselect(true)
@@ -85,18 +82,21 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     def isSynthetic(sym: Symbol): Boolean = {
       sym.isJava && sym.isModuleOrModuleClass
     }
-    val isSeen = mutable.Set.empty[Symbol]
+    val isSeen = mutable.Set.empty[String]
     val buf = List.newBuilder[Member]
     def loop(lst: List[Member]): Unit = lst match {
       case Nil =>
       case head :: tail =>
-        val companion = head.sym.companion
-        val isNotCompanionSeen = companion == NoSymbol || !isSeen(companion)
-        if (!isSeen(head.sym) &&
-          isNotCompanionSeen &&
+        val id =
+          if (head.sym.isClass || head.sym.isModule) {
+            head.sym.fullName
+          } else {
+            semanticdbSymbol(head.sym)
+          }
+        if (!isSeen(id) &&
           !isUninterestingSymbol(head.sym) &&
           !isSynthetic(head.sym)) {
-          isSeen += head.sym
+          isSeen += id
           buf += head
         }
         loop(tail)
@@ -217,20 +217,7 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     override def compare(x: Member, y: Member): Int = {
       val byRelevance = Integer.compare(relevance(x), relevance(y))
       if (byRelevance != 0) byRelevance
-      else charsequenceComparator.compare(x.sym.name, y.sym.name)
-    }
-  }
-
-  private val charsequenceComparator = new Comparator[CharSequence] {
-    override def compare(o1: CharSequence, o2: CharSequence): Int = {
-      val len = math.min(o1.length(), o2.length())
-      var i = 0
-      while (i < len) {
-        val result = Character.compare(o1.charAt(i), o2.charAt(i))
-        if (result != 0) return result
-        i += 1
-      }
-      Integer.compare(o1.length(), o2.length())
+      else IdentifierComparator.compare(x.sym.name, y.sym.name)
     }
   }
 
