@@ -14,6 +14,9 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       val result = pc.complete("A.scala", code, offset)
       val out = new StringBuilder()
       result.getItems.asScala.foreach { item =>
+        out
+          .append(item.getLabel)
+          .append(item.getDetail)
       }
       assertNoDiff(out.toString(), expected)
     }

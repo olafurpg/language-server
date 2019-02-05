@@ -5,12 +5,14 @@ import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Paths
+import org.eclipse.lsp4j.MarkupContent
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsSymbolIndexer
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.ScalaPC
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 abstract class BasePCSuite extends BaseSuite {
   val myclasspath = this.getClass.getClassLoader
@@ -38,7 +40,6 @@ abstract class BasePCSuite extends BaseSuite {
   override def afterAll(): Unit = {
     pc.shutdown()
   }
-
   def params(code: String): (String, Int) = {
     val code2 = code.replaceAllLiterally("@@", "")
     val offset = code.indexOf("@@")
@@ -46,5 +47,13 @@ abstract class BasePCSuite extends BaseSuite {
       fail("missing @@")
     }
     (code2, offset)
+  }
+  def doc(e: JEither[String, MarkupContent]): String = {
+    if (e == null) ""
+    else if (e.isLeft) {
+      " " + e.getLeft
+    } else {
+      " " + e.getRight.getValue
+    }
   }
 }

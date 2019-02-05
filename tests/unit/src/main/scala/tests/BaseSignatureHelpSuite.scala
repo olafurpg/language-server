@@ -1,18 +1,8 @@
 package tests
 
-import org.eclipse.lsp4j.MarkupContent
 import scala.collection.JavaConverters._
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
-  def doc(e: JEither[String, MarkupContent]): String = {
-    if (e == null) ""
-    else if (e.isLeft) {
-      " " + e.getLeft
-    } else {
-      " " + e.getRight.getValue
-    }
-  }
   def checkDoc(name: String, code: String, expected: String): Unit = {
     check(name, code, expected, includeDocs = true)
   }
