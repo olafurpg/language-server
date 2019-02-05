@@ -4,6 +4,18 @@ import org.eclipse.lsp4j.CompletionItem
 import scala.collection.JavaConverters._
 
 abstract class BaseCompletionSuite extends BasePCSuite {
+  def checkLength(
+      name: String,
+      original: String,
+      expected: Int
+  ): Unit = {
+    test(name) {
+      val (code, offset) = params(original)
+      val result = pc.complete("A.scala", code, offset)
+      assertEquals(result.getItems.size(), expected)
+    }
+  }
+
   def check(
       name: String,
       original: String,
@@ -26,8 +38,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           .append(item.getDetail)
           .append("\n")
       }
-      pprint.log(items.length)
-//      assertNoDiff(out.toString(), expected)
+      assertNoDiff(out.toString(), expected)
     }
   }
 }

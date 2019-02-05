@@ -125,12 +125,63 @@ object CompletionFastSuite extends BaseCompletionSuite {
   )
 
   check(
-    "open",
+    "implicit-class",
     """
       |object A {
+      |  implicit class XtensionMethod(a: Int) {
+      |    def increment = a + 1
+      |  }
+      |  Xtension@@
+      |}""".stripMargin,
+    """|XtensionMethod(a: Int): A.XtensionMethod
+       |""".stripMargin
+  )
+  check(
+    "fuzzy",
+    """
+      |object A {
+      |  def userService = 1
+      |  uService@@
+      |}""".stripMargin,
+    """|userService: Int
+       |""".stripMargin
+  )
+  check(
+    "fuzzy1",
+    """
+      |object A {
+      |  new PBuil@@
+      |}""".stripMargin,
+    """|ProcessBuilder java.lang
+       |""".stripMargin
+  )
+  check(
+    "companion",
+    """
+      |object A {
+      |  Map@@
+      |}""".stripMargin,
+    """|Map: scala.collection.immutable.Map.type
+       |""".stripMargin
+  )
+  check(
+    "pkg",
+    """
+      |import scala.collection.conc@@
+      |""".stripMargin,
+    """|concurrent scala.collection
+       |""".stripMargin
+  )
+
+  //  The following method tests too many results so we only assert the total number of results
+  // to catch at least regressions. It's OK to update the expected number, but at least double check
+  // the output makes sense before doing so.
+  checkLength(
+    "open",
+    """
+      |object Local {
       |  @@
       |}""".stripMargin,
-    """|apply[A](xs: A*): List[A]
-       |""".stripMargin
+    441
   )
 }

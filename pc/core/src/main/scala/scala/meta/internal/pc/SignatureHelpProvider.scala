@@ -269,6 +269,7 @@ class SignatureHelpProvider(
       tree0.symbol
     } else {
       def applyQualifier(tree: Tree): Option[RefTree] = tree match {
+        case Select(New(t: RefTree), _) => Some(t)
         case t: RefTree => Some(t)
         case TreeApply(qual, _) => applyQualifier(qual)
         case _ =>

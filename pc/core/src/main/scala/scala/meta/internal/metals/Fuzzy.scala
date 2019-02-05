@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import java.lang.StringBuilder
 
 /**
  * Metals fuzzy search for strings.
@@ -59,7 +58,7 @@ object Fuzzy {
   def matches(
       query: CharSequence,
       symbol: CharSequence,
-      skipNames: Int
+      skipNames: Int = 0
   ): Boolean = {
     def lastDelimiter(
         string: CharSequence,
