@@ -59,6 +59,15 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|identity(a: Int): Int
        |""".stripMargin
   )
+  check(
+    "tparam2",
+    """
+      |object A {
+      |  Map.empty[Int, String].getOrEl@@
+      |}""".stripMargin,
+    """|getOrElse[V1 >: String](key: Int,default: => V1): V1
+       |""".stripMargin
+  )
 
   check(
     "cursor",

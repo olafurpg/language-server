@@ -40,10 +40,14 @@ class CompletionProvider(compiler: Global) {
           val item = new CompletionItem(label)
           item.setPreselect(true)
           val detail = qual match {
-            case NoType =>
-              r.sym.signatureString
-            case tpe =>
+            case Some(tpe) =>
+              // Compute type parameters based on the qualifier.
+              // Example: Map[Int, String].applyOrE@@
+              // Before: getOrElse[V1 >: V](     key: K,   default: => V1): V1
+              // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
               r.sym.infoString(tpe.memberType(r.sym))
+            case _ =>
+              r.sym.signatureString
           }
           item.setDetail(detail)
           item.setKind(completionItemKind(r))
@@ -110,10 +114,10 @@ class CompletionProvider(compiler: Global) {
 
   private def safeCompletionsAt(
       position: Position
-  ): (Type, LookupKind, List[CompletionResult#M]) = {
+  ): (Option[Type], LookupKind, List[CompletionResult#M]) = {
     def expected(e: Throwable) = {
       println(s"Expected error '${e.getMessage}'")
-      (NoType, LookupKind.None, Nil)
+      (None, LookupKind.None, Nil)
     }
     try {
       val completions = completionsAt(position)
@@ -128,9 +132,9 @@ class CompletionProvider(compiler: Global) {
       }
       val qual = completions match {
         case t: CompletionResult.TypeMembers =>
-          t.qualifier.tpe
+          Option(t.qualifier.tpe)
         case _ =>
-          NoType
+          None
       }
       (qual, kind, items)
     } catch {
