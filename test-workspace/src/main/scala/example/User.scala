@@ -1,5 +1,5 @@
 package example
 
 object App {
-  new ProcessBuilder
+  Map
 }

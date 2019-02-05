@@ -147,12 +147,29 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
   check(
+    "fuzzy1",
+    """
+      |object A {
+      |  new PBuil@@
+      |}""".stripMargin,
+    """|ProcessBuilder java.lang.
+       |""".stripMargin
+  )
+  check(
     "companion",
     """
       |object A {
       |  Map@@
       |}""".stripMargin,
     """|Map: scala.collection.immutable.Map.type
+       |""".stripMargin
+  )
+  check(
+    "pkg",
+    """
+      |import scala.collection.conc@@
+      |""".stripMargin,
+    """|concurrent scala.collection
        |""".stripMargin
   )
 

@@ -30,23 +30,24 @@ class CompletionProvider(val compiler: ScalaCompiler) {
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
         item.setPreselect(true)
-        val detail = qual match {
-          case Some(tpe) =>
-            // Compute type parameters based on the qualifier.
-            // Example: Map[Int, String].applyOrE@@
-            // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
-            // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
-            r.sym.infoString(tpe.memberType(r.sym))
-          case _ =>
-            if (r.sym.isClass || r.sym.isModuleOrModuleClass) {
-              " " + semanticdbSymbol(r.sym.owner)
-            } else {
-              // NOTE(olafur): We use `signatureString` because it is presumably fast due
-              // to not completing the symbol's type. It seems to produce readable output
-              // excluding type bounds `<: <?>` that we remove via string processing.
-              r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
+        val detail =
+          if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
+            " " + r.sym.owner.fullName
+          } else {
+            qual match {
+              case Some(tpe) =>
+                // Compute type parameters based on the qualifier.
+                // Example: Map[Int, String].applyOrE@@
+                // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
+                // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
+                r.sym.infoString(tpe.memberType(r.sym))
+              case _ =>
+                // NOTE(olafur): We use `signatureString` because it is presumably fast due
+                // to not completing the symbol's type. It seems to produce readable output
+                // excluding type bounds `<: <?>` that we remove via string processing.
+                r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
             }
-        }
+          }
         item.setDetail(detail)
         item.setKind(completionItemKind(r))
         item.setSortText(f"${idx}%05d")
@@ -84,6 +85,7 @@ class CompletionProvider(val compiler: ScalaCompiler) {
       )
     ).flatMap(_.alternatives)
     def isSynthetic(sym: Symbol): Boolean = {
+      !sym.hasPackageFlag &&
       sym.isJava && sym.isModuleOrModuleClass
     }
     val isSeen = mutable.Set.empty[String]
@@ -173,11 +175,10 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     }
     try {
       val completions = completionsAt(position)
-      val items = filterInteresting(
-        completions.matchingResults { entered => name =>
-          Fuzzy.matches(entered, name)
-        }
-      )
+      val matchingResults = completions.matchingResults { entered => name =>
+        Fuzzy.matches(entered, name)
+      }
+      val items = filterInteresting(matchingResults)
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           LookupKind.Scope
