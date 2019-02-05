@@ -125,12 +125,27 @@ object CompletionFastSuite extends BaseCompletionSuite {
   )
 
   check(
-    "open",
+    "implicit-class",
     """
       |object A {
+      |  implicit class XtensionMethod(a: Int) {
+      |    def increment = a + 1
+      |  }
+      |  Xtension@@
+      |}""".stripMargin,
+    """|XtensionMethod(a: Int): A.XtensionMethod
+       |""".stripMargin
+  )
+
+  //  The following method tests too many results so we only assert the total number of results
+  // to catch at least regressions. It's OK to update the expected number, but at least double check
+  // the output makes sense before doing so.
+  checkLength(
+    "open",
+    """
+      |object Local {
       |  @@
       |}""".stripMargin,
-    """|apply[A](xs: A*): List[A]
-       |""".stripMargin
+    413
   )
 }

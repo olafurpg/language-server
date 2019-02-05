@@ -40,7 +40,10 @@ class CompletionProvider(val compiler: ScalaCompiler) {
             if (r.sym.isClass || r.sym.isModuleOrModuleClass) {
               " " + semanticdbSymbol(r.sym.owner)
             } else {
-              r.sym.signatureString
+              // NOTE(olafur): We use `signatureString` because it is presumably fast due
+              // to not completing the symbol's type. It seems to produce readable output
+              // excluding type bounds `<: <?>` that we remove via string processing.
+              r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
             }
         }
         item.setDetail(detail)
