@@ -69,6 +69,17 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
        |<init>(self: java.util.Random): scala.util.Random
        |""".stripMargin
   )
+  check(
+    "ctor1",
+    """
+      |object a {
+      |  new ProcessBuilder(@@)
+      |}
+    """.stripMargin,
+    """|<init>(x$1: String*): ProcessBuilder
+       |<init>(x$1: java.util.List[String]): ProcessBuilder
+       |""".stripMargin
+  )
 
   check(
     "apply",

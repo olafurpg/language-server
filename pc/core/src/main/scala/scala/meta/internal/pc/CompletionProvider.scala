@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 
@@ -172,7 +173,11 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     }
     try {
       val completions = completionsAt(position)
-      val items = filterInteresting(completions.matchingResults())
+      val items = filterInteresting(
+        completions.matchingResults { entered => name =>
+          Fuzzy.matches(entered, name)
+        }
+      )
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           LookupKind.Scope

@@ -136,6 +136,25 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|XtensionMethod(a: Int): A.XtensionMethod
        |""".stripMargin
   )
+  check(
+    "fuzzy",
+    """
+      |object A {
+      |  def userService = 1
+      |  uService@@
+      |}""".stripMargin,
+    """|userService: Int
+       |""".stripMargin
+  )
+  check(
+    "companion",
+    """
+      |object A {
+      |  Map@@
+      |}""".stripMargin,
+    """|Map: scala.collection.immutable.Map.type
+       |""".stripMargin
+  )
 
   //  The following method tests too many results so we only assert the total number of results
   // to catch at least regressions. It's OK to update the expected number, but at least double check
