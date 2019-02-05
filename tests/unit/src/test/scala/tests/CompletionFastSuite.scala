@@ -152,7 +152,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  new PBuil@@
       |}""".stripMargin,
-    """|ProcessBuilder java.lang.
+    """|ProcessBuilder java.lang
        |""".stripMargin
   )
   check(
@@ -182,6 +182,6 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    413
+    441
   )
 }
