@@ -38,13 +38,15 @@ trait Completions { self: PresentationCompiler =>
     pprint.log(focus1)
     focus1 match {
       case Import(i @ Ident(name), head :: Nil) if head.name == nme.ERROR =>
-        val r = search.search(name.toString).toList
-        pprint.log(r)
         val allMembers = metalsScopeMembers(pos)
         val nameStart = i.pos.start
         val positionDelta: Int = pos.start - nameStart
         val subName = name.subName(0, pos.start - i.pos.start)
-        CompletionResult.ScopeMembers(positionDelta, allMembers, subName)
+        val result =
+          CompletionResult.ScopeMembers(positionDelta, allMembers, subName)
+        val x = search.search(result.name.toString).toList
+        pprint.log(x)
+        result
       case imp @ Import(qual, selectors) =>
         selectors.reverseIterator.find(_.namePos <= pos.start) match {
           case None => CompletionResult.NoResults
