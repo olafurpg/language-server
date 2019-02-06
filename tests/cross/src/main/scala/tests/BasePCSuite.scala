@@ -12,6 +12,7 @@ import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.ScalaPC
 import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import scala.meta.internal.metals.ClasspathSearch
 import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
@@ -26,7 +27,8 @@ abstract class BasePCSuite extends BaseSuite {
     .toSeq
   val index = OnDemandSymbolIndex()
   val indexer = new MetalsSymbolIndexer(index)
-  val pc = new ScalaPC(myclasspath, Nil, indexer)
+  val search = ClasspathSearch.fromClasspath(myclasspath, _ => 0)
+  val pc = new ScalaPC(myclasspath, Nil, indexer, search)
 
   override def beforeAll(): Unit = {
     index.addSourceJar(JdkSources().get)

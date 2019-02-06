@@ -33,8 +33,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         }
       })
       items.foreach { item =>
+        val label =
+          if (item.getInsertText == null) item.getLabel else item.getInsertText
         out
-          .append(item.getLabel)
+          .append(label)
           .append(item.getDetail)
           .append("\n")
       }

@@ -1,17 +1,14 @@
 package scala.meta.internal.pc
 
-import java.nio.CharBuffer
-import java.util.Comparator
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.language.implicitConversions
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 
-class CompletionProvider(val compiler: ScalaCompiler) {
+class CompletionProvider(val compiler: PresentationCompiler) {
   import compiler._
 
   def completions(
@@ -32,6 +29,7 @@ class CompletionProvider(val compiler: ScalaCompiler) {
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
         item.setPreselect(true)
+        // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
         val detail = qual match {
           case Some(tpe) if !r.sym.hasPackageFlag =>
             // Compute type parameters based on the qualifier.
@@ -48,6 +46,11 @@ class CompletionProvider(val compiler: ScalaCompiler) {
               // excluding type bounds `<: <?>` that we remove via string processing.
               r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
             }
+        }
+        r match {
+          case w: WorkspaceMember =>
+            item.setInsertText(w.sym.fullName)
+          case _ =>
         }
         item.setDetail(detail)
         item.setKind(completionItemKind(r))
@@ -179,6 +182,7 @@ class CompletionProvider(val compiler: ScalaCompiler) {
       val completions = metalsCompletionsAt(position)
       val matchingResults = completions.matchingResults { entered => name =>
         Fuzzy.matches(entered, name)
+
       }
       val items = filterInteresting(matchingResults)
       val kind = completions match {

@@ -1,93 +1,18 @@
 package scala.meta.internal.pc
 
-import java.nio.CharBuffer
-import scala.collection.concurrent.TrieMap
-import scala.language.implicitConversions
-import scala.meta.internal.semanticdb.scalac.SemanticdbOps
-import scala.meta.pc.MethodInformation
-import scala.meta.pc.SymbolIndexer
-import scala.meta.pc.SymbolVisitor
-import scala.tools.nsc.Settings
-import scala.tools.nsc.interactive.Global
-import scala.tools.nsc.reporters.Reporter
+import scala.meta.internal.metals.Classfile
+import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.tools.nsc.symtab.Flags.{ACCESSOR, PARAMACCESSOR}
+import scala.util.control.NonFatal
 
-class ScalaCompiler(
-    settings: Settings,
-    reporter: Reporter,
-    indexer: SymbolIndexer
-) extends Global(settings, reporter) { compiler =>
-
-  lazy val semanticdbOps: SemanticdbOps {
-    val global: compiler.type
-  } = new SemanticdbOps {
-    val global: compiler.type = compiler
-  }
-
-  def semanticdbSymbol(symbol: Symbol): String = {
-    import semanticdbOps._
-    symbol.toSemantic
-  }
-
-  def printPretty(pos: Position): Unit = {
-    println(pretty(pos))
-  }
-  def pretty(pos: Position): String = {
-    if (pos.isDefined) {
-      val lineCaret =
-        if (pos.isRange) {
-          val indent = " " * (pos.column - 1)
-          val caret = "^" * (pos.end - pos.start)
-          indent + caret
-        } else {
-          pos.lineCaret
-        }
-      pos.lineContent + "\n" + lineCaret
-    } else {
-      "<none>"
-    }
-  }
-
-  def treePos(tree: Tree): Position = {
-    if (tree.pos == null) {
-      NoPosition
-    } else if (tree.symbol != null &&
-      tree.symbol.name.startsWith("x$") &&
-      tree.symbol.isArtifact) {
-      tree.symbol.pos
-    } else {
-      tree.pos
-    }
-  }
-
-  def methodInfo(symbol: Symbol): Option[MethodInformation] = {
-    val sym = compiler.semanticdbSymbol(symbol)
-    methodInfos.get(sym) match {
-      case Some(null) => None
-      case s: Some[t] => s
-      case None =>
-        index(sym)
-        val result = methodInfos.get(sym)
-        if (result.isEmpty) {
-          methodInfos.put(sym, null)
-        }
-        result
-    }
-  }
-
-  def index(symbol: String): Unit = {
-    indexer.visit(
-      symbol,
-      new SymbolVisitor {
-        override def visitMethod(method: MethodInformation): Unit = {
-          methodInfos(method.symbol()) = method
-        }
-      }
-    )
-  }
-
-  val methodInfos = TrieMap.empty[String, MethodInformation]
-
+/**
+ * Implementation for completions.
+ *
+ * Most of the code in this file is originally copied from the Scala presentation compiler,
+ * but some parts have been adjusted to improve features and provide consistent experience
+ * across Scala versions.
+ */
+trait Completions { self: PresentationCompiler =>
   final def metalsCompletionsAt(pos: Position): CompletionResult = {
     val focus1: Tree = typedTreeAt(pos)
     def typeCompletions(
@@ -113,13 +38,18 @@ class ScalaCompiler(
       )
     }
     focus1 match {
-      case imp @ Import(i @ Ident(name), head :: Nil)
-          if head.name == nme.ERROR =>
+      case Import(i @ Ident(name), head :: Nil) if head.name == nme.ERROR =>
         val allMembers = metalsScopeMembers(pos)
         val nameStart = i.pos.start
         val positionDelta: Int = pos.start - nameStart
         val subName = name.subName(0, pos.start - i.pos.start)
-        CompletionResult.ScopeMembers(positionDelta, allMembers, subName)
+        val workspaceMembers = workspaceSymbolMembers(subName.toString)
+        val result = CompletionResult.ScopeMembers(
+          positionDelta,
+          workspaceMembers ++ allMembers,
+          subName
+        )
+        result
       case imp @ Import(qual, selectors) =>
         selectors.reverseIterator.find(_.namePos <= pos.start) match {
           case None => CompletionResult.NoResults
@@ -144,6 +74,40 @@ class ScalaCompiler(
     }
   }
 
+  class WorkspaceMember(sym: Symbol)
+      extends ScopeMember(sym, sym.tpe, true, EmptyTree)
+  private def workspaceSymbolMembers(query: String): List[ScopeMember] = {
+    for {
+      classfile <- search.search(query)
+      sym <- toStaticSymbols(classfile)
+    } yield new WorkspaceMember(sym)
+  }.toList
+  private def toStaticSymbols(classfile: Classfile): List[Symbol] = {
+    try {
+      val pkg = rootMirror.staticPackage(
+        classfile.pkg.stripSuffix("/").replace('/', '.')
+      )
+      val member = classfile.filename
+        .stripSuffix(".class")
+        .split("\\$")
+        .foldLeft(List[Symbol](pkg)) {
+          case (accum, "") =>
+            accum
+          case (accum, name) =>
+            accum.flatMap { sym =>
+              val term = sym.info.member(TermName(name))
+              val tpe = sym.info.member(TypeName(name))
+              if (term == NoSymbol && tpe == NoSymbol) Nil
+              else if (term == NoSymbol) tpe :: Nil
+              else term :: tpe :: Nil
+            }
+        }
+      member
+    } catch {
+      case NonFatal(e) =>
+        Nil
+    }
+  }
   private def metalsTypeMembers(pos: Position): Stream[List[TypeMember]] = {
     // Choosing which tree will tell us the type members at the given position:
     //   If pos leads to an Import, type the expr
@@ -170,7 +134,7 @@ class ScalaCompiler(
 
     debugLog("typeMembers at " + tree + " " + tree.tpe)
     val superAccess = tree.isInstanceOf[Super]
-    val members = new Members[TypeMember]
+    val members = new MetalsMembers[TypeMember]
 
     def addTypeMember(
         sym: Symbol,
@@ -250,8 +214,8 @@ class ScalaCompiler(
   private def metalsScopeMembers(pos: Position): List[ScopeMember] = {
     typedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
-    val locals = new Members[ScopeMember]
-    val enclosing = new Members[ScopeMember]
+    val locals = new MetalsMembers[ScopeMember]
+    val enclosing = new MetalsMembers[ScopeMember]
     def addScopeMember(sym: Symbol, pre: Type, viaImport: Tree): Unit =
       locals.add(sym, pre, implicitlyAdded = false) { (s, st) =>
         // imported val and var are always marked as inaccessible, but they could be accessed through their getters. scala/bug#7995
@@ -304,7 +268,7 @@ class ScalaCompiler(
     result
   }
 
-  private class Members[M <: Member]
+  private class MetalsMembers[M <: Member]
       extends scala.collection.mutable.LinkedHashMap[Name, Set[M]] {
     override def default(key: Name): Set[M] = Set()
 
@@ -342,16 +306,11 @@ class ScalaCompiler(
       }
     }
 
-    def addNonShadowed(other: Members[M]): Unit = {
+    def addNonShadowed(other: MetalsMembers[M]): Unit = {
       for ((name, ms) <- other)
         if (ms.nonEmpty && this(name).isEmpty) this(name) = ms
     }
 
     def allMembers: List[M] = values.toList.flatten
   }
-
-  // Only needed for 2.11 where `Name` doesn't extend CharSequence.
-  implicit def nameToCharSequence(name: Name): CharSequence =
-    CharBuffer.wrap(chrs, name.start, name.length())
-
 }

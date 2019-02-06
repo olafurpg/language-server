@@ -23,10 +23,12 @@ class CompletionProvider(
       target <- buildTargets.inverseSources(path)
       scalac <- buildTargets.scalacOptions(target)
     } yield {
+      val classpath = scalac.classpath.map(_.toNIO).toSeq
       val pc = new ScalaPC(
-        scalac.classpath.map(_.toNIO).toSeq,
+        classpath,
         scalac.getOptions.asScala,
-        indexer
+        indexer,
+        ClasspathSearch.fromClasspath(classpath, _ => 0)
       )
       val input = path.toInputFromBuffers(buffers)
       val pos = params.getPosition.toMeta(input)

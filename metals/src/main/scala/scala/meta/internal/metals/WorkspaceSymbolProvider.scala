@@ -30,11 +30,11 @@ final class WorkspaceSymbolProvider(
     statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
     val index: OnDemandSymbolIndex,
-    isReferencedPackage: String => Boolean,
+    isReferencedPackage: String => Int,
     fileOnDisk: AbsolutePath => AbsolutePath
 )(implicit ec: ExecutionContext) {
   val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  val inDependencies = TrieMap.empty[String, CompressedPackageIndex]
+  var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
@@ -83,13 +83,7 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  private def isExcludedPackage(pkg: String): Boolean = {
-    // NOTE(olafur) I can't count how many times I've gotten unwanted results from these packages.
-    pkg.startsWith("com/sun/") ||
-    pkg.startsWith("com/apple/")
-  }
   private def indexClasspathUnsafe(): Unit = {
-    inDependencies.clear()
     val packages = new PackageIndex()
     packages.expandJdkClasspath()
     for {
@@ -99,42 +93,10 @@ final class WorkspaceSymbolProvider(
     } {
       packages.visit(classpathEntry)
     }
-    for {
-      (pkg, members) <- packages.packages.asScala
-      if !isExcludedPackage(pkg)
-    } {
-      val buf = Fuzzy.bloomFilterSymbolStrings(members.asScala)
-      buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)
-      val bloom = BloomFilters.create(buf.size)
-      buf.foreach { key =>
-        bloom.put(key)
-      }
-      // Sort members for deterministic order for deterministic results.
-      members.sort(String.CASE_INSENSITIVE_ORDER)
-      // Compress members because they make up the bulk of memory usage in the classpath index.
-      // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
-      // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
-      // so we should try to keep each of them as small as possible.
-      val compressedMembers = Compression.compress(members.asScala)
-      inDependencies(pkg) = CompressedPackageIndex(bloom, compressedMembers)
-    }
-  }
-
-  private val byReferenceThenAlphabeticalComparator = new Comparator[String] {
-    override def compare(a: String, b: String): Int = {
-      val isReferencedA = isReferencedPackage(a)
-      val isReferencedB = isReferencedPackage(b)
-      val byReference =
-        -java.lang.Boolean.compare(isReferencedA, isReferencedB)
-      if (byReference != 0) byReference
-      else a.compare(b)
-    }
-  }
-
-  private def packagesSortedByReferences(): Array[String] = {
-    val packages = inDependencies.keys.toArray
-    util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
-    packages
+    inDependencies = ClasspathSearch.fromPackages(
+      packages,
+      isReferencedPackage
+    )
   }
 
   private def searchUnsafe(
@@ -175,20 +137,10 @@ final class WorkspaceSymbolProvider(
       val classfiles = new PriorityQueue[Classfile](
         (a, b) => Integer.compare(a.filename.length, b.filename.length)
       )
-      val packages = packagesSortedByReferences()
       for {
-        pkg <- packages.iterator
-        compressed = inDependencies(pkg)
-        _ = token.checkCanceled()
-        if query.matches(compressed.bloom)
-        member <- compressed.members
-        if member.endsWith(".class")
-        name = member.subSequence(0, member.length - ".class".length)
-        symbol = new ConcatSequence(pkg, name)
-        isMatch = query.matches(symbol)
-        if isMatch
+        classfile <- inDependencies.search(query, token)
       } {
-        classfiles.add(Classfile(pkg, member))
+        classfiles.add(classfile)
       }
       val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
       val isVisited = mutable.Set.empty[AbsolutePath]
