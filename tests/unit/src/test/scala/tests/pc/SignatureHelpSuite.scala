@@ -1,4 +1,6 @@
-package tests
+package tests.pc
+
+import tests.BaseSignatureHelpSuite
 
 object SignatureHelpSuite extends BaseSignatureHelpSuite {
   checkDoc(

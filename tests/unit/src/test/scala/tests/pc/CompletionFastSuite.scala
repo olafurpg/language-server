@@ -1,4 +1,6 @@
-package tests
+package tests.pc
+
+import tests.BaseCompletionSuite
 
 object CompletionFastSuite extends BaseCompletionSuite {
   override def beforeAll(): Unit = ()
