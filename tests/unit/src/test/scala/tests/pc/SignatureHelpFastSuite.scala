@@ -1,4 +1,6 @@
-package tests
+package tests.pc
+
+import tests.BaseSignatureHelpSuite
 
 /**
  * Same as SignatureHelpSuite except without indexing library dependency sources.

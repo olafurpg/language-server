@@ -1,7 +1,22 @@
-package tests
+package tests.pc
+
+import tests.BaseCompletionSuite
 
 object CompletionFastSuite extends BaseCompletionSuite {
   override def beforeAll(): Unit = ()
+
+  //  The following method tests too many results so we only assert the total number of results
+  // to catch at least regressions. It's OK to update the expected number, but at least double check
+  // the output makes sense before doing so.
+  checkLength(
+    "open",
+    """
+      |object Local {
+      |  @@
+      |}""".stripMargin,
+    441
+  )
+
   check(
     "scope",
     """
@@ -136,6 +151,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|XtensionMethod(a: Int): A.XtensionMethod
        |""".stripMargin
   )
+
   check(
     "fuzzy",
     """
@@ -146,6 +162,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|userService: Int
        |""".stripMargin
   )
+
   check(
     "fuzzy1",
     """
@@ -155,6 +172,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|ProcessBuilder java.lang
        |""".stripMargin
   )
+
   check(
     "companion",
     """
@@ -164,6 +182,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|Map: scala.collection.immutable.Map.type
        |""".stripMargin
   )
+
   check(
     "pkg",
     """
@@ -173,15 +192,13 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
-  //  The following method tests too many results so we only assert the total number of results
-  // to catch at least regressions. It's OK to update the expected number, but at least double check
-  // the output makes sense before doing so.
-  checkLength(
-    "open",
+  check(
+    "import",
     """
-      |object Local {
-      |  @@
-      |}""".stripMargin,
-    441
+      |import JavaCon@@
+      |""".stripMargin,
+    """|concurrent scala.collection
+       |""".stripMargin
   )
+
 }
