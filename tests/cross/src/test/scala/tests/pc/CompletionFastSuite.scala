@@ -32,8 +32,8 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |scala.collection.mutable.ListMap scala.collection.mutable
        |scala.collection.immutable.ListSet scala.collection.immutable
        |java.util.SubList java.util
+       |java.awt.peer.ListPeer java.awt.peer
        |org.w3c.dom.NameList org.w3c.dom
-       |org.w3c.dom.NodeList org.w3c.dom
        |""".stripMargin
   )
 

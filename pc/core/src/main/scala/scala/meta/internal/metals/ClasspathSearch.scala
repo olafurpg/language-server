@@ -43,12 +43,6 @@ class ClasspathSearch(
       if member.endsWith(".class")
       symbol = new ConcatSequence(pkg, member)
       isMatch = query.matches(symbol)
-      _ = {
-        if (member.contains("Path.class")) {
-          pprint.log(symbol)
-          pprint.log(isMatch)
-        }
-      }
       if isMatch
     } yield Classfile(pkg, member)
   }
