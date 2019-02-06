@@ -173,7 +173,7 @@ class CompletionProvider(val compiler: ScalaCompiler) {
       (None, LookupKind.None, Nil)
     }
     try {
-      val completions = completionsAt(position)
+      val completions = metalsCompletionsAt(position)
       val matchingResults = completions.matchingResults { entered => name =>
         Fuzzy.matches(entered, name)
       }

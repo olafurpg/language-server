@@ -1,9 +1,5 @@
 package scala.meta.internal.metals
 
-import java.util
-import java.util.Optional
-import scala.meta.pc.MethodInformation
-import scala.meta.pc.ParameterInformation
 import com.thoughtworks.qdox.model.JavaAnnotatedElement
 import com.thoughtworks.qdox.model.JavaConstructor
 import com.thoughtworks.qdox.model.JavaGenericDeclaration
@@ -11,7 +7,6 @@ import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaParameter
 import com.thoughtworks.qdox.model.JavaTypeVariable
 import java.util
-import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.ParameterInformation
