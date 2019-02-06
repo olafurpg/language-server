@@ -30,11 +30,11 @@ final class WorkspaceSymbolProvider(
     statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
     val index: OnDemandSymbolIndex,
-    isReferencedPackage: String => Boolean,
+    isReferencedPackage: String => Int,
     fileOnDisk: AbsolutePath => AbsolutePath
 )(implicit ec: ExecutionContext) {
   val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  var inDependencies = ClasspathSearch.fromClasspath(Nil)
+  var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
@@ -95,7 +95,7 @@ final class WorkspaceSymbolProvider(
     }
     inDependencies = ClasspathSearch.fromPackages(
       packages,
-      pkg => if (isReferencedPackage(pkg)) 0 else 1
+      isReferencedPackage
     )
   }
 

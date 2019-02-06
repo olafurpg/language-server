@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.tools.nsc.symtab.Flags.{ACCESSOR, PARAMACCESSOR}
 
 /**
@@ -37,7 +38,8 @@ trait Completions { self: PresentationCompiler =>
     pprint.log(focus1)
     focus1 match {
       case Import(i @ Ident(name), head :: Nil) if head.name == nme.ERROR =>
-        pprint.log(name)
+        val r = search.search(name.toString).toList
+        pprint.log(r)
         val allMembers = metalsScopeMembers(pos)
         val nameStart = i.pos.start
         val positionDelta: Int = pos.start - nameStart

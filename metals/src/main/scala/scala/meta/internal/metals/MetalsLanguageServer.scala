@@ -275,7 +275,11 @@ class MetalsLanguageServer(
       config.statistics,
       buildTargets,
       definitionIndex,
-      pkg => referencesProvider.referencedPackages.mightContain(pkg),
+      pkg => {
+        val mightContain =
+          referencesProvider.referencedPackages.mightContain(pkg)
+        if (mightContain) 0 else 1
+      },
       interactiveSemanticdbs.toFileOnDisk
     )
     doctor = new Doctor(
