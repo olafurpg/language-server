@@ -126,7 +126,7 @@ lazy val pc = project
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
     )
   )
-  .dependsOn(interfaces)
+  .dependsOn(interfaces, mtags)
 
 lazy val mtags = project
   .settings(
@@ -259,6 +259,24 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   testFrameworks := List(new TestFramework("utest.runner.Framework"))
 )
 
+lazy val mtest = project
+  .in(file("tests/mtest"))
+  .settings(
+    skip.in(publish) := true,
+    libraryDependencies ++= List(
+      "com.geirsson" %% "coursier-small" % "1.3.3",
+      "org.scalameta" %% "testkit" % V.scalameta,
+      "com.lihaoyi" %% "utest" % "0.6.0"
+    )
+  )
+
+lazy val cross = project
+  .in(file("tests/cross"))
+  .settings(
+    testSettings,
+    crossScalaVersions := V.supportedScalaVersions
+  )
+  .dependsOn(mtest, pc)
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
@@ -281,7 +299,7 @@ lazy val unit = project
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )
-  .dependsOn(metals, pc)
+  .dependsOn(mtest, metals, pc)
   .enablePlugins(BuildInfoPlugin)
 lazy val slow = project
   .in(file("tests/slow"))

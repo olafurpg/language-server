@@ -1,6 +1,8 @@
 package scala.meta.internal.pc
 
+import java.nio.CharBuffer
 import scala.collection.concurrent.TrieMap
+import scala.language.implicitConversions
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
@@ -175,7 +177,7 @@ class ScalaCompiler(
         pre: Type,
         inherited: Boolean,
         viaView: Symbol
-    ) = {
+    ): Unit = {
       val implicitlyAdded = viaView != NoSymbol
       members.add(sym, pre, implicitlyAdded) { (s, st) =>
         val result = new TypeMember(
@@ -250,7 +252,7 @@ class ScalaCompiler(
     val context = doLocateContext(pos)
     val locals = new Members[ScopeMember]
     val enclosing = new Members[ScopeMember]
-    def addScopeMember(sym: Symbol, pre: Type, viaImport: Tree) =
+    def addScopeMember(sym: Symbol, pre: Type, viaImport: Tree): Unit =
       locals.add(sym, pre, implicitlyAdded = false) { (s, st) =>
         // imported val and var are always marked as inaccessible, but they could be accessed through their getters. scala/bug#7995
         val member =
@@ -271,7 +273,7 @@ class ScalaCompiler(
         member.prefix = pre
         member
       }
-    def localsToEnclosing() = {
+    def localsToEnclosing(): Unit = {
       enclosing.addNonShadowed(locals)
       locals.clear()
     }
@@ -304,7 +306,7 @@ class ScalaCompiler(
 
   private class Members[M <: Member]
       extends scala.collection.mutable.LinkedHashMap[Name, Set[M]] {
-    override def default(key: Name) = Set()
+    override def default(key: Name): Set[M] = Set()
 
     private def matching(sym: Symbol, symtpe: Type, ms: Set[M]): Option[M] =
       ms.find { m =>
@@ -340,12 +342,16 @@ class ScalaCompiler(
       }
     }
 
-    def addNonShadowed(other: Members[M]) = {
+    def addNonShadowed(other: Members[M]): Unit = {
       for ((name, ms) <- other)
         if (ms.nonEmpty && this(name).isEmpty) this(name) = ms
     }
 
     def allMembers: List[M] = values.toList.flatten
   }
+
+  // Only needed for 2.11 where `Name` doesn't extend CharSequence.
+  implicit def nameToCharSequence(name: Name): CharSequence =
+    CharBuffer.wrap(chrs, name.start, name.length())
 
 }

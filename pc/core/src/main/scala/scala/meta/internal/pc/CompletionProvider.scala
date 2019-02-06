@@ -1,10 +1,12 @@
 package scala.meta.internal.pc
 
+import java.nio.CharBuffer
 import java.util.Comparator
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.language.implicitConversions
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
@@ -123,7 +125,8 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     if (symbol.hasPackageFlag) k.Module
     else if (symbol.isPackageObject) k.Module
     else if (symbol.isModuleOrModuleClass) k.Module
-    else if (symbol.isTraitOrInterface) k.Interface
+    else if (symbol.isTrait) k.Interface
+    else if (symbol.isJava) k.Interface
     else if (symbol.isClass) k.Class
     else if (symbol.isMethod) k.Method
     else if (symbol.isCaseAccessor) k.Field
@@ -207,25 +210,30 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     }
   }
 
-  implicit val byRelevance = new Ordering[Member] {
+  implicit val byRelevance: Ordering[Member] = new Ordering[Member] {
     val relevanceCache = new java.util.HashMap[Member, Int]
     def relevance(m: Member): Int = {
       relevanceCache.computeIfAbsent(
-        m, {
-          case TypeMember(sym, _, true, inherited, viaView) =>
-            // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
-            -computeRelevance(sym, viaView, inherited)
-          case ScopeMember(sym, _, true, _) =>
-            -computeRelevance(sym, NoSymbol, inherited = false)
-          case r =>
-            0
+        m,
+        new java.util.function.Function[Member, Int] {
+          override def apply(t: compiler.Member): Int = t match {
+            case TypeMember(sym, _, true, inherited, viaView) =>
+              // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
+              -computeRelevance(sym, viaView, inherited)
+            case ScopeMember(sym, _, true, _) =>
+              -computeRelevance(sym, NoSymbol, inherited = false)
+            case r =>
+              0
+          }
         }
       )
     }
     override def compare(x: Member, y: Member): Int = {
       val byRelevance = Integer.compare(relevance(x), relevance(y))
       if (byRelevance != 0) byRelevance
-      else IdentifierComparator.compare(x.sym.name, y.sym.name)
+      else {
+        IdentifierComparator.compare(x.sym.name, y.sym.name)
+      }
     }
   }
 

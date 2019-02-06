@@ -4,7 +4,6 @@ import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.language.experimental.macros
-import scala.meta.internal.metals.MetalsLogger
 import scala.meta.io.AbsolutePath
 import scala.reflect.ClassTag
 import utest.TestSuite
@@ -23,7 +22,6 @@ import utest.ufansi.Str
  *
  */
 class BaseSuite extends TestSuite {
-  MetalsLogger.updateDefaultFormat()
   System.setProperty("metals.testing", "true")
   def isAppveyor: Boolean = "True" == System.getenv("APPVEYOR")
   def beforeAll(): Unit = ()

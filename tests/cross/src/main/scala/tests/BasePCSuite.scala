@@ -10,9 +10,9 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsSymbolIndexer
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.ScalaPC
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
   val myclasspath = this.getClass.getClassLoader
@@ -34,7 +34,13 @@ abstract class BasePCSuite extends BaseSuite {
       new Settings()
         .withClassifiers(List("sources"))
         .withDependencies(
-          List(new Dependency("org.scala-lang", "scala-library", V.scala212))
+          List(
+            new Dependency(
+              "org.scala-lang",
+              "scala-library",
+              Properties.versionNumberString
+            )
+          )
         )
     )
     index.addSourceJar(JdkSources().get)
