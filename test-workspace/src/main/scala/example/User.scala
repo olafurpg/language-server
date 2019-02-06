@@ -1,7 +1,7 @@
 package example
 
-import scala.collection.JavaConverters
+import scala.collection.JavaConverters._
 
 object App {
-  // java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(""))
+  List(1).asJava
 }
