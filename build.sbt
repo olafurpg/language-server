@@ -263,6 +263,7 @@ lazy val mtest = project
   .in(file("tests/mtest"))
   .settings(
     skip.in(publish) := true,
+    crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.geirsson" %% "coursier-small" % "1.3.3",
       "org.scalameta" %% "testkit" % V.scalameta,
