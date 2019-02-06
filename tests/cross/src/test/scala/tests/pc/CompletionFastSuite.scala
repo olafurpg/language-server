@@ -14,7 +14,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    440
+    439
   )
 
   check(
@@ -23,9 +23,18 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  Lis@@
       |}""".stripMargin,
-    """
-      |List: collection.immutable.List.type
-      |""".stripMargin
+    """|List: collection.immutable.List.type
+       |scala.collection.immutable.ListMap.EmptyListMap scala.collection.immutable.ListMap
+       |scala.collection.immutable.ListSet.EmptyListSet scala.collection.immutable.ListSet
+       |scala.collection.convert.Wrappers.JListWrapper scala.collection.convert.Wrappers
+       |scala.collection.immutable.List scala.collection.immutable
+       |scala.collection.mutable.ListBuffer scala.collection.mutable
+       |scala.collection.immutable.ListMap scala.collection.immutable
+       |scala.collection.mutable.ListMap scala.collection.mutable
+       |scala.collection.immutable.ListSerializeEnd scala.collection.immutable
+       |scala.collection.immutable.ListSet scala.collection.immutable
+       |scala.collection.mutable.MutableList scala.collection.mutable
+       |""".stripMargin
   )
 
   check(

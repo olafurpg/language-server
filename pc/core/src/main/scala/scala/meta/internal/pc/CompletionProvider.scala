@@ -2,16 +2,21 @@ package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import scala.collection.AbstractIterator
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.util.control.NonFatal
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 class CompletionProvider(val compiler: PresentationCompiler) {
   import compiler._
+
+  val maxWorkspaceSymbolResults = 10
 
   def completions(
       filename: String,
@@ -62,7 +67,10 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     new CompletionItems(kind, items.toSeq.asJava)
   }
 
-  private def filterInteresting(completions: Iterator[Member]): List[Member] = {
+  private def filterInteresting(
+      completions: List[Member],
+      workspace: Iterator[Member]
+  ): List[Member] = {
     val isUninterestingSymbol = Set[Symbol](
       // the methods == != ## are arguably "interesting" but they're here becuase
       // - they're short so completing them doesn't save you keystrokes
@@ -96,8 +104,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
     val isSeen = mutable.Set.empty[String]
     val buf = List.newBuilder[Member]
-    while (completions.hasNext) {
-      val head = completions.next()
+    def visit(head: Member): Boolean = {
       val id =
         if (head.sym.isClass || head.sym.isModule) {
           head.sym.fullName
@@ -109,9 +116,17 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         !isSynthetic(head.sym)) {
         isSeen += id
         buf += head
+        true
+      } else {
+        false
       }
-
     }
+    completions.foreach(visit)
+    workspace
+      .map(visit)
+      .filter(_ == true)
+      .take(maxWorkspaceSymbolResults)
+      .foreach(_ => ())
     buf.result()
   }
 
@@ -175,6 +190,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       position: Position
   ): (Option[Type], LookupKind, List[Member]) = {
     def expected(e: Throwable) = {
+      e.printStackTrace()
       println(s"Expected error '${e.getMessage}'")
       (None, LookupKind.None, Nil)
     }
@@ -198,7 +214,8 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           Iterator.empty
         }
       val items = filterInteresting(
-        Iterator(matchingResults, workspace).flatten
+        matchingResults,
+        workspace
       )
       val qual = completions match {
         case t: CompletionResult.TypeMembers =>
@@ -256,9 +273,22 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     if (query.isEmpty) {
       Iterator.empty
     } else {
+      val candidates = new java.util.PriorityQueue[Classfile](
+        new java.util.Comparator[Classfile] {
+          override def compare(o1: Classfile, o2: Classfile): RunId = {
+            Integer.compare(
+              Fuzzy.nameLength(o1.filename),
+              Fuzzy.nameLength(o2.filename)
+            )
+          }
+        }
+      )
+      search.search(query).foreach { classfile =>
+        candidates.add(classfile)
+      }
       for {
-        classfile <- search.search(query)
-        sym <- toStaticSymbols(classfile)
+        top <- candidates.pollingIterator
+        sym <- toStaticSymbols(top)
         if sym != NoSymbol
       } yield new WorkspaceMember(sym)
     }
