@@ -14,7 +14,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    441
+    439
   )
 
   check(
