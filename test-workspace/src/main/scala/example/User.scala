@@ -1,9 +1,7 @@
 package example
 
-object App {
-  new example.Outer.Inner()
-}
+import scala.collection.JavaConverters
 
-object Outer {
-  class Inner
+object App {
+  import scala.collection.concurrent.TrieMapIterator
 }
