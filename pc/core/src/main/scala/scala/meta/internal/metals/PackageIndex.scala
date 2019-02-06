@@ -107,13 +107,19 @@ class PackageIndex {
   }
 
   def visitBootClasspath(): Unit = {
-    sys.props
-      .collectFirst {
-        case (k, v) if k.endsWith(".boot.class.path") =>
-          Classpath(v).entries
-            .filter(_.isFile)
-            .foreach(jar => visitJarEntry(jar))
-      }
+    PackageIndex.bootClasspath.foreach(visit)
   }
 
+}
+
+object PackageIndex {
+  def bootClasspath: List[AbsolutePath] =
+    for {
+      entries <- sys.props.collectFirst {
+        case (k, v) if k.endsWith(".boot.class.path") =>
+          Classpath(v).entries
+      }.toList
+      entry <- entries
+      if entry.isFile
+    } yield entry
 }

@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.io.File
 import java.nio.file.Path
 import java.util
+import java.util.Collections
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.meta.pc.CompletionItems
@@ -44,7 +45,35 @@ class ScalaPC(
         search
       )
     }
+    _global.reporter.reset()
     _global
+  }
+
+  override def diagnostics(): util.List[String] = {
+    if (_global == null) Collections.emptyList()
+    else {
+      _global.reporter
+        .asInstanceOf[StoreReporter]
+        .infos
+        .iterator
+        .map(
+          info =>
+            new StringBuilder()
+              .append(info.pos.source.file.path)
+              .append(":")
+              .append(info.pos.column)
+              .append(" ")
+              .append(info.msg)
+              .append("\n")
+              .append(info.pos.lineContent)
+              .append("\n")
+              .append(info.pos.lineCaret)
+              .toString
+        )
+        .filterNot(_.contains("_CURSOR_"))
+        .toList
+        .asJava
+    }
   }
 
   override def complete(

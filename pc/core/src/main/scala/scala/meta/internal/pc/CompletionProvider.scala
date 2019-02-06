@@ -6,12 +6,15 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.Fuzzy
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.util.control.NonFatal
 
 class CompletionProvider(val compiler: PresentationCompiler) {
   import compiler._
+
+  val maxWorkspaceSymbolResults = 10
 
   def completions(
       filename: String,
@@ -25,8 +28,8 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
-    val (qual, kind, results) = safeCompletionsAt(position)
-    val items = results.sorted(byRelevance).iterator.zipWithIndex.map {
+    val (qual, kind, i) = safeCompletionsAt(position, unit.contexts)
+    val items = i.results.sorted(byRelevance).iterator.zipWithIndex.map {
       case (r, idx) =>
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
@@ -59,10 +62,21 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         item.setSortText(f"${idx}%05d")
         item
     }
-    new CompletionItems(kind, items.toSeq.asJava)
+    val result = new CompletionItems(kind, items.toSeq.asJava)
+    result.setIsIncomplete(i.isIncomplete)
+    result
   }
 
-  private def filterInteresting(completions: Iterator[Member]): List[Member] = {
+  case class InterestingMembers(
+      results: List[Member],
+      workspaceHits: Int,
+      isIncomplete: Boolean
+  )
+
+  private def filterInteresting(
+      completions: List[Member],
+      workspace: Iterator[Member]
+  ): InterestingMembers = {
     val isUninterestingSymbol = Set[Symbol](
       // the methods == != ## are arguably "interesting" but they're here becuase
       // - they're short so completing them doesn't save you keystrokes
@@ -96,8 +110,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
     val isSeen = mutable.Set.empty[String]
     val buf = List.newBuilder[Member]
-    while (completions.hasNext) {
-      val head = completions.next()
+    def visit(head: Member): Boolean = {
       val id =
         if (head.sym.isClass || head.sym.isModule) {
           head.sym.fullName
@@ -109,10 +122,22 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         !isSynthetic(head.sym)) {
         isSeen += id
         buf += head
+        true
+      } else {
+        false
       }
-
     }
-    buf.result()
+    completions.foreach(visit)
+    var workspaceHits = 0
+    while (workspaceHits < maxWorkspaceSymbolResults && workspace.hasNext) {
+      val isAdded = visit(workspace.next())
+      if (isAdded) workspaceHits += 1
+    }
+    InterestingMembers(
+      buf.result(),
+      workspaceHits,
+      isIncomplete = workspace.hasNext
+    )
   }
 
   private def isFunction(symbol: Symbol): Boolean = {
@@ -172,11 +197,13 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   }
 
   private def safeCompletionsAt(
-      position: Position
-  ): (Option[Type], LookupKind, List[Member]) = {
+      position: Position,
+      contexts: Contexts
+  ): (Option[Type], LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
+      e.printStackTrace()
       println(s"Expected error '${e.getMessage}'")
-      (None, LookupKind.None, Nil)
+      (None, LookupKind.None, InterestingMembers(Nil, 0, isIncomplete = false))
     }
     try {
       val completions = completionsAt(position)
@@ -193,13 +220,11 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       }
       val workspace =
         if (kind == LookupKind.Scope) {
-          workspaceSymbolListMembers(completions.name.toString)
+          workspaceSymbolListMembers(completions.name.toString, position)
         } else {
           Iterator.empty
         }
-      val items = filterInteresting(
-        Iterator(matchingResults, workspace).flatten
-      )
+      val items = filterInteresting(matchingResults, workspace)
       val qual = completions match {
         case t: CompletionResult.TypeMembers =>
           Option(t.qualifier.tpe)
@@ -231,12 +256,12 @@ class CompletionProvider(val compiler: PresentationCompiler) {
             case TypeMember(sym, _, true, inherited, viaView) =>
               // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
               -computeRelevance(sym, viaView, inherited)
-            case _: WorkspaceMember =>
-              -1
+            case w: WorkspaceMember =>
+              w.sym.name.length()
             case ScopeMember(sym, _, true, _) =>
               -computeRelevance(sym, NoSymbol, inherited = false)
             case _ =>
-              0
+              Int.MaxValue
           }
         }
       )
@@ -252,22 +277,80 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   class WorkspaceMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 
-  private def workspaceSymbolListMembers(query: String): Iterator[Member] = {
+  class ClassfileComparator(query: String)
+      extends java.util.Comparator[Classfile] {
+    def characterCount(string: String, ch: Char): Int = {
+      var i = 0
+      var count = 0
+      while (i < string.length) {
+        if (string.charAt(i) == ch) {
+          count += 1
+        }
+        i += 1
+      }
+      count
+    }
+    override def compare(o1: Classfile, o2: Classfile): RunId = {
+      val byNameLength = Integer.compare(
+        Fuzzy.nameLength(o1.filename),
+        Fuzzy.nameLength(o2.filename)
+      )
+      if (byNameLength != 0) byNameLength
+      else {
+        val byInnerclassDepth = Integer.compare(
+          characterCount(o1.filename, '$'),
+          characterCount(o2.filename, '$')
+        )
+        if (byInnerclassDepth != 0) byInnerclassDepth
+        else {
+          val byFirstQueryCharacter = Integer.compare(
+            o1.filename.indexOf(query.head),
+            o2.filename.indexOf(query.head)
+          )
+          if (byFirstQueryCharacter != 0) {
+            byFirstQueryCharacter
+          } else {
+            val byPackageDepth = Integer.compare(
+              characterCount(o1.pkg, '/'),
+              characterCount(o2.pkg, '/')
+            )
+            if (byPackageDepth != 0) byPackageDepth
+            else o1.filename.compareTo(o2.filename)
+          }
+        }
+      }
+    }
+  }
+
+  private def workspaceSymbolListMembers(
+      query: String,
+      pos: Position
+  ): Iterator[Member] = {
     if (query.isEmpty) {
       Iterator.empty
     } else {
+      val candidates =
+        new java.util.PriorityQueue[Classfile](new ClassfileComparator(query))
+      search.search(query).foreach { classfile =>
+        candidates.add(classfile)
+      }
       for {
-        classfile <- search.search(query)
-        sym <- toStaticSymbols(classfile)
-        if sym != NoSymbol
+        top <- candidates.pollingIterator
+        sym <- loadSymbolFromClassfile(top)
       } yield new WorkspaceMember(sym)
     }
   }
 
-  private def toStaticSymbols(classfile: Classfile): List[Symbol] = {
+  private def loadSymbolFromClassfile(classfile: Classfile): List[Symbol] = {
     try {
       val pkgName = classfile.pkg.stripSuffix("/").replace('/', '.')
       val pkg = rootMirror.staticPackage(pkgName)
+      def isAccessible(sym: Symbol): Boolean = {
+        sym != NoSymbol && {
+          sym.info // needed to fill complete symbol
+          sym.isPublic
+        }
+      }
       val member = classfile.filename
         .stripSuffix(".class")
         .split("\\$")
@@ -276,16 +359,15 @@ class CompletionProvider(val compiler: PresentationCompiler) {
             accum
           case (accum, name) =>
             accum.flatMap {
-              case NoSymbol => Nil
-              // Can't import from type members
-              case sym if sym.isType => Nil
+              case sym if !isAccessible(sym) || !sym.isModuleOrModuleClass =>
+                Nil
               case sym =>
                 val term = sym.info.member(TermName(name))
                 val tpe = sym.info.member(TypeName(name))
                 term :: tpe :: Nil
             }
         }
-      member
+      member.filter(sym => isAccessible(sym))
     } catch {
       case NonFatal(e) =>
         pprint.log(e)

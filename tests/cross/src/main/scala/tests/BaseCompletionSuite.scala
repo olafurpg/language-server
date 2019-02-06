@@ -2,17 +2,22 @@ package tests
 
 import org.eclipse.lsp4j.CompletionItem
 import scala.collection.JavaConverters._
+import scala.util.Properties
 
 abstract class BaseCompletionSuite extends BasePCSuite {
   def checkLength(
       name: String,
       original: String,
-      expected: Int
+      expected: Int,
+      compat: Map[String, Int] = Map.empty
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
       val result = pc.complete("A.scala", code, offset)
-      assertEquals(result.getItems.size(), expected)
+      assertEquals(
+        result.getItems.size(),
+        getExpected(expected, compat)
+      )
     }
   }
 
@@ -20,7 +25,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       name: String,
       original: String,
       expected: String,
-      includeDocs: Boolean = false
+      includeDocs: Boolean = false,
+      compat: Map[String, String] = Map.empty
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
@@ -40,7 +46,18 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           .append(item.getDetail)
           .append("\n")
       }
-      assertNoDiff(out.toString(), expected)
+      assertNoDiff(out.toString(), getExpected(expected, compat))
     }
+  }
+
+  private def scalaVersion: String =
+    Properties.versionNumberString
+  private def scalaBinary: String =
+    scalaVersion.split("\\.").take(2).mkString(".")
+  private def getExpected[T](default: T, compat: Map[String, T]): T = {
+    compat
+      .get(scalaBinary)
+      .orElse(compat.get(scalaVersion))
+      .getOrElse(default)
   }
 }

@@ -41,8 +41,7 @@ class ClasspathSearch(
       if query.matches(compressed.bloom)
       member <- compressed.members
       if member.endsWith(".class")
-      name = member.subSequence(0, member.length - ".class".length)
-      symbol = new ConcatSequence(pkg, name)
+      symbol = new ConcatSequence(pkg, member)
       isMatch = query.matches(symbol)
       if isMatch
     } yield Classfile(pkg, member)

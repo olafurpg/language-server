@@ -1,10 +1,8 @@
 package scala.meta.internal.pc
 
-import java.nio.CharBuffer
 import scala.collection.concurrent.TrieMap
 import scala.language.implicitConversions
 import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.metals.PackageIndex
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
@@ -18,9 +16,7 @@ class PresentationCompiler(
     reporter: Reporter,
     val indexer: SymbolIndexer,
     val search: ClasspathSearch
-) extends Global(settings, reporter)
-//    with Completions
-    { compiler =>
+) extends Global(settings, reporter) { compiler =>
 
   lazy val semanticdbOps: SemanticdbOps {
     val global: compiler.type
@@ -94,6 +90,6 @@ class PresentationCompiler(
 
   // Only needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
-    CharBuffer.wrap(chrs, name.start, name.length())
+    name.toString
 
 }

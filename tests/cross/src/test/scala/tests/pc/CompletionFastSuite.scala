@@ -14,7 +14,8 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    440
+    439,
+    compat = Map("2.11" -> 438)
   )
 
   check(
@@ -23,9 +24,18 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  Lis@@
       |}""".stripMargin,
-    """
-      |List: collection.immutable.List.type
-      |""".stripMargin
+    """|java.awt.List java.awt
+       |java.util.List java.util
+       |scala.collection.immutable.List scala.collection.immutable
+       |List: collection.immutable.List.type
+       |scala.collection.immutable.ListMap scala.collection.immutable
+       |scala.collection.mutable.ListMap scala.collection.mutable
+       |scala.collection.immutable.ListSet scala.collection.immutable
+       |java.awt.peer.ListPeer java.awt.peer
+       |org.w3c.dom.NameList org.w3c.dom
+       |org.w3c.dom.NodeList org.w3c.dom
+       |java.util.ArrayList java.util
+       |""".stripMargin
   )
 
   check(
@@ -81,7 +91,10 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  Map.empty[Int, String].getOrEl@@
       |}""".stripMargin,
     """|getOrElse[V1 >: String](key: Int,default: => V1): V1
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" -> "getOrElse[B1 >: String](key: Int,default: => B1): B1"
+    )
   )
 
   check(
@@ -170,14 +183,14 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  new PBuil@@
       |}""".stripMargin,
     """|ProcessBuilder java.lang
-       |java.security.cert.CertPathBuilder java.security.cert
-       |java.security.cert.CertPathBuilderException java.security.cert
-       |java.security.cert.CertPathBuilderResult java.security.cert
-       |java.security.cert.CertPathBuilderSpi java.security.cert
-       |java.security.cert.PKIXBuilderParameters java.security.cert
-       |java.security.cert.PKIXCertPathBuilderResult java.security.cert
        |scala.sys.process.ProcessBuilder scala.sys.process
+       |java.security.cert.CertPathBuilder java.security.cert
+       |java.security.cert.CertPathBuilderSpi java.security.cert
        |scala.sys.process.ProcessBuilderImpl scala.sys.process
+       |java.security.cert.CertPathBuilderResult java.security.cert
+       |java.security.cert.PKIXBuilderParameters java.security.cert
+       |java.security.cert.CertPathBuilderException java.security.cert
+       |java.security.cert.PKIXCertPathBuilderResult java.security.cert
        |""".stripMargin
   )
 
@@ -189,11 +202,10 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  TrieMap@@
       |}""".stripMargin,
     """|TrieMap scala.collection.concurrent
-       |scala.collection.immutable.HashMap.HashTrieMap scala.collection.immutable.HashMap
        |scala.collection.parallel.mutable.ParTrieMap scala.collection.parallel.mutable
+       |scala.collection.immutable.HashMap.HashTrieMap scala.collection.immutable.HashMap
        |scala.collection.parallel.mutable.ParTrieMapCombiner scala.collection.parallel.mutable
        |scala.collection.parallel.mutable.ParTrieMapSplitter scala.collection.parallel.mutable
-       |scala.collection.concurrent.TrieMapIterator scala.collection.concurrent
        |scala.collection.concurrent.TrieMapSerializationEnd scala.collection.concurrent
        |""".stripMargin
   )
@@ -212,12 +224,17 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """
       |import JavaCon@@
       |""".stripMargin,
-    """|
-       |scala.collection.convert.AsJavaConverters scala.collection.convert
+    """|scala.collection.JavaConverters scala.collection
        |scala.collection.JavaConversions scala.collection
        |scala.concurrent.JavaConversions scala.concurrent
-       |scala.collection.JavaConverters scala.collection
-       |""".stripMargin
+       |scala.collection.convert.AsJavaConverters scala.collection.convert
+       |""".stripMargin,
+    compat = Map(
+      "2.11" -> """|scala.collection.JavaConverters scala.collection
+                   |scala.collection.JavaConversions scala.collection
+                   |scala.concurrent.JavaConversions scala.concurrent
+                   |""".stripMargin
+    )
   )
 
   check(
@@ -235,6 +252,34 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |import Catch@@
       |""".stripMargin,
     """|scala.util.control.Exception.Catch scala.util.control.Exception
+       |""".stripMargin
+  )
+  check(
+    "import3",
+    """
+      |import Path@@
+      |""".stripMargin,
+    """|java.nio.file.Path java.nio.file
+       |java.nio.file.Paths java.nio.file
+       |java.awt.geom.Path2D java.awt.geom
+       |java.security.cert.CertPath java.security.cert
+       |java.awt.font.LayoutPath java.awt.font
+       |java.awt.geom.GeneralPath java.awt.geom
+       |java.nio.file.PathMatcher java.nio.file
+       |org.w3c.dom.xpath.XPathResult org.w3c.dom.xpath
+       |java.awt.geom.PathIterator java.awt.geom
+       |org.w3c.dom.xpath.XPathEvaluator org.w3c.dom.xpath
+       |""".stripMargin
+  )
+  check(
+    "accessible",
+    """
+      |package a
+      |import MetaData@@
+      |""".stripMargin,
+    """|java.sql.DatabaseMetaData java.sql
+       |java.sql.ParameterMetaData java.sql
+       |java.sql.ResultSetMetaData java.sql
        |""".stripMargin
   )
 
