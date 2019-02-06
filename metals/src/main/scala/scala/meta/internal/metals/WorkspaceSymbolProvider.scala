@@ -137,20 +137,10 @@ final class WorkspaceSymbolProvider(
       val classfiles = new PriorityQueue[Classfile](
         (a, b) => Integer.compare(a.filename.length, b.filename.length)
       )
-      val packages = packagesSortedByReferences()
       for {
-        pkg <- packages.iterator
-        compressed = inDependencies(pkg)
-        _ = token.checkCanceled()
-        if query.matches(compressed.bloom)
-        member <- compressed.members
-        if member.endsWith(".class")
-        name = member.subSequence(0, member.length - ".class".length)
-        symbol = new ConcatSequence(pkg, name)
-        isMatch = query.matches(symbol)
-        if isMatch
+        classfile <- inDependencies.search(query, token)
       } {
-        classfiles.add(Classfile(pkg, member))
+        classfiles.add(classfile)
       }
       val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
       val isVisited = mutable.Set.empty[AbsolutePath]
