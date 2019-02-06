@@ -29,6 +29,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
         item.setPreselect(true)
+        // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
         val detail = qual match {
           case Some(tpe) if !r.sym.hasPackageFlag =>
             // Compute type parameters based on the qualifier.
@@ -45,6 +46,11 @@ class CompletionProvider(val compiler: PresentationCompiler) {
               // excluding type bounds `<: <?>` that we remove via string processing.
               r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
             }
+        }
+        r match {
+          case w: WorkspaceMember =>
+            item.setInsertText(w.sym.fullName)
+          case _ =>
         }
         item.setDetail(detail)
         item.setKind(completionItemKind(r))
@@ -176,6 +182,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       val completions = metalsCompletionsAt(position)
       val matchingResults = completions.matchingResults { entered => name =>
         Fuzzy.matches(entered, name)
+
       }
       val items = filterInteresting(matchingResults)
       val kind = completions match {

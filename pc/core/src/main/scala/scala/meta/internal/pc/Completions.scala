@@ -1,7 +1,9 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.tools.nsc.symtab.Flags.{ACCESSOR, PARAMACCESSOR}
+import scala.util.control.NonFatal
 
 /**
  * Implementation for completions.
@@ -35,17 +37,18 @@ trait Completions { self: PresentationCompiler =>
         subName
       )
     }
-    pprint.log(focus1)
     focus1 match {
       case Import(i @ Ident(name), head :: Nil) if head.name == nme.ERROR =>
         val allMembers = metalsScopeMembers(pos)
         val nameStart = i.pos.start
         val positionDelta: Int = pos.start - nameStart
         val subName = name.subName(0, pos.start - i.pos.start)
-        val result =
-          CompletionResult.ScopeMembers(positionDelta, allMembers, subName)
-        val x = search.search(result.name.toString).toList
-        pprint.log(x)
+        val workspaceMembers = workspaceSymbolMembers(subName.toString)
+        val result = CompletionResult.ScopeMembers(
+          positionDelta,
+          workspaceMembers ++ allMembers,
+          subName
+        )
         result
       case imp @ Import(qual, selectors) =>
         selectors.reverseIterator.find(_.namePos <= pos.start) match {
@@ -71,6 +74,40 @@ trait Completions { self: PresentationCompiler =>
     }
   }
 
+  class WorkspaceMember(sym: Symbol)
+      extends ScopeMember(sym, sym.tpe, true, EmptyTree)
+  private def workspaceSymbolMembers(query: String): List[ScopeMember] = {
+    for {
+      classfile <- search.search(query)
+      sym <- toStaticSymbols(classfile)
+    } yield new WorkspaceMember(sym)
+  }.toList
+  private def toStaticSymbols(classfile: Classfile): List[Symbol] = {
+    try {
+      val pkg = rootMirror.staticPackage(
+        classfile.pkg.stripSuffix("/").replace('/', '.')
+      )
+      val member = classfile.filename
+        .stripSuffix(".class")
+        .split("\\$")
+        .foldLeft(List[Symbol](pkg)) {
+          case (accum, "") =>
+            accum
+          case (accum, name) =>
+            accum.flatMap { sym =>
+              val term = sym.info.member(TermName(name))
+              val tpe = sym.info.member(TypeName(name))
+              if (term == NoSymbol && tpe == NoSymbol) Nil
+              else if (term == NoSymbol) tpe :: Nil
+              else term :: tpe :: Nil
+            }
+        }
+      member
+    } catch {
+      case NonFatal(e) =>
+        Nil
+    }
+  }
   private def metalsTypeMembers(pos: Position): Stream[List[TypeMember]] = {
     // Choosing which tree will tell us the type members at the given position:
     //   If pos leads to an Import, type the expr

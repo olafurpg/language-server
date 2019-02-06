@@ -197,7 +197,11 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """
       |import JavaCon@@
       |""".stripMargin,
-    """|concurrent scala.collection
+    """|
+       |scala.collection.convert.AsJavaConverters scala.collection.convert
+       |scala.collection.JavaConversions scala.collection
+       |scala.concurrent.JavaConversions scala.concurrent
+       |scala.collection.JavaConverters scala.collection
        |""".stripMargin
   )
 
