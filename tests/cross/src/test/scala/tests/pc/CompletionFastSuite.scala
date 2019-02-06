@@ -23,17 +23,17 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  Lis@@
       |}""".stripMargin,
-    """|List: collection.immutable.List.type
-       |scala.collection.immutable.ListMap.EmptyListMap scala.collection.immutable.ListMap
-       |scala.collection.immutable.ListSet.EmptyListSet scala.collection.immutable.ListSet
-       |scala.collection.convert.Wrappers.JListWrapper scala.collection.convert.Wrappers
+    """|java.awt.List java.awt
+       |java.util.List java.util
        |scala.collection.immutable.List scala.collection.immutable
-       |scala.collection.mutable.ListBuffer scala.collection.mutable
+       |List: collection.immutable.List.type
+       |scala.collection.immutable.RedBlackTree.NList scala.collection.immutable.RedBlackTree
        |scala.collection.immutable.ListMap scala.collection.immutable
        |scala.collection.mutable.ListMap scala.collection.mutable
-       |scala.collection.immutable.ListSerializeEnd scala.collection.immutable
        |scala.collection.immutable.ListSet scala.collection.immutable
-       |scala.collection.mutable.MutableList scala.collection.mutable
+       |java.util.SubList java.util
+       |org.w3c.dom.NameList org.w3c.dom
+       |org.w3c.dom.NodeList org.w3c.dom
        |""".stripMargin
   )
 
@@ -179,14 +179,14 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  new PBuil@@
       |}""".stripMargin,
     """|ProcessBuilder java.lang
-       |java.security.cert.CertPathBuilder java.security.cert
-       |java.security.cert.CertPathBuilderException java.security.cert
-       |java.security.cert.CertPathBuilderResult java.security.cert
-       |java.security.cert.CertPathBuilderSpi java.security.cert
-       |java.security.cert.PKIXBuilderParameters java.security.cert
-       |java.security.cert.PKIXCertPathBuilderResult java.security.cert
        |scala.sys.process.ProcessBuilder scala.sys.process
+       |java.security.cert.CertPathBuilder java.security.cert
+       |java.security.cert.CertPathBuilderSpi java.security.cert
        |scala.sys.process.ProcessBuilderImpl scala.sys.process
+       |java.security.cert.CertPathBuilderResult java.security.cert
+       |java.security.cert.PKIXBuilderParameters java.security.cert
+       |java.security.cert.CertPathBuilderException java.security.cert
+       |java.security.cert.PKIXCertPathBuilderResult java.security.cert
        |""".stripMargin
   )
 
@@ -198,11 +198,11 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  TrieMap@@
       |}""".stripMargin,
     """|TrieMap scala.collection.concurrent
-       |scala.collection.immutable.HashMap.HashTrieMap scala.collection.immutable.HashMap
        |scala.collection.parallel.mutable.ParTrieMap scala.collection.parallel.mutable
+       |scala.collection.immutable.HashMap.HashTrieMap scala.collection.immutable.HashMap
+       |scala.collection.concurrent.TrieMapIterator scala.collection.concurrent
        |scala.collection.parallel.mutable.ParTrieMapCombiner scala.collection.parallel.mutable
        |scala.collection.parallel.mutable.ParTrieMapSplitter scala.collection.parallel.mutable
-       |scala.collection.concurrent.TrieMapIterator scala.collection.concurrent
        |scala.collection.concurrent.TrieMapSerializationEnd scala.collection.concurrent
        |""".stripMargin
   )
@@ -221,11 +221,10 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """
       |import JavaCon@@
       |""".stripMargin,
-    """|
-       |scala.collection.convert.AsJavaConverters scala.collection.convert
+    """|scala.collection.JavaConverters scala.collection
        |scala.collection.JavaConversions scala.collection
        |scala.concurrent.JavaConversions scala.concurrent
-       |scala.collection.JavaConverters scala.collection
+       |scala.collection.convert.AsJavaConverters scala.collection.convert
        |""".stripMargin
   )
 
@@ -244,6 +243,23 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |import Catch@@
       |""".stripMargin,
     """|scala.util.control.Exception.Catch scala.util.control.Exception
+       |""".stripMargin
+  )
+  check(
+    "import3",
+    """
+      |import Path@@
+      |""".stripMargin,
+    """|java.nio.file.Path java.nio.file
+       |java.nio.file.Paths java.nio.file
+       |java.awt.geom.Path2D java.awt.geom
+       |java.security.cert.CertPath java.security.cert
+       |java.awt.font.LayoutPath java.awt.font
+       |java.io.File.PathStatus java.io.File
+       |java.security.cert.CertPath.CertPathRep java.security.cert.CertPath
+       |java.awt.geom.GeneralPath java.awt.geom
+       |java.nio.file.PathMatcher java.nio.file
+       |org.w3c.dom.xpath.XPathResult org.w3c.dom.xpath
        |""".stripMargin
   )
 

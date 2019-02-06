@@ -257,12 +257,12 @@ class CompletionProvider(val compiler: PresentationCompiler) {
             case TypeMember(sym, _, true, inherited, viaView) =>
               // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
               -computeRelevance(sym, viaView, inherited)
-            case _: WorkspaceMember =>
-              -1
+            case w: WorkspaceMember =>
+              w.sym.name.length()
             case ScopeMember(sym, _, true, _) =>
               -computeRelevance(sym, NoSymbol, inherited = false)
             case _ =>
-              0
+              Int.MaxValue
           }
         }
       )

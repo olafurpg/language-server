@@ -102,11 +102,16 @@ object Fuzzy {
   private def lastIndex(symbol: CharSequence): Int = {
     val end = symbol.length() - (if (endsWith(symbol, ".class")) ".class".length
                                  else 0)
-    val endOfSymbolDelimiter = symbol.charAt(end - 1) match {
-      case '.' | '/' | '#' | '$' => 1
-      case _ => 0
+    var i = 0
+    while (i < end && isDelimiter(symbol.charAt(end - i))) {
+      i += 1
     }
-    symbol.length - endOfSymbolDelimiter
+    math.max(0, end - i) + 1
+  }
+
+  def isDelimiter(ch: Char): Boolean = ch match {
+    case '.' | '/' | '#' | '$' => true
+    case _ => false
   }
 
   /**
@@ -115,9 +120,13 @@ object Fuzzy {
    * Example: scala/Option$Some.class returns length of "Some"
    */
   def nameLength(symbol: CharSequence): Int = {
-    val end = lastIndex(symbol)
-    val start = lastDelimiter(symbol, end).idx
-    end - start
+    val end = lastIndex(symbol) - 1
+    var start = end
+    while (start >= 0 && !isDelimiter(symbol.charAt(start))) {
+      start -= 1
+    }
+    if (start < 0) end + 1
+    else end - start
   }
 
   def endsWith(cs: CharSequence, string: String): Boolean = {
