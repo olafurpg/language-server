@@ -24,6 +24,13 @@ case class WorkspaceSymbolQuery(
 }
 
 object WorkspaceSymbolQuery {
+  def exact(query: String): WorkspaceSymbolQuery = {
+    WorkspaceSymbolQuery(
+      query,
+      Array(AlternativeQuery(query)),
+      isTrailingDot = false
+    )
+  }
   def fromTextQuery(query: String): WorkspaceSymbolQuery = {
     val isTrailingDot = query.endsWith(".")
     val actualQuery =

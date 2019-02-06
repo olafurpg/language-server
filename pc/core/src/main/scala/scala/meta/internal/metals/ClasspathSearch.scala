@@ -25,7 +25,7 @@ class ClasspathSearch(
     packages
   }
   def search(query: String): Iterator[Classfile] = {
-    search(WorkspaceSymbolQuery.fromTextQuery(query), new CancelChecker {
+    search(WorkspaceSymbolQuery.exact(query), new CancelChecker {
       override def checkCanceled(): Unit = ()
     })
   }
