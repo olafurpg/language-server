@@ -1,7 +1,6 @@
 package scala.meta.internal.pc
 
 import scala.meta.internal.metals.Classfile
-import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.tools.nsc.symtab.Flags.{ACCESSOR, PARAMACCESSOR}
 import scala.util.control.NonFatal
 
@@ -84,9 +83,8 @@ trait Completions { self: PresentationCompiler =>
   }.toList
   private def toStaticSymbols(classfile: Classfile): List[Symbol] = {
     try {
-      val pkg = rootMirror.staticPackage(
-        classfile.pkg.stripSuffix("/").replace('/', '.')
-      )
+      val pkgName = classfile.pkg.stripSuffix("/").replace('/', '.')
+      val pkg = rootMirror.staticPackage(pkgName)
       val member = classfile.filename
         .stripSuffix(".class")
         .split("\\$")
@@ -95,16 +93,22 @@ trait Completions { self: PresentationCompiler =>
             accum
           case (accum, name) =>
             accum.flatMap { sym =>
-              val term = sym.info.member(TermName(name))
-              val tpe = sym.info.member(TypeName(name))
-              if (term == NoSymbol && tpe == NoSymbol) Nil
-              else if (term == NoSymbol) tpe :: Nil
-              else term :: tpe :: Nil
+              if (!sym.isJava && sym.isType) {
+                // Can't import from type members
+                Nil
+              } else {
+                val term = sym.info.member(TermName(name))
+                val tpe = sym.info.member(TypeName(name))
+                if (term == NoSymbol && tpe == NoSymbol) Nil
+                else if (term == NoSymbol) tpe :: Nil
+                else term :: tpe :: Nil
+              }
             }
         }
       member
     } catch {
       case NonFatal(e) =>
+        pprint.log(e)
         Nil
     }
   }

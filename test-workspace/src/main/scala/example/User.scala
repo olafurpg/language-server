@@ -1,3 +1,9 @@
 package example
 
-object App {}
+object App {
+  import example.Outer.MyInner
+}
+
+object Outer {
+  object MyInner
+}

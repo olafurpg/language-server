@@ -16,7 +16,7 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
-  val myclasspath = this.getClass.getClassLoader
+  val scalaLibrary = this.getClass.getClassLoader
     .asInstanceOf[URLClassLoader]
     .getURLs
     .iterator
@@ -27,6 +27,7 @@ abstract class BasePCSuite extends BaseSuite {
     .toSeq
   val index = OnDemandSymbolIndex()
   val indexer = new MetalsSymbolIndexer(index)
+  val myclasspath = scalaLibrary.toList
   val search = ClasspathSearch.fromClasspath(myclasspath, _ => 0)
   val pc = new ScalaPC(myclasspath, Nil, indexer, search)
 
