@@ -9,7 +9,7 @@ import scala.meta.pc
 import scala.meta.pc.SymbolIndexer
 
 class SignatureHelpProvider(
-    val compiler: ScalaCompiler,
+    val compiler: PresentationCompiler,
     indexer: SymbolIndexer
 ) {
   import compiler._

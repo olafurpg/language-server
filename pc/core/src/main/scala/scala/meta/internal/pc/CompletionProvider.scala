@@ -1,17 +1,14 @@
 package scala.meta.internal.pc
 
-import java.nio.CharBuffer
-import java.util.Comparator
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.language.implicitConversions
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 
-class CompletionProvider(val compiler: ScalaCompiler) {
+class CompletionProvider(val compiler: PresentationCompiler) {
   import compiler._
 
   def completions(

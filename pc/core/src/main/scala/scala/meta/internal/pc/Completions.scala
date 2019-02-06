@@ -1,9 +1,15 @@
 package scala.meta.internal.pc
 
-import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.symtab.Flags.{ACCESSOR, PARAMACCESSOR}
 
-trait Completions { self: Global =>
+/**
+ * Implementation for completions.
+ *
+ * Most of the code in this file is originally copied from the Scala presentation compiler,
+ * but some parts have been adjusted to improve features and provide consistent experience
+ * across Scala versions.
+ */
+trait Completions { self: PresentationCompiler =>
   final def metalsCompletionsAt(pos: Position): CompletionResult = {
     val focus1: Tree = typedTreeAt(pos)
     def typeCompletions(

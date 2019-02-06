@@ -11,7 +11,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.Reporter
 
-class ScalaCompiler(
+class PresentationCompiler(
     settings: Settings,
     reporter: Reporter,
     indexer: SymbolIndexer

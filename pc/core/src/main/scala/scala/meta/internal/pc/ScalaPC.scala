@@ -19,12 +19,12 @@ class ScalaPC(
     classpath: Seq[Path],
     options: Seq[String],
     indexer: SymbolIndexer,
-    private var _global: ScalaCompiler = null
+    private var _global: PresentationCompiler = null
 ) extends PC {
   override def withIndexer(indexer: SymbolIndexer): PC =
     new ScalaPC(classpath, options, indexer, global)
   def this() = this(Nil, Nil, new EmptySymbolIndexer)
-  def global: ScalaCompiler = {
+  def global: PresentationCompiler = {
     if (_global == null) {
       _global = ScalaPC.newCompiler(
         classpath.mkString(File.pathSeparator),
@@ -103,7 +103,7 @@ object ScalaPC {
       classpath: String,
       scalacOptions: Seq[String],
       indexer: SymbolIndexer
-  ): ScalaCompiler = {
+  ): PresentationCompiler = {
     val options = scalacOptions.iterator.filterNot { o =>
       o.contains("semanticdb") ||
       o.contains("scalajs")
@@ -120,7 +120,7 @@ object ScalaPC {
       settings.processArguments(options, processAll = true)
     require(isSuccess, unprocessed)
     require(unprocessed.isEmpty, unprocessed)
-    new ScalaCompiler(settings, new StoreReporter, indexer)
+    new PresentationCompiler(settings, new StoreReporter, indexer)
   }
 
   def ask[A](f: Response[A] => Unit): Response[A] = {
