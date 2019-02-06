@@ -126,7 +126,7 @@ lazy val pc = project
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
     )
   )
-  .dependsOn(interfaces)
+  .dependsOn(interfaces, mtags)
 
 lazy val mtags = project
   .settings(
@@ -264,6 +264,7 @@ lazy val mtest = project
   .settings(
     skip.in(publish) := true,
     libraryDependencies ++= List(
+      "com.geirsson" %% "coursier-small" % "1.3.3",
       "org.scalameta" %% "testkit" % V.scalameta,
       "com.lihaoyi" %% "utest" % "0.6.0"
     )

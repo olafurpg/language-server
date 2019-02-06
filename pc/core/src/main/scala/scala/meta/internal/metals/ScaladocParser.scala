@@ -1,12 +1,37 @@
 package scala.meta.internal.metals
 
-import scala.tools.nsc.doc.base.comment._
 import scala.annotation.tailrec
-import scala.collection._
-import scala.util.matching.Regex
-import scala.reflect.internal.util.Position
-import scala.language.postfixOps
+import scala.collection.Map
+import scala.collection.Seq
+import scala.collection.mutable
 import scala.reflect.internal.util.NoPosition
+import scala.reflect.internal.util.Position
+import scala.tools.nsc.doc.base.comment.Block
+import scala.tools.nsc.doc.base.comment.Body
+import scala.tools.nsc.doc.base.comment.Bold
+import scala.tools.nsc.doc.base.comment.Cell
+import scala.tools.nsc.doc.base.comment.Chain
+import scala.tools.nsc.doc.base.comment.Code
+import scala.tools.nsc.doc.base.comment.ColumnOption
+import scala.tools.nsc.doc.base.comment.Comment
+import scala.tools.nsc.doc.base.comment.HorizontalRule
+import scala.tools.nsc.doc.base.comment.HtmlTag
+import scala.tools.nsc.doc.base.comment.Inline
+import scala.tools.nsc.doc.base.comment.Italic
+import scala.tools.nsc.doc.base.comment.Link
+import scala.tools.nsc.doc.base.comment.Monospace
+import scala.tools.nsc.doc.base.comment.OrderedList
+import scala.tools.nsc.doc.base.comment.Paragraph
+import scala.tools.nsc.doc.base.comment.Row
+import scala.tools.nsc.doc.base.comment.Subscript
+import scala.tools.nsc.doc.base.comment.Summary
+import scala.tools.nsc.doc.base.comment.Superscript
+import scala.tools.nsc.doc.base.comment.Table
+import scala.tools.nsc.doc.base.comment.Text
+import scala.tools.nsc.doc.base.comment.Title
+import scala.tools.nsc.doc.base.comment.Underline
+import scala.tools.nsc.doc.base.comment.UnorderedList
+import scala.util.matching.Regex
 
 /**
  * A fork of the Scaladoc parser in the Scala compiler with a few removed features.

@@ -1,18 +1,18 @@
 package scala.meta.internal.metals
 
+import scala.collection.JavaConverters._
 import scala.meta._
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ScalaMtags
-import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.trees.Origin
+import scala.meta.pc.ParameterInformation
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolVisitor
-import scala.collection.JavaConverters._
-import scala.meta.pc.ParameterInformation
 import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 import scala.tools.nsc.doc.base.comment.Bold
@@ -119,7 +119,8 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
             try mtags.indexRoot()
             catch {
               case NonFatal(e) =>
-                scribe.error(defn.path.toURI.toString, e)
+                pprint.log(e)
+//                scribe.error(defn.path.toURI.toString, e)
             }
           case _ =>
         }
