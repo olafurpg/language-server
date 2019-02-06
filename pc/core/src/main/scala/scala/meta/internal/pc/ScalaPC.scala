@@ -10,6 +10,9 @@ import scala.meta.pc.PC
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.collection.JavaConverters._
+import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.PackageIndex
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolIndexer
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
@@ -19,17 +22,26 @@ class ScalaPC(
     classpath: Seq[Path],
     options: Seq[String],
     indexer: SymbolIndexer,
+    search: ClasspathSearch,
     private var _global: PresentationCompiler = null
 ) extends PC {
   override def withIndexer(indexer: SymbolIndexer): PC =
-    new ScalaPC(classpath, options, indexer, global)
-  def this() = this(Nil, Nil, new EmptySymbolIndexer)
+    new ScalaPC(classpath, options, indexer, search, global)
+  def this() =
+    this(Nil, Nil, new EmptySymbolIndexer, ClasspathSearch.empty)
+  override def newInstance(
+      classpath: util.List[Path],
+      options: util.List[String]
+  ): PC = {
+    new ScalaPC(classpath.asScala, options.asScala, indexer, search)
+  }
   def global: PresentationCompiler = {
     if (_global == null) {
       _global = ScalaPC.newCompiler(
-        classpath.mkString(File.pathSeparator),
+        classpath,
         options,
-        indexer
+        indexer,
+        search
       )
     }
     _global
@@ -45,12 +57,6 @@ class ScalaPC(
 
   override def hover(filename: String, text: String, offset: Int): Hover = {
     new HoverProvider(global).hover(filename, text, offset).orNull
-  }
-  override def newInstance(
-      classpath: util.List[Path],
-      options: util.List[String]
-  ): PC = {
-    new ScalaPC(classpath.asScala, options.asScala, indexer)
   }
 
   override def shutdown(): Unit = {
@@ -100,10 +106,12 @@ object ScalaPC {
   }
 
   def newCompiler(
-      classpath: String,
+      classpaths: Seq[Path],
       scalacOptions: Seq[String],
-      indexer: SymbolIndexer
+      indexer: SymbolIndexer,
+      search: ClasspathSearch
   ): PresentationCompiler = {
+    val classpath = classpaths.mkString(File.pathSeparator)
     val options = scalacOptions.iterator.filterNot { o =>
       o.contains("semanticdb") ||
       o.contains("scalajs")
@@ -120,7 +128,7 @@ object ScalaPC {
       settings.processArguments(options, processAll = true)
     require(isSuccess, unprocessed)
     require(unprocessed.isEmpty, unprocessed)
-    new PresentationCompiler(settings, new StoreReporter, indexer)
+    new PresentationCompiler(settings, new StoreReporter, indexer, search)
   }
 
   def ask[A](f: Response[A] => Unit): Response[A] = {

@@ -3,6 +3,8 @@ package scala.meta.internal.pc
 import java.nio.CharBuffer
 import scala.collection.concurrent.TrieMap
 import scala.language.implicitConversions
+import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.PackageIndex
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
@@ -14,7 +16,8 @@ import scala.tools.nsc.reporters.Reporter
 class PresentationCompiler(
     settings: Settings,
     reporter: Reporter,
-    indexer: SymbolIndexer
+    val indexer: SymbolIndexer,
+    val search: ClasspathSearch
 ) extends Global(settings, reporter)
     with Completions { compiler =>
 

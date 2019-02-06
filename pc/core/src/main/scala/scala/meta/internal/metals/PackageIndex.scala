@@ -37,7 +37,8 @@ class PackageIndex {
         }
       } catch {
         case NonFatal(e) =>
-          scribe.error(s"failed to process classpath entry $entry", e)
+          pprint.log(e)
+//          scribe.error(s"failed to process classpath entry $entry", e)
       }
     }
   }

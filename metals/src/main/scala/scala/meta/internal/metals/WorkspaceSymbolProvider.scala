@@ -34,7 +34,7 @@ final class WorkspaceSymbolProvider(
     fileOnDisk: AbsolutePath => AbsolutePath
 )(implicit ec: ExecutionContext) {
   val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  val inDependencies = TrieMap.empty[String, CompressedPackageIndex]
+  var inDependencies = ClasspathSearch.fromClasspath(Nil)
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
@@ -83,13 +83,7 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  private def isExcludedPackage(pkg: String): Boolean = {
-    // NOTE(olafur) I can't count how many times I've gotten unwanted results from these packages.
-    pkg.startsWith("com/sun/") ||
-    pkg.startsWith("com/apple/")
-  }
   private def indexClasspathUnsafe(): Unit = {
-    inDependencies.clear()
     val packages = new PackageIndex()
     packages.expandJdkClasspath()
     for {
@@ -99,42 +93,10 @@ final class WorkspaceSymbolProvider(
     } {
       packages.visit(classpathEntry)
     }
-    for {
-      (pkg, members) <- packages.packages.asScala
-      if !isExcludedPackage(pkg)
-    } {
-      val buf = Fuzzy.bloomFilterSymbolStrings(members.asScala)
-      buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)
-      val bloom = BloomFilters.create(buf.size)
-      buf.foreach { key =>
-        bloom.put(key)
-      }
-      // Sort members for deterministic order for deterministic results.
-      members.sort(String.CASE_INSENSITIVE_ORDER)
-      // Compress members because they make up the bulk of memory usage in the classpath index.
-      // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
-      // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
-      // so we should try to keep each of them as small as possible.
-      val compressedMembers = Compression.compress(members.asScala)
-      inDependencies(pkg) = CompressedPackageIndex(bloom, compressedMembers)
-    }
-  }
-
-  private val byReferenceThenAlphabeticalComparator = new Comparator[String] {
-    override def compare(a: String, b: String): Int = {
-      val isReferencedA = isReferencedPackage(a)
-      val isReferencedB = isReferencedPackage(b)
-      val byReference =
-        -java.lang.Boolean.compare(isReferencedA, isReferencedB)
-      if (byReference != 0) byReference
-      else a.compare(b)
-    }
-  }
-
-  private def packagesSortedByReferences(): Array[String] = {
-    val packages = inDependencies.keys.toArray
-    util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
-    packages
+    inDependencies = ClasspathSearch.fromPackages(
+      packages,
+      pkg => if (isReferencedPackage(pkg)) 0 else 1
+    )
   }
 
   private def searchUnsafe(

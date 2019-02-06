@@ -34,9 +34,10 @@ trait Completions { self: PresentationCompiler =>
         subName
       )
     }
+    pprint.log(focus1)
     focus1 match {
-      case imp @ Import(i @ Ident(name), head :: Nil)
-          if head.name == nme.ERROR =>
+      case Import(i @ Ident(name), head :: Nil) if head.name == nme.ERROR =>
+        pprint.log(name)
         val allMembers = metalsScopeMembers(pos)
         val nameStart = i.pos.start
         val positionDelta: Int = pos.start - nameStart
