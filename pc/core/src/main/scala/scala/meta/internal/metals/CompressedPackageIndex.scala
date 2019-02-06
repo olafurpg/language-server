@@ -22,7 +22,9 @@ case class CompressedPackageIndex(
 
 object CompressedPackageIndex {
   private def isExcludedPackage(pkg: String): Boolean = {
-    // NOTE(olafur) I can't count how many times I've gotten unwanted results from these packages.
+    // NOTE(olafur) At some point we may consider making this list configurable, I can
+    // imagine that some people wouldn't mind excluding for example javax._
+    pkg.startsWith("jdk/internal/") ||
     pkg.startsWith("com/sun/") ||
     pkg.startsWith("com/apple/")
   }

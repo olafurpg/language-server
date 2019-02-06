@@ -106,7 +106,7 @@ class PackageIndex {
     }
   }
 
-  def expandJdkClasspath(): Unit = {
+  def visitBootClasspath(): Unit = {
     sys.props
       .collectFirst {
         case (k, v) if k.endsWith(".boot.class.path") =>

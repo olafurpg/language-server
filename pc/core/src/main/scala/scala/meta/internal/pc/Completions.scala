@@ -75,7 +75,7 @@ trait Completions { self: PresentationCompiler =>
   }
 
   class WorkspaceMember(sym: Symbol)
-      extends ScopeMember(sym, sym.tpe, true, EmptyTree)
+      extends ScopeMember(sym, NoType, true, EmptyTree)
   private def workspaceSymbolMembers(query: String): List[ScopeMember] = {
     for {
       classfile <- search.search(query)

@@ -205,4 +205,22 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "import1",
+    """
+      |import Paths@@
+      |""".stripMargin,
+    """|java.nio.file.Paths java.nio.file
+       |""".stripMargin
+  )
+
+  check(
+    "import2",
+    """
+      |import Catch@@
+      |""".stripMargin,
+    """|scala.util.control.Exception.Catch scala.util.control.Exception
+       |""".stripMargin
+  )
+
 }

@@ -182,7 +182,6 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       val completions = metalsCompletionsAt(position)
       val matchingResults = completions.matchingResults { entered => name =>
         Fuzzy.matches(entered, name)
-
       }
       val items = filterInteresting(matchingResults)
       val kind = completions match {
