@@ -31,9 +31,9 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |scala.collection.immutable.ListMap scala.collection.immutable
        |scala.collection.mutable.ListMap scala.collection.mutable
        |scala.collection.immutable.ListSet scala.collection.immutable
-       |java.util.SubList java.util
        |java.awt.peer.ListPeer java.awt.peer
        |org.w3c.dom.NameList org.w3c.dom
+       |org.w3c.dom.NodeList org.w3c.dom
        |""".stripMargin
   )
 
@@ -200,7 +200,6 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|TrieMap scala.collection.concurrent
        |scala.collection.parallel.mutable.ParTrieMap scala.collection.parallel.mutable
        |scala.collection.immutable.HashMap.HashTrieMap scala.collection.immutable.HashMap
-       |scala.collection.concurrent.TrieMapIterator scala.collection.concurrent
        |scala.collection.parallel.mutable.ParTrieMapCombiner scala.collection.parallel.mutable
        |scala.collection.parallel.mutable.ParTrieMapSplitter scala.collection.parallel.mutable
        |scala.collection.concurrent.TrieMapSerializationEnd scala.collection.concurrent
@@ -255,11 +254,22 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |java.awt.geom.Path2D java.awt.geom
        |java.security.cert.CertPath java.security.cert
        |java.awt.font.LayoutPath java.awt.font
-       |java.io.File.PathStatus java.io.File
-       |java.security.cert.CertPath.CertPathRep java.security.cert.CertPath
        |java.awt.geom.GeneralPath java.awt.geom
        |java.nio.file.PathMatcher java.nio.file
        |org.w3c.dom.xpath.XPathResult org.w3c.dom.xpath
+       |java.awt.geom.PathIterator java.awt.geom
+       |org.w3c.dom.xpath.XPathEvaluator org.w3c.dom.xpath
+       |""".stripMargin
+  )
+  check(
+    "accessible",
+    """
+      |package a
+      |import MetaData@@
+      |""".stripMargin,
+    """|java.sql.DatabaseMetaData java.sql
+       |java.sql.ParameterMetaData java.sql
+       |java.sql.ResultSetMetaData java.sql
        |""".stripMargin
   )
 

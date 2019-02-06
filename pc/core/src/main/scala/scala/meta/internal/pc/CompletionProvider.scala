@@ -30,7 +30,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
-    val (qual, kind, i) = safeCompletionsAt(position)
+    val (qual, kind, i) = safeCompletionsAt(position, unit.contexts)
     val items = i.results.sorted(byRelevance).iterator.zipWithIndex.map {
       case (r, idx) =>
         val label = r.symNameDropLocal.decoded
@@ -199,7 +199,8 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   }
 
   private def safeCompletionsAt(
-      position: Position
+      position: Position,
+      contexts: Contexts
   ): (Option[Type], LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
       e.printStackTrace()
@@ -221,7 +222,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       }
       val workspace =
         if (kind == LookupKind.Scope) {
-          workspaceSymbolListMembers(completions.name.toString)
+          workspaceSymbolListMembers(completions.name.toString, position)
         } else {
           Iterator.empty
         }
@@ -323,7 +324,10 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
   }
 
-  private def workspaceSymbolListMembers(query: String): Iterator[Member] = {
+  private def workspaceSymbolListMembers(
+      query: String,
+      pos: Position
+  ): Iterator[Member] = {
     if (query.isEmpty) {
       Iterator.empty
     } else {
@@ -332,10 +336,15 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       search.search(query).foreach { classfile =>
         candidates.add(classfile)
       }
+      def isAccessible(sym: Symbol): Boolean = {
+        sym.info // needed to fill `privateWithin`
+        sym.privateWithin == NoSymbol
+      }
       for {
         top <- candidates.pollingIterator
         sym <- toStaticSymbols(top)
         if sym != NoSymbol
+        if isAccessible(sym)
       } yield new WorkspaceMember(sym)
     }
   }
