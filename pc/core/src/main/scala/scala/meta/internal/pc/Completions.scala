@@ -93,7 +93,7 @@ trait Completions { self: PresentationCompiler =>
             accum
           case (accum, name) =>
             accum.flatMap { sym =>
-              if (!sym.isJava && sym.isType) {
+              if (sym.isType) {
                 // Can't import from type members
                 Nil
               } else {

@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.collection.JavaConverters._
 import com.google.common.hash.BloomFilter
+import sun.nio.ByteBuffered
 
 /**
  * The memory-compressed version of PackageIndex.
@@ -25,6 +26,7 @@ object CompressedPackageIndex {
     // NOTE(olafur) At some point we may consider making this list configurable, I can
     // imagine that some people wouldn't mind excluding for example javax._
     pkg.startsWith("jdk/internal/") ||
+    pkg.startsWith("sun/") ||
     pkg.startsWith("com/sun/") ||
     pkg.startsWith("com/apple/")
   }

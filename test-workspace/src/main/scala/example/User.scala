@@ -1,9 +1,5 @@
 package example
 
-object App {
-  import example.Outer.MyInner
-}
+import java.nio.file.FileVisitResult.SKIP_SUBTREE
 
-object Outer {
-  object MyInner
-}
+object App {}
