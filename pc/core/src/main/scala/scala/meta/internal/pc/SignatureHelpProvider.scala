@@ -13,6 +13,7 @@ class SignatureHelpProvider(
     indexer: SymbolIndexer
 ) {
   import compiler._
+  def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 
   def signatureHelp(
       filename: String,
@@ -408,7 +409,10 @@ class SignatureHelpProvider(
                   s"$name: ${param.info.toLongString}$default"
                 }
               }
-            val docstring = paramInfo.map(_.docstring()).getOrElse("")
+            val docstring: String = paramInfo match {
+              case Some(value) if isDocs => value.docstring()
+              case _ => ""
+            }
             val byNameLabel =
               if (isByNamedOrdered) s"<$label>"
               else label
@@ -453,9 +457,13 @@ class SignatureHelpProvider(
         "",
         s": ${method.returnType.toLongString}"
       )
+    val docstring = info match {
+      case Some(value) if isDocs => value.docstring()
+      case _ => ""
+    }
     new SignatureInformation(
       methodSignature,
-      info.fold("")(_.docstring()),
+      docstring,
       paramLabels.iterator.flatten.toSeq.asJava
     )
   }

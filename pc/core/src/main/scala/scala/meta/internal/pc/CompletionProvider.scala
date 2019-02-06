@@ -30,8 +30,8 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
-    val (qual, kind, results) = safeCompletionsAt(position)
-    val items = results.sorted(byRelevance).iterator.zipWithIndex.map {
+    val (qual, kind, i) = safeCompletionsAt(position)
+    val items = i.results.sorted(byRelevance).iterator.zipWithIndex.map {
       case (r, idx) =>
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
@@ -64,13 +64,21 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         item.setSortText(f"${idx}%05d")
         item
     }
-    new CompletionItems(kind, items.toSeq.asJava)
+    val result = new CompletionItems(kind, items.toSeq.asJava)
+    result.setIsIncomplete(i.isIncomplete)
+    result
   }
+
+  case class InterestingMembers(
+      results: List[Member],
+      workspaceHits: Int,
+      isIncomplete: Boolean
+  )
 
   private def filterInteresting(
       completions: List[Member],
       workspace: Iterator[Member]
-  ): List[Member] = {
+  ): InterestingMembers = {
     val isUninterestingSymbol = Set[Symbol](
       // the methods == != ## are arguably "interesting" but they're here becuase
       // - they're short so completing them doesn't save you keystrokes
@@ -122,12 +130,16 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       }
     }
     completions.foreach(visit)
-    workspace
-      .map(visit)
-      .filter(_ == true)
-      .take(maxWorkspaceSymbolResults)
-      .foreach(_ => ())
-    buf.result()
+    var workspaceHits = 0
+    while (workspaceHits < maxWorkspaceSymbolResults && workspace.hasNext) {
+      val isAdded = visit(workspace.next())
+      if (isAdded) workspaceHits += 1
+    }
+    InterestingMembers(
+      buf.result(),
+      workspaceHits,
+      isIncomplete = workspace.hasNext
+    )
   }
 
   private def isFunction(symbol: Symbol): Boolean = {
@@ -188,11 +200,11 @@ class CompletionProvider(val compiler: PresentationCompiler) {
 
   private def safeCompletionsAt(
       position: Position
-  ): (Option[Type], LookupKind, List[Member]) = {
+  ): (Option[Type], LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
       e.printStackTrace()
       println(s"Expected error '${e.getMessage}'")
-      (None, LookupKind.None, Nil)
+      (None, LookupKind.None, InterestingMembers(Nil, 0, isIncomplete = false))
     }
     try {
       val completions = completionsAt(position)
@@ -213,10 +225,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         } else {
           Iterator.empty
         }
-      val items = filterInteresting(
-        matchingResults,
-        workspace
-      )
+      val items = filterInteresting(matchingResults, workspace)
       val qual = completions match {
         case t: CompletionResult.TypeMembers =>
           Option(t.qualifier.tpe)
