@@ -14,7 +14,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    439
+    440
   )
 
   check(
@@ -170,16 +170,31 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  new PBuil@@
       |}""".stripMargin,
     """|ProcessBuilder java.lang
+       |java.security.cert.CertPathBuilder java.security.cert
+       |java.security.cert.CertPathBuilderException java.security.cert
+       |java.security.cert.CertPathBuilderResult java.security.cert
+       |java.security.cert.CertPathBuilderSpi java.security.cert
+       |java.security.cert.PKIXBuilderParameters java.security.cert
+       |java.security.cert.PKIXCertPathBuilderResult java.security.cert
+       |scala.sys.process.ProcessBuilder scala.sys.process
+       |scala.sys.process.ProcessBuilderImpl scala.sys.process
        |""".stripMargin
   )
 
   check(
     "companion",
     """
+      |import scala.collection.concurrent._
       |object A {
-      |  Map@@
+      |  TrieMap@@
       |}""".stripMargin,
-    """|Map: scala.collection.immutable.Map.type
+    """|TrieMap scala.collection.concurrent
+       |scala.collection.immutable.HashMap.HashTrieMap scala.collection.immutable.HashMap
+       |scala.collection.parallel.mutable.ParTrieMap scala.collection.parallel.mutable
+       |scala.collection.parallel.mutable.ParTrieMapCombiner scala.collection.parallel.mutable
+       |scala.collection.parallel.mutable.ParTrieMapSplitter scala.collection.parallel.mutable
+       |scala.collection.concurrent.TrieMapIterator scala.collection.concurrent
+       |scala.collection.concurrent.TrieMapSerializationEnd scala.collection.concurrent
        |""".stripMargin
   )
 
@@ -202,6 +217,24 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |scala.collection.JavaConversions scala.collection
        |scala.concurrent.JavaConversions scala.concurrent
        |scala.collection.JavaConverters scala.collection
+       |""".stripMargin
+  )
+
+  check(
+    "import1",
+    """
+      |import Paths@@
+      |""".stripMargin,
+    """|java.nio.file.Paths java.nio.file
+       |""".stripMargin
+  )
+
+  check(
+    "import2",
+    """
+      |import Catch@@
+      |""".stripMargin,
+    """|scala.util.control.Exception.Catch scala.util.control.Exception
        |""".stripMargin
   )
 

@@ -1,5 +1,3 @@
 package example
 
-object App {
-  Map
-}
+object App {}

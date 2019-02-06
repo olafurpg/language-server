@@ -58,8 +58,8 @@ class PackageIndex {
         ): FileVisitResult = {
           val member = file.getFileName.toString
           if (member.endsWith(".class")) {
-            val relpath = AbsolutePath(file).toRelative(dir)
-            val pkg = relpath.toURI(isDirectory = false).toString
+            val relpath = AbsolutePath(file.getParent).toRelative(dir)
+            val pkg = relpath.toURI(isDirectory = true).toString
             addMember(pkg, member)
           }
           FileVisitResult.CONTINUE
@@ -106,7 +106,7 @@ class PackageIndex {
     }
   }
 
-  def expandJdkClasspath(): Unit = {
+  def visitBootClasspath(): Unit = {
     sys.props
       .collectFirst {
         case (k, v) if k.endsWith(".boot.class.path") =>

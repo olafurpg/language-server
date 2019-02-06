@@ -4,9 +4,11 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
+import scala.util.control.NonFatal
 
 class CompletionProvider(val compiler: PresentationCompiler) {
   import compiler._
@@ -60,7 +62,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     new CompletionItems(kind, items.toSeq.asJava)
   }
 
-  private def filterInteresting(completions: List[Member]): List[Member] = {
+  private def filterInteresting(completions: Iterator[Member]): List[Member] = {
     val isUninterestingSymbol = Set[Symbol](
       // the methods == != ## are arguably "interesting" but they're here becuase
       // - they're short so completing them doesn't save you keystrokes
@@ -94,24 +96,22 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
     val isSeen = mutable.Set.empty[String]
     val buf = List.newBuilder[Member]
-    def loop(lst: List[Member]): Unit = lst match {
-      case Nil =>
-      case head :: tail =>
-        val id =
-          if (head.sym.isClass || head.sym.isModule) {
-            head.sym.fullName
-          } else {
-            semanticdbSymbol(head.sym)
-          }
-        if (!isSeen(id) &&
-          !isUninterestingSymbol(head.sym) &&
-          !isSynthetic(head.sym)) {
-          isSeen += id
-          buf += head
+    while (completions.hasNext) {
+      val head = completions.next()
+      val id =
+        if (head.sym.isClass || head.sym.isModule) {
+          head.sym.fullName
+        } else {
+          semanticdbSymbol(head.sym)
         }
-        loop(tail)
+      if (!isSeen(id) &&
+        !isUninterestingSymbol(head.sym) &&
+        !isSynthetic(head.sym)) {
+        isSeen += id
+        buf += head
+      }
+
     }
-    loop(completions)
     buf.result()
   }
 
@@ -179,12 +179,10 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       (None, LookupKind.None, Nil)
     }
     try {
-      val completions = metalsCompletionsAt(position)
+      val completions = completionsAt(position)
       val matchingResults = completions.matchingResults { entered => name =>
         Fuzzy.matches(entered, name)
-
       }
-      val items = filterInteresting(matchingResults)
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           LookupKind.Scope
@@ -193,6 +191,15 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         case _ =>
           LookupKind.None
       }
+      val workspace =
+        if (kind == LookupKind.Scope) {
+          workspaceSymbolListMembers(completions.name.toString)
+        } else {
+          Iterator.empty
+        }
+      val items = filterInteresting(
+        Iterator(matchingResults, workspace).flatten
+      )
       val qual = completions match {
         case t: CompletionResult.TypeMembers =>
           Option(t.qualifier.tpe)
@@ -224,9 +231,11 @@ class CompletionProvider(val compiler: PresentationCompiler) {
             case TypeMember(sym, _, true, inherited, viaView) =>
               // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
               -computeRelevance(sym, viaView, inherited)
+            case _: WorkspaceMember =>
+              -1
             case ScopeMember(sym, _, true, _) =>
               -computeRelevance(sym, NoSymbol, inherited = false)
-            case r =>
+            case _ =>
               0
           }
         }
@@ -238,6 +247,49 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       else {
         IdentifierComparator.compare(x.sym.name, y.sym.name)
       }
+    }
+  }
+  class WorkspaceMember(sym: Symbol)
+      extends ScopeMember(sym, NoType, true, EmptyTree)
+
+  private def workspaceSymbolListMembers(query: String): Iterator[Member] = {
+    if (query.isEmpty) {
+      Iterator.empty
+    } else {
+      for {
+        classfile <- search.search(query)
+        sym <- toStaticSymbols(classfile)
+        if sym != NoSymbol
+      } yield new WorkspaceMember(sym)
+    }
+  }
+
+  private def toStaticSymbols(classfile: Classfile): List[Symbol] = {
+    try {
+      val pkgName = classfile.pkg.stripSuffix("/").replace('/', '.')
+      val pkg = rootMirror.staticPackage(pkgName)
+      val member = classfile.filename
+        .stripSuffix(".class")
+        .split("\\$")
+        .foldLeft(List[Symbol](pkg)) {
+          case (accum, "") =>
+            accum
+          case (accum, name) =>
+            accum.flatMap {
+              case NoSymbol => Nil
+              // Can't import from type members
+              case sym if sym.isType => Nil
+              case sym =>
+                val term = sym.info.member(TermName(name))
+                val tpe = sym.info.member(TypeName(name))
+                term :: tpe :: Nil
+            }
+        }
+      member
+    } catch {
+      case NonFatal(e) =>
+        pprint.log(e)
+        Nil
     }
   }
 

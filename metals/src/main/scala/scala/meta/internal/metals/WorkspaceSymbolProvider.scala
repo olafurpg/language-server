@@ -85,7 +85,7 @@ final class WorkspaceSymbolProvider(
 
   private def indexClasspathUnsafe(): Unit = {
     val packages = new PackageIndex()
-    packages.expandJdkClasspath()
+    packages.visitBootClasspath()
     for {
       target <- buildTargets.all
       classpathEntry <- target.scalac.classpath

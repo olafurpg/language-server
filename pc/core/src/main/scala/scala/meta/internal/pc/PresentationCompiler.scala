@@ -19,7 +19,8 @@ class PresentationCompiler(
     val indexer: SymbolIndexer,
     val search: ClasspathSearch
 ) extends Global(settings, reporter)
-    with Completions { compiler =>
+//    with Completions
+    { compiler =>
 
   lazy val semanticdbOps: SemanticdbOps {
     val global: compiler.type

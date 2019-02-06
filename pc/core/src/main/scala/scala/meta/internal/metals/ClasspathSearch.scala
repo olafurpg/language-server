@@ -1,8 +1,7 @@
 package scala.meta.internal.metals
 
-import com.sun.xml.internal.ws.api.model.wsdl.WSDLModel.WSDLParser
-import java.util.Arrays
 import java.nio.file.Path
+import java.util
 import java.util.Comparator
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import scala.collection.concurrent.TrieMap
@@ -22,11 +21,11 @@ class ClasspathSearch(
 
   private def packagesSortedByReferences(): Array[String] = {
     val packages = map.keys.toArray
-    Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
+    util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
     packages
   }
   def search(query: String): Iterator[Classfile] = {
-    search(WorkspaceSymbolQuery.fromTextQuery(query), new CancelChecker {
+    search(WorkspaceSymbolQuery.exact(query), new CancelChecker {
       override def checkCanceled(): Unit = ()
     })
   }
@@ -66,6 +65,7 @@ object ClasspathSearch {
       packagePriority: String => Int
   ): ClasspathSearch = {
     val packages = new PackageIndex
+    packages.visitBootClasspath()
     classpath.foreach { path =>
       packages.visit(AbsolutePath(path))
     }

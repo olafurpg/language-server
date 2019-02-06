@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
-import scala.collection.JavaConverters._
 import com.google.common.hash.BloomFilter
+import scala.collection.JavaConverters._
 
 /**
  * The memory-compressed version of PackageIndex.
@@ -22,7 +22,15 @@ case class CompressedPackageIndex(
 
 object CompressedPackageIndex {
   private def isExcludedPackage(pkg: String): Boolean = {
-    // NOTE(olafur) I can't count how many times I've gotten unwanted results from these packages.
+    // NOTE(olafur) At some point we may consider making this list configurable, I can
+    // imagine that some people wouldn't mind excluding more packages or including for
+    // example javax._.
+    pkg.startsWith("jdk/internal/") ||
+    pkg.startsWith("sun/") ||
+    pkg.startsWith("javax/") ||
+    pkg.startsWith("org/omg/") ||
+    pkg.startsWith("oracle/") ||
+    pkg.startsWith("com/oracle/") ||
     pkg.startsWith("com/sun/") ||
     pkg.startsWith("com/apple/")
   }
