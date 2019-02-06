@@ -167,8 +167,6 @@ class CompletionProvider(val compiler: ScalaCompiler) {
       relevance += 40
     relevance
   }
-  implicit def nameToCharSequence(name: Name): CharSequence =
-    name.toString
 
   private def safeCompletionsAt(
       position: Position
@@ -212,7 +210,7 @@ class CompletionProvider(val compiler: ScalaCompiler) {
     }
   }
 
-  implicit val byRelevance = new Ordering[Member] {
+  implicit val byRelevance: Ordering[Member] = new Ordering[Member] {
     val relevanceCache = new java.util.HashMap[Member, Int]
     def relevance(m: Member): Int = {
       relevanceCache.computeIfAbsent(

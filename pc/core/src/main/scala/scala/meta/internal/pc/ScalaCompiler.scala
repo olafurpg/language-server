@@ -1,6 +1,8 @@
 package scala.meta.internal.pc
 
+import java.nio.CharBuffer
 import scala.collection.concurrent.TrieMap
+import scala.language.implicitConversions
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
@@ -347,5 +349,9 @@ class ScalaCompiler(
 
     def allMembers: List[M] = values.toList.flatten
   }
+
+  // Only needed for 2.11 where `Name` doesn't extend CharSequence.
+  implicit def nameToCharSequence(name: Name): CharSequence =
+    CharBuffer.wrap(chrs, name.start, name.length())
 
 }
