@@ -1,15 +1,16 @@
 package bench
 
+import scala.collection.JavaConverters._
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.OutputTimeUnit
+import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
-import org.openjdk.jmh.annotations.TearDown
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.pc.ScalaPC
 import scala.meta.io.AbsolutePath
@@ -18,11 +19,53 @@ import scala.meta.pc.PC
 import tests.Library
 import tests.SimpleJavaSymbolIndexer
 
+@State(Scope.Benchmark)
 abstract class BaseCompletionBench {
   var libraries: List[Library] = Nil
+  var completions: Map[String, SourceCompletion] = Map.empty
+
+  def runSetup(): Unit
+
+  def presentationCompiler(): PC
+
+  @Setup
+  def setup(): Unit = {
+    runSetup()
+  }
+
   def downloadLibraries(): Unit = {
     libraries = Library.jdk :: Library.all
+    completions = Map(
+      "scopeOpen" -> SourceCompletion(
+        "A.scala",
+        "import Java\n",
+        "import Jav".length
+      ),
+      "scopeDeep" -> SourceCompletion.fromPath(
+        "UnzipWithApply.scala",
+        "if (pendin@@g12) pendingCount -= 1"
+      ),
+      "memberDeep" -> SourceCompletion.fromPath(
+        "UnzipWithApply.scala",
+        "shape.@@out21"
+      )
+    )
   }
+  @Param(Array("openScope", "extraLargeMember"))
+  var completion: String = _
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  def complete(): CompletionItems = {
+    val pc = presentationCompiler()
+    val result = currentCompletion.complete(pc)
+    val diagnostics = pc.diagnostics()
+    require(diagnostics.isEmpty, diagnostics.asScala.mkString("\n", "\n", "\n"))
+    result
+  }
+
+  def currentCompletion: SourceCompletion = completions(completion)
 
   def classpath: List[Path] =
     libraries.flatMap(_.classpath.entries.map(_.toNIO))
@@ -32,7 +75,6 @@ abstract class BaseCompletionBench {
     require(libraries.nonEmpty)
     ClasspathSearch.fromClasspath(classpath, _ => 0)
   }
-
   def newIndexer() = new SimpleJavaSymbolIndexer(sources)
 
   def newPC(
@@ -48,64 +90,31 @@ abstract class BaseCompletionBench {
   }
 }
 
-@State(Scope.Benchmark)
 class OnDemandCompletionBench extends BaseCompletionBench {
-
-  @Setup
-  def setup(): Unit = {
-    downloadLibraries()
-  }
-
-  @TearDown
-  def teardown(): Unit = {}
-
-  @Benchmark
-  @BenchmarkMode(Array(Mode.SingleShotTime))
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def run(): CompletionItems = {
-    scopeComplete(newPC(newSearch(), newIndexer()))
-  }
+  override def runSetup(): Unit = downloadLibraries()
+  override def presentationCompiler(): PC = newPC(newSearch(), newIndexer())
 }
 
-@State(Scope.Benchmark)
 class CachedSearchAndCompilerCompletionBench extends BaseCompletionBench {
   var pc: PC = _
 
-  @Setup
-  def setup(): Unit = {
+  override def runSetup(): Unit = {
     downloadLibraries()
     pc = newPC()
   }
 
-  @TearDown
-  def teardown(): Unit = {}
-
-  @Benchmark
-  @BenchmarkMode(Array(Mode.SingleShotTime))
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def run(): CompletionItems = {
-    scopeComplete(pc)
-  }
+  override def presentationCompiler(): PC = pc
 }
 
-@State(Scope.Benchmark)
 class CachedSearchCompletionBench extends BaseCompletionBench {
   var pc: PC = _
   var cachedSearch: ClasspathSearch = _
 
-  @Setup
-  def setup(): Unit = {
+  override def runSetup(): Unit = {
     downloadLibraries()
     cachedSearch = newSearch()
   }
 
-  @TearDown
-  def teardown(): Unit = {}
+  override def presentationCompiler(): PC = newPC(cachedSearch)
 
-  @Benchmark
-  @BenchmarkMode(Array(Mode.SingleShotTime))
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def run(): CompletionItems = {
-    scopeComplete(newPC(cachedSearch))
-  }
 }

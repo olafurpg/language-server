@@ -2,16 +2,14 @@ package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
-import scala.collection.AbstractIterator
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.Fuzzy
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.util.control.NonFatal
-import scala.meta.internal.mtags.MtagsEnrichments._
 
 class CompletionProvider(val compiler: PresentationCompiler) {
   import compiler._

@@ -36,6 +36,11 @@ object Library {
             "2.5.9"
           ),
           new Dependency(
+            "com.typesafe.akka",
+            "akka-stream_2.12",
+            "2.5.9"
+          ),
+          new Dependency(
             "org.apache.spark",
             "spark-sql_2.11",
             "2.2.1"
