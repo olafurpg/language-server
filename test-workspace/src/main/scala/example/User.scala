@@ -1,8 +1,15 @@
-package example
+package myexample
 
-import scala.collection.JavaConverters._
-
+object App9 {}
+object App8 {}
+object App7 {}
+object App6 {}
+object App5 {}
+object App4 {}
+object App3 {}
+object App2 {}
 object App {
-  new scala.collection.immutable.HashSet.HashTrieSet[Int]()
-  List(1).asJava
+  val x = 1
 }
+
+class CoolioSync

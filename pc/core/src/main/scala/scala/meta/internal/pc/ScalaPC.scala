@@ -24,7 +24,7 @@ class ScalaPC(
     options: Seq[String],
     indexer: SymbolIndexer,
     search: ClasspathSearch,
-    private var _global: PresentationCompiler = null
+    var _global: PresentationCompiler = null
 ) extends PC {
   override def withIndexer(indexer: SymbolIndexer): PC =
     new ScalaPC(classpath, options, indexer, search, global)

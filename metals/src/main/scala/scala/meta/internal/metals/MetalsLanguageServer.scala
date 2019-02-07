@@ -112,6 +112,13 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params)
     )
   )
+  private val compilers: Compilers = register(
+    new Compilers(
+      buildTargets,
+      buffers,
+      symbolIndexer
+    )
+  )
   private val indexingPromise = Promise[Unit]()
 
   // These can't be instantiated until we know the workspace root directory.
@@ -128,7 +135,6 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
-  private var completionProvider: CompletionProvider = _
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
@@ -191,7 +197,8 @@ class MetalsLanguageServer(
       buildTargets,
       config,
       statusBar,
-      time
+      time,
+      compilers
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -242,11 +249,6 @@ class MetalsLanguageServer(
       config.icons,
       statusBar,
       warnings
-    )
-    completionProvider = new CompletionProvider(
-      buildTargets,
-      buffers,
-      symbolIndexer
     )
     formattingProvider = new FormattingProvider(
       workspace,
@@ -654,7 +656,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
     CompletableFutures.computeAsync { _ =>
-      completionProvider.hover(params).orNull
+      compilers.hover(params).orNull
     }
 
   @JsonRequest("textDocument/documentHighlight")
@@ -788,7 +790,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CompletableFutures.computeAsync { _ =>
-      completionProvider.completions(params).orNull
+      compilers.completions(params).orNull
     }
 
   @JsonRequest("textDocument/signatureHelp")
@@ -796,7 +798,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CompletableFutures.computeAsync { _ =>
-      completionProvider.signatureHelp(params).orNull
+      compilers.signatureHelp(params).orNull
     }
 
   @JsonRequest("textDocument/codeAction")

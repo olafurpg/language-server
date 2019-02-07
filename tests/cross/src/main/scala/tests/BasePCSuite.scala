@@ -4,6 +4,7 @@ import com.geirsson.coursiersmall.CoursierSmall
 import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
+import java.nio.file.Path
 import java.nio.file.Paths
 import org.eclipse.lsp4j.MarkupContent
 import scala.meta.internal.metals.JdkSources
@@ -16,18 +17,20 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
-  val scalaLibrary = this.getClass.getClassLoader
-    .asInstanceOf[URLClassLoader]
-    .getURLs
-    .iterator
-    .map(url => Paths.get(url.toURI))
-    .filter { p =>
-      p.getFileName.toString.contains("scala-library")
-    }
-    .toSeq
+  val scalaLibrary: Seq[Path] =
+    this.getClass.getClassLoader
+      .asInstanceOf[URLClassLoader]
+      .getURLs
+      .iterator
+      .map(url => Paths.get(url.toURI))
+      .filter { p =>
+        p.getFileName.toString.contains("scala-library")
+      }
+      .toSeq
+  def extraClasspath: List[Path] = Nil
+  val myclasspath: List[Path] = extraClasspath ++ scalaLibrary.toList
   val index = OnDemandSymbolIndex()
   val indexer = new MetalsSymbolIndexer(index)
-  val myclasspath = scalaLibrary.toList
   val search = ClasspathSearch.fromClasspath(myclasspath, _ => 0)
   val pc = new ScalaPC(myclasspath, Nil, indexer, search)
 
