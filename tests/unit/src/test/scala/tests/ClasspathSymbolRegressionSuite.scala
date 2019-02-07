@@ -105,7 +105,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |java.io.File Class
        |java.nio.file.Files Class
        |java.nio.file.Files#FileTypeDetectors Class
-       |javax.annotation.processing.Filer Interface
        |org.apache.hadoop.io.file.tfile.TFile Class
        |org.apache.hadoop.io.file.tfile.TFile#TFileIndex Class
        |org.apache.hadoop.io.file.tfile.TFile#TFileIndexEntry Class
@@ -115,6 +114,12 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.jute.compiler.JFile Class
        |org.apache.parquet.Files Class
        |scala.meta.internal.io.FileIO Object
+       |scala.reflect.internal.util.BatchSourceFile Class
+       |scala.reflect.internal.util.NoFile Object
+       |scala.reflect.internal.util.NoSourceFile Object
+       |scala.reflect.internal.util.ScriptSourceFile Class
+       |scala.reflect.internal.util.ScriptSourceFile Object
+       |scala.reflect.internal.util.SourceFile Class
        |scala.reflect.io.File Class
        |scala.reflect.io.File Object
        |sourcecode.File Class
@@ -142,7 +147,9 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
 
   check(
     "Implicits",
-    """|com.fasterxml.jackson.module.scala.util.Implicits Object
+    """|akka.stream.extra.Implicits Object
+       |akka.stream.scaladsl.GraphDSL.Implicits Object
+       |com.fasterxml.jackson.module.scala.util.Implicits Object
        |fastparse.core.Implicits Object
        |kafka.javaapi.Implicits Object
        |kafka.javaapi.MetadataListImplicits Object
@@ -153,8 +160,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.LowPriorityImplicits Class
        |scala.collection.convert.ToJavaImplicits Interface
        |scala.collection.convert.ToScalaImplicits Interface
-       |scala.math.Fractional.ExtraImplicits Interface
-       |scala.math.Fractional.Implicits Object
        |scala.math.Integral.ExtraImplicits Interface
        |scala.math.Integral.Implicits Object
        |scala.math.LowPriorityOrderingImplicits Interface
