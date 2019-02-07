@@ -39,7 +39,7 @@ abstract class BaseCompletionBench {
       "scopeOpen" -> SourceCompletion(
         "A.scala",
         "import Java\n",
-        "import Jav".length
+        "import Java".length
       ),
       "scopeDeep" -> SourceCompletion.fromPath(
         "UnzipWithApply.scala",
@@ -51,7 +51,7 @@ abstract class BaseCompletionBench {
       )
     )
   }
-  @Param(Array("openScope", "extraLargeMember"))
+  @Param(Array("scopeOpen", "scopeDeep", "memberDeep"))
   var completion: String = _
 
   @Benchmark

@@ -56,7 +56,6 @@ class ScalaPC(
         .asInstanceOf[StoreReporter]
         .infos
         .iterator
-        .filterNot(_.msg.contains("_CURSOR_"))
         .map(
           info =>
             new StringBuilder()
@@ -71,6 +70,7 @@ class ScalaPC(
               .append(info.pos.lineCaret)
               .toString
         )
+        .filterNot(_.contains("_CURSOR_"))
         .toList
         .asJava
     }
