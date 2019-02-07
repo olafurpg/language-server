@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Hover
@@ -10,7 +9,6 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.pc.ScalaPC
 import scala.meta.pc.PC
 import scala.meta.pc.SymbolIndexer
 
@@ -44,15 +42,17 @@ class Compilers(
 
   private def withPC[T](
       params: TextDocumentPositionParams
-  )(fn: (ScalaPC, Position) => T): Option[T] = {
+  )(fn: (PC, Position) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     for {
       target <- buildTargets.inverseSources(path)
+      info <- buildTargets.info(target)
+      scala <- info.asScalaBuildTarget
       scalac <- buildTargets.scalacOptions(target)
     } yield {
       val compiler = cache.getOrElseUpdate(
         target,
-        BuildTargetCompiler.fromClasspath(scalac, indexer)
+        BuildTargetCompiler.fromClasspath(scalac, scala, indexer)
       )
       val input = path.toInputFromBuffers(buffers)
       val pos = params.getPosition.toMeta(input)
