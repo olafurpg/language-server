@@ -14,7 +14,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    438,
+    439,
     compat = Map("2.11" -> 438)
   )
 

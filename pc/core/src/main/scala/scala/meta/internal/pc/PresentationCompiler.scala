@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import java.nio.CharBuffer
 import scala.collection.concurrent.TrieMap
 import scala.language.implicitConversions
 import scala.meta.internal.metals.ClasspathSearch
