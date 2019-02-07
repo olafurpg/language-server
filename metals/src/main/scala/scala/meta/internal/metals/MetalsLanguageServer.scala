@@ -244,6 +244,7 @@ class MetalsLanguageServer(
       warnings
     )
     completionProvider = new CompletionProvider(
+      workspace,
       buildTargets,
       buffers,
       symbolIndexer

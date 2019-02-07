@@ -13,7 +13,6 @@ import scala.tools.nsc.Settings
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.PackageIndex
-import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolIndexer
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
@@ -24,25 +23,38 @@ class ScalaPC(
     options: Seq[String],
     indexer: SymbolIndexer,
     search: ClasspathSearch,
+    libmanager: Option[LibraryManager],
     private var _global: PresentationCompiler = null
 ) extends PC {
+  override def withWorkspace(workspace: Path): PC = {
+    new ScalaPC(
+      classpath,
+      options,
+      indexer,
+      search,
+      Some(LibraryManager(workspace)),
+      global
+    )
+  }
   override def withIndexer(indexer: SymbolIndexer): PC =
-    new ScalaPC(classpath, options, indexer, search, global)
+    new ScalaPC(classpath, options, indexer, search, libmanager, global)
   def this() =
-    this(Nil, Nil, new EmptySymbolIndexer, ClasspathSearch.empty)
+    this(Nil, Nil, new EmptySymbolIndexer, ClasspathSearch.empty, null)
   override def newInstance(
       classpath: util.List[Path],
       options: util.List[String]
   ): PC = {
-    new ScalaPC(classpath.asScala, options.asScala, indexer, search)
+    new ScalaPC(classpath.asScala, options.asScala, indexer, search, libmanager)
   }
+
   def global: PresentationCompiler = {
     if (_global == null) {
       _global = ScalaPC.newCompiler(
         classpath,
         options,
         indexer,
-        search
+        search,
+        libmanager
       )
     }
     _global.reporter.reset()
@@ -138,26 +150,40 @@ object ScalaPC {
       classpaths: Seq[Path],
       scalacOptions: Seq[String],
       indexer: SymbolIndexer,
-      search: ClasspathSearch
+      search: ClasspathSearch,
+      libmanager: Option[LibraryManager]
   ): PresentationCompiler = {
     val classpath = classpaths.mkString(File.pathSeparator)
     val options = scalacOptions.iterator.filterNot { o =>
       o.contains("semanticdb") ||
       o.contains("scalajs")
     }.toList
+    val reporter = new StoreReporter
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.outputDirs.setSingleOutput(vd)
-    settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
-    if (classpath.isEmpty) {
-      settings.usejavacp.value = true
-    }
     val (isSuccess, unprocessed) =
       settings.processArguments(options, processAll = true)
     require(isSuccess, unprocessed)
     require(unprocessed.isEmpty, unprocessed)
-    new PresentationCompiler(settings, new StoreReporter, indexer, search)
+    libmanager match {
+      case Some(value) =>
+        val allJars = PackageIndex.bootClasspath.map(_.toNIO) ++ classpaths
+        InMemoryGlobal.createInteractive(
+          settings,
+          reporter,
+          value.buildFlatFileSystem(allJars),
+          indexer,
+          search
+        )
+      case None =>
+        if (classpath.isEmpty) {
+          settings.usejavacp.value = true
+        }
+        settings.classpath.value = classpath
+        new PresentationCompiler(settings, reporter, indexer, search)
+    }
   }
 
   def ask[A](f: Response[A] => Unit): Response[A] = {

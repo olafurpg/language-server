@@ -123,6 +123,10 @@ lazy val pc = project
     crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
+      "org.xerial.snappy" % "snappy-java" % "1.1.7.2",
+      "org.xerial.larray" %% "larray" % "0.4.1",
+      "com.outr" %% "scribe" % "2.6.0",
+      "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
       "com.lihaoyi" %% "pprint" % "0.5.3",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full

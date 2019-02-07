@@ -1,7 +1,9 @@
 package bench
 
+import java.nio.file.Files
 import scala.collection.JavaConverters._
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -11,7 +13,10 @@ import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.pc.LibraryManager
 import scala.meta.internal.pc.ScalaPC
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItems
@@ -23,14 +28,23 @@ import tests.SimpleJavaSymbolIndexer
 abstract class BaseCompletionBench {
   var libraries: List[Library] = Nil
   var completions: Map[String, SourceCompletion] = Map.empty
+  var workspace: Path = _
 
   def runSetup(): Unit
+  def runTeardown(): Unit = {}
 
   def presentationCompiler(): PC
 
   @Setup
   def setup(): Unit = {
+    workspace = Files.createTempDirectory("metals")
     runSetup()
+  }
+
+  @TearDown
+  def teardown(): Unit = {
+    RecursivelyDelete(AbsolutePath(workspace))
+    runTeardown()
   }
 
   def downloadLibraries(): Unit = {
@@ -77,11 +91,18 @@ abstract class BaseCompletionBench {
   }
   def newIndexer() = new SimpleJavaSymbolIndexer(sources)
 
+  def newLibmanager(): LibraryManager = {
+    val libmanager = LibraryManager(workspace)
+    val _ = libmanager.buildFlatFileSystem(classpath) // pre-compute manager
+    libmanager
+  }
+
   def newPC(
       search: ClasspathSearch = newSearch(),
-      indexer: SimpleJavaSymbolIndexer = newIndexer()
+      indexer: SimpleJavaSymbolIndexer = newIndexer(),
+      libmanager: Option[LibraryManager] = None
   ): ScalaPC = {
-    new ScalaPC(classpath, Nil, indexer, search)
+    new ScalaPC(classpath, Nil, indexer, search, libmanager)
   }
 
   def scopeComplete(pc: PC): CompletionItems = {
@@ -106,6 +127,17 @@ class CachedSearchAndCompilerCompletionBench extends BaseCompletionBench {
   override def presentationCompiler(): PC = pc
 }
 
+class CachedSearchAndMemoryCompilerCompletionBench extends BaseCompletionBench {
+  var pc: PC = _
+
+  override def runSetup(): Unit = {
+    downloadLibraries()
+    pc = newPC(libmanager = Some(newLibmanager()))
+  }
+
+  override def presentationCompiler(): PC = pc
+}
+
 class CachedSearchCompletionBench extends BaseCompletionBench {
   var pc: PC = _
   var cachedSearch: ClasspathSearch = _
@@ -116,5 +148,21 @@ class CachedSearchCompletionBench extends BaseCompletionBench {
   }
 
   override def presentationCompiler(): PC = newPC(cachedSearch)
+
+}
+
+class CachedSearchMemoryCompilerCompletionBench extends BaseCompletionBench {
+  var pc: PC = _
+  var cachedSearch: ClasspathSearch = _
+  var libmanager: LibraryManager = _
+
+  override def runSetup(): Unit = {
+    downloadLibraries()
+    libmanager = newLibmanager()
+    cachedSearch = newSearch()
+  }
+
+  override def presentationCompiler(): PC =
+    newPC(search = cachedSearch, libmanager = Some(libmanager))
 
 }

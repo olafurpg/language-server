@@ -4,6 +4,7 @@ import com.geirsson.coursiersmall.CoursierSmall
 import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Paths
 import org.eclipse.lsp4j.MarkupContent
 import scala.meta.internal.metals.JdkSources
@@ -13,6 +14,8 @@ import scala.meta.internal.pc.ScalaPC
 import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.pc.LibraryManager
 import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
@@ -29,7 +32,10 @@ abstract class BasePCSuite extends BaseSuite {
   val indexer = new MetalsSymbolIndexer(index)
   val myclasspath = scalaLibrary.toList
   val search = ClasspathSearch.fromClasspath(myclasspath, _ => 0)
-  val pc = new ScalaPC(myclasspath, Nil, indexer, search)
+  val workspace = Files.createTempDirectory("metals")
+  pprint.log(workspace)
+  val libmanager = LibraryManager(workspace)
+  val pc = new ScalaPC(myclasspath, Nil, indexer, search, Some(libmanager))
 
   override def beforeAll(): Unit = {
     index.addSourceJar(JdkSources().get)
@@ -53,6 +59,7 @@ abstract class BasePCSuite extends BaseSuite {
   }
   override def afterAll(): Unit = {
     pc.shutdown()
+//    RecursivelyDelete(AbsolutePath(workspace))
   }
   def params(code: String): (String, Int) = {
     val code2 = code.replaceAllLiterally("@@", "")
