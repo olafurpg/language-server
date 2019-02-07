@@ -336,23 +336,23 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       search.search(query).foreach { classfile =>
         candidates.add(classfile)
       }
-      def isAccessible(sym: Symbol): Boolean = {
-        sym.info // needed to fill `privateWithin`
-        sym.privateWithin == NoSymbol
-      }
       for {
         top <- candidates.pollingIterator
-        sym <- toStaticSymbols(top)
-        if sym != NoSymbol
-        if isAccessible(sym)
+        sym <- loadSymbolFromClassfile(top)
       } yield new WorkspaceMember(sym)
     }
   }
 
-  private def toStaticSymbols(classfile: Classfile): List[Symbol] = {
+  private def loadSymbolFromClassfile(classfile: Classfile): List[Symbol] = {
     try {
       val pkgName = classfile.pkg.stripSuffix("/").replace('/', '.')
       val pkg = rootMirror.staticPackage(pkgName)
+      def isAccessible(sym: Symbol): Boolean = {
+        sym != NoSymbol && {
+          sym.info // needed to fill complete symbol
+          sym.isPublic
+        }
+      }
       val member = classfile.filename
         .stripSuffix(".class")
         .split("\\$")
@@ -361,16 +361,15 @@ class CompletionProvider(val compiler: PresentationCompiler) {
             accum
           case (accum, name) =>
             accum.flatMap {
-              case NoSymbol => Nil
-              // Can't import from type members
-              case sym if sym.isType => Nil
+              case sym if !isAccessible(sym) || !sym.isModuleOrModuleClass =>
+                Nil
               case sym =>
                 val term = sym.info.member(TermName(name))
                 val tpe = sym.info.member(TypeName(name))
                 term :: tpe :: Nil
             }
         }
-      member
+      member.filter(sym => isAccessible(sym))
     } catch {
       case NonFatal(e) =>
         pprint.log(e)

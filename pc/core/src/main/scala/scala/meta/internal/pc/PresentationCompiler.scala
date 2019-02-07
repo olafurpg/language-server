@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.nio.CharBuffer
 import scala.collection.concurrent.TrieMap
 import scala.language.implicitConversions
 import scala.meta.internal.metals.ClasspathSearch
@@ -91,7 +92,5 @@ class PresentationCompiler(
   // Only needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
-//  ???
-//    CharBuffer.wrap(chrs, name.start, name.length())
 
 }

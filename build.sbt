@@ -76,6 +76,7 @@ inThisBuild(
 )
 
 cancelable.in(Global) := true
+crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
@@ -109,8 +110,8 @@ lazy val interfaces = project
   .in(file("pc/interfaces"))
   .settings(
     moduleName := "pc-interfaces",
+    autoScalaLibrary := false,
     libraryDependencies ++= List(
-      "com.lihaoyi" %% "pprint" % "0.5.3",
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0"
     ),
     crossVersion := CrossVersion.disabled
@@ -122,6 +123,7 @@ lazy val pc = project
     crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
+      "com.lihaoyi" %% "pprint" % "0.5.3",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
     )

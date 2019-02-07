@@ -14,7 +14,8 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    439
+    438,
+    compat = Map("2.11" -> 438)
   )
 
   check(
@@ -27,13 +28,13 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |java.util.List java.util
        |scala.collection.immutable.List scala.collection.immutable
        |List: collection.immutable.List.type
-       |scala.collection.immutable.RedBlackTree.NList scala.collection.immutable.RedBlackTree
        |scala.collection.immutable.ListMap scala.collection.immutable
        |scala.collection.mutable.ListMap scala.collection.mutable
        |scala.collection.immutable.ListSet scala.collection.immutable
        |java.awt.peer.ListPeer java.awt.peer
        |org.w3c.dom.NameList org.w3c.dom
        |org.w3c.dom.NodeList org.w3c.dom
+       |java.util.ArrayList java.util
        |""".stripMargin
   )
 
@@ -90,7 +91,10 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  Map.empty[Int, String].getOrEl@@
       |}""".stripMargin,
     """|getOrElse[V1 >: String](key: Int,default: => V1): V1
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" -> "getOrElse[B1 >: String](key: Int,default: => B1): B1"
+    )
   )
 
   check(
@@ -224,7 +228,13 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |scala.collection.JavaConversions scala.collection
        |scala.concurrent.JavaConversions scala.concurrent
        |scala.collection.convert.AsJavaConverters scala.collection.convert
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" -> """|scala.collection.JavaConverters scala.collection
+                   |scala.collection.JavaConversions scala.collection
+                   |scala.concurrent.JavaConversions scala.concurrent
+                   |""".stripMargin
+    )
   )
 
   check(
