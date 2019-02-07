@@ -128,50 +128,51 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
     }
   }
 
-  def toMarkdown(docstring: String): String = {
-    val comment = ScaladocParser.parseAtSymbol(docstring)
-    val out = new StringBuilder()
-    def loop(i: Inline): Unit = i match {
-      case Chain(items) =>
-        items.foreach(loop)
-      case Italic(text) =>
-        out.append('*')
-        loop(text)
-        out.append('*')
-      case Bold(text) =>
-        out.append("**")
-        loop(text)
-        out.append("**")
-      case Underline(text) =>
-        out.append("_")
-        loop(text)
-        out.append("_")
-      case Superscript(text) =>
-        loop(text)
-      case Subscript(text) =>
-        loop(text)
-      case Link(target, title) =>
-        out.append("[")
-        loop(title)
-        out
-          .append("](")
-          .append(target)
-          .append(")")
-      case Monospace(text) =>
-        out.append("`")
-        loop(text)
-        out.append("`")
-      case Text(text) =>
-        out.append(text)
-      case _: EntityLink =>
-      case HtmlTag(data) =>
-        out.append(data)
-      case Summary(text) =>
-        loop(text)
-    }
-    loop(comment.short)
-    out.toString().trim
-  }
+  def toMarkdown(docstring: String): String = ""
+//  def toMarkdown(docstring: String): String = {
+//    val comment = ScaladocParser.parseAtSymbol(docstring)
+//    val out = new StringBuilder()
+//    def loop(i: Inline): Unit = i match {
+//      case Chain(items) =>
+//        items.foreach(loop)
+//      case Italic(text) =>
+//        out.append('*')
+//        loop(text)
+//        out.append('*')
+//      case Bold(text) =>
+//        out.append("**")
+//        loop(text)
+//        out.append("**")
+//      case Underline(text) =>
+//        out.append("_")
+//        loop(text)
+//        out.append("_")
+//      case Superscript(text) =>
+//        loop(text)
+//      case Subscript(text) =>
+//        loop(text)
+//      case Link(target, title) =>
+//        out.append("[")
+//        loop(title)
+//        out
+//          .append("](")
+//          .append(target)
+//          .append(")")
+//      case Monospace(text) =>
+//        out.append("`")
+//        loop(text)
+//        out.append("`")
+//      case Text(text) =>
+//        out.append(text)
+//      case _: EntityLink =>
+//      case HtmlTag(data) =>
+//        out.append(data)
+//      case Summary(text) =>
+//        loop(text)
+//    }
+//    loop(comment.short)
+//    out.toString().trim
+//  }
 
   def findLeadingDocstring(tokens: Tokens, start: Int): Option[String] =
     if (start < 0) None

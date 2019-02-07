@@ -100,13 +100,13 @@ object Fuzzy {
   }
 
   private def lastIndex(symbol: CharSequence): Int = {
-    val end = symbol.length() - (if (endsWith(symbol, ".class")) ".class".length
-                                 else 0)
-    var i = 0
-    while (i < end && isDelimiter(symbol.charAt(end - i))) {
-      i += 1
+    var end = symbol.length() - (if (endsWith(symbol, ".class"))
+                                   ".class".length
+                                 else 1)
+    while (end >= 0 && isDelimiter(symbol.charAt(end))) {
+      end -= 1
     }
-    math.max(0, end - i) + 1
+    end + 1
   }
 
   def isDelimiter(ch: Char): Boolean = ch match {
