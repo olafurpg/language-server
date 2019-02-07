@@ -1,15 +1,16 @@
 package myexample
 
-object App9 {}
-object App8 {}
-object App7 {}
-object App6 {}
-object App5 {}
-object App4 {}
-object App3 {}
-object App2 {}
+import scala.collection.JavaConverters._
+
 object App {
+  import scala.collection.concurrent.TrieMap
   val x = 1
+  val n = scala.collection.concurrent.TrieMap.empty[Int, String].get(1)
+  TrieMap.empty
+  println(n)
+  import myexample.CoolioSync.Inner
 }
 
-class CoolioSync
+object CoolioSync {
+  class Inner
+}
