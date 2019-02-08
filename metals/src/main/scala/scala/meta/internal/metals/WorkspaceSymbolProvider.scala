@@ -4,7 +4,6 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util.PriorityQueue
 import java.util.concurrent.CancellationException
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
@@ -14,7 +13,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
-import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -34,10 +32,6 @@ final class WorkspaceSymbolProvider(
     extends SymbolSearch {
   val inWorkspace = TrieMap.empty[Path, CompressedSourceIndex]
   var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
-  // The maximum number of non-exact matches that we return for classpath queries.
-  // Generic queries like "Str" can returns several thousand results, so we need
-  // to limit it at some arbitrary point. Exact matches are always included.
-  private val maxNonExactMatches = 10
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -53,7 +47,10 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  override def search(query: String, visitor: SymbolSearchVisitor): Unit = {
+  override def search(
+      query: String,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
     search(WorkspaceSymbolQuery.exact(query), visitor)
   }
 
@@ -106,9 +103,9 @@ final class WorkspaceSymbolProvider(
   private def search(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor
-  ): Unit = {
-    classpathSearch(query, visitor)
+  ): SymbolSearch.Result = {
     workspaceSearch(query, visitor)
+    inDependencies.search(query, visitor)
   }
 
   private def workspaceSearch(
@@ -127,34 +124,6 @@ final class WorkspaceSymbolProvider(
         symbol.kind,
         symbol.range
       )
-    }
-  }
-  private def classpathSearch(
-      query: WorkspaceSymbolQuery,
-      visitor: SymbolSearchVisitor
-  ): Unit = {
-    val classfiles = new PriorityQueue[Classfile](
-      (a, b) => Integer.compare(a.filename.length, b.filename.length)
-    )
-    for {
-      classfile <- inDependencies.search(
-        query,
-        pkg => visitor.preVisitPackage(pkg),
-        () => visitor.isCancelled
-      )
-    } {
-      classfiles.add(classfile)
-    }
-    var nonExactMatches = 0
-    for {
-      hit <- classfiles.pollingIterator
-      if !visitor.isCancelled
-      if nonExactMatches < maxNonExactMatches || hit.isExact(query)
-    } {
-      if (!hit.isExact(query)) {
-        nonExactMatches += 1
-      }
-      visitor.visitClassfile(hit.pkg, hit.filename)
     }
   }
 

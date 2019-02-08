@@ -14,6 +14,7 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
+import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.util.control.NonFatal
 
@@ -75,13 +76,16 @@ class CompletionProvider(val compiler: PresentationCompiler) {
 
   case class InterestingMembers(
       results: List[Member],
-      workspaceHits: Int,
-      isIncomplete: Boolean
-  )
+      searchResult: SymbolSearch.Result
+  ) {
+    def isIncomplete = searchResult == SymbolSearch.Result.INCOMPLETE
+  }
 
   private def filterInteresting(
       completions: List[Member],
-      workspace: Iterator[Member]
+      kind: LookupKind,
+      query: String,
+      pos: Position
   ): InterestingMembers = {
     val isUninterestingSymbol = Set[Symbol](
       // the methods == != ## are arguably "interesting" but they're here becuase
@@ -134,16 +138,14 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       }
     }
     completions.foreach(visit)
-    var workspaceHits = 0
-    while (workspaceHits < maxWorkspaceSymbolResults && workspace.hasNext) {
-      val isAdded = visit(workspace.next())
-      if (isAdded) workspaceHits += 1
-    }
-    InterestingMembers(
-      buf.result(),
-      workspaceHits,
-      isIncomplete = workspace.hasNext
-    )
+    val searchResults =
+      if (kind == LookupKind.Scope) {
+        workspaceSymbolListMembers(query, pos, visit)
+      } else {
+        SymbolSearch.Result.COMPLETE
+      }
+
+    InterestingMembers(buf.result(), searchResults)
   }
 
   private def isFunction(symbol: Symbol): Boolean = {
@@ -209,7 +211,11 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     def expected(e: Throwable) = {
       e.printStackTrace()
       println(s"Expected error '${e.getMessage}'")
-      (None, LookupKind.None, InterestingMembers(Nil, 0, isIncomplete = false))
+      (
+        None,
+        LookupKind.None,
+        InterestingMembers(Nil, SymbolSearch.Result.COMPLETE)
+      )
     }
     try {
       val completions = completionsAt(position)
@@ -224,13 +230,12 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         case _ =>
           LookupKind.None
       }
-      val workspace =
-        if (kind == LookupKind.Scope) {
-          workspaceSymbolListMembers(completions.name.toString, position)
-        } else {
-          Iterator.empty
-        }
-      val items = filterInteresting(matchingResults, workspace)
+      val items = filterInteresting(
+        matchingResults,
+        kind,
+        completions.name.toString,
+        position
+      )
       val qual = completions match {
         case t: CompletionResult.TypeMembers =>
           Option(t.qualifier.tpe)
@@ -285,20 +290,29 @@ class CompletionProvider(val compiler: PresentationCompiler) {
 
   private def workspaceSymbolListMembers(
       query: String,
-      pos: Position
-  ): Iterator[Member] = {
-    if (query.isEmpty) {
-      Iterator.empty
-    } else {
+      pos: Position,
+      visit: Member => Boolean
+  ): SymbolSearch.Result = {
+    if (query.isEmpty) SymbolSearch.Result.COMPLETE
+    else {
       val context = doLocateContext(pos)
-      val visitor =
-        new CompilerSearchVisitor(query, compiler.metalsContainsPackage)
+      val visitor = new CompilerSearchVisitor(
+        query,
+        compiler.metalsContainsPackage,
+        top => {
+          var added = 0
+          for {
+            sym <- loadSymbolFromClassfile(top)
+            if context.scope.lookup(sym.name) == NoSymbol
+          } {
+            if (visit(new WorkspaceMember(sym))) {
+              added += 1
+            }
+          }
+          added
+        }
+      )
       search.search(query, visitor)
-      for {
-        top <- visitor.candidates.pollingIterator
-        sym <- loadSymbolFromClassfile(top)
-        if context.scope.lookup(sym.name) == NoSymbol
-      } yield new WorkspaceMember(sym)
     }
   }
 
@@ -314,18 +328,26 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           sym.isPublic
         }
       }
-      val member = classfile.names.foldLeft(List[Symbol](pkg)) {
+      val members = classfile.names.foldLeft(List[Symbol](pkg)) {
         case (accum, desc) =>
           accum.flatMap {
             case sym if !isAccessible(sym) || !sym.isModuleOrModuleClass =>
               Nil
             case sym =>
-              if (desc.isTerm) sym.info.member(TermName(desc.value)) :: Nil
-              else if (desc.isType) sym.info.member(TypeName(desc.value)) :: Nil
-              else Nil
+              if (desc.isTypeParameter) {
+                sym.info.member(TermName(desc.value)) ::
+                  sym.info.member(TypeName(desc.value)) ::
+                  Nil
+              } else if (desc.isTerm) {
+                sym.info.member(TermName(desc.value)) :: Nil
+              } else if (desc.isType) {
+                sym.info.member(TypeName(desc.value)) :: Nil
+              } else {
+                Nil
+              }
           }
       }
-      member.filter(sym => isAccessible(sym))
+      members.filter(sym => isAccessible(sym))
     } catch {
       case NonFatal(e) =>
         pprint.log(e)

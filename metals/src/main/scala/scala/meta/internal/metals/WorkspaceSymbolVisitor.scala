@@ -46,7 +46,7 @@ class WorkspaceSymbolVisitor(
       symbol: String,
       kind: SymbolKind,
       range: l.Range
-  ): Unit = {
+  ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
     results += new l.SymbolInformation(
       desc.name.value,
@@ -54,8 +54,10 @@ class WorkspaceSymbolVisitor(
       new l.Location(path.toUri.toString, range),
       owner.replace('/', '.')
     )
+    1
   }
-  override def visitClassfile(pkg: String, filename: String): Unit = {
+  override def visitClassfile(pkg: String, filename: String): Int = {
+    var added = 0
     for {
       defn <- definition(pkg, filename, index)
       if !isVisited(defn.path)
@@ -65,9 +67,11 @@ class WorkspaceSymbolVisitor(
       SemanticdbDefinition.foreach(input) { defn =>
         if (query.matches(defn.info)) {
           results += defn.toLSP(uri)
+          added += 1
         }
       }
     }
+    added
   }
   override def isCancelled: Boolean = token.isCancelled
 }

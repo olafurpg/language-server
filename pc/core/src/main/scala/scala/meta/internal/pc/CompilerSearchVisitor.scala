@@ -4,21 +4,21 @@ import java.nio.file.Path
 import scala.meta.pc.SymbolSearchVisitor
 import org.eclipse.{lsp4j => l}
 
-class CompilerSearchVisitor(query: String, containsPackage: String => Boolean)
-    extends SymbolSearchVisitor {
-  val candidates = new java.util.PriorityQueue[WorkspaceCandidate](
-    new WorkspaceCandidate.Comparator(query)
-  )
-  def visitClassfile(pkg: String, filename: String): Unit = {
-    candidates.add(WorkspaceCandidate.Classfile(pkg, filename))
+class CompilerSearchVisitor(
+    query: String,
+    containsPackage: String => Boolean,
+    visit: WorkspaceCandidate => Int
+) extends SymbolSearchVisitor {
+  def visitClassfile(pkg: String, filename: String): Int = {
+    visit(WorkspaceCandidate.Classfile(pkg, filename))
   }
   def visitWorkspaceSymbol(
       path: Path,
       symbol: String,
       kind: l.SymbolKind,
       range: l.Range
-  ): Unit = {
-    candidates.add(WorkspaceCandidate.Workspace(symbol))
+  ): Int = {
+    visit(WorkspaceCandidate.Workspace(symbol))
   }
 
   override def preVisitPath(path: Path): Boolean = {
@@ -26,7 +26,8 @@ class CompilerSearchVisitor(query: String, containsPackage: String => Boolean)
     true
   }
   def preVisitPackage(pkg: String): Boolean = {
-    containsPackage(pkg)
+    // TODO come up with less hacky check, maybe staticPackageSymbol(..)
+    containsPackage(pkg.stripSuffix("/").replace('/', '.'))
   }
 
   override def isCancelled: Boolean = {

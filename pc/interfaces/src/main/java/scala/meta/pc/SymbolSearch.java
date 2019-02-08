@@ -1,5 +1,9 @@
 package scala.meta.pc;
 
 public interface SymbolSearch {
-    void search(String query, SymbolSearchVisitor visitor);
+    Result search(String query, SymbolSearchVisitor visitor);
+    enum Result {
+        COMPLETE,
+        INCOMPLETE
+    }
 }

@@ -3,15 +3,21 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.util
 import java.util.Comparator
+import java.util.PriorityQueue
 import scala.collection.concurrent.TrieMap
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 class ClasspathSearch(
     map: collection.Map[String, CompressedPackageIndex],
     packagePriority: String => Int
 ) extends SymbolSearch {
+  // The maximum number of non-exact matches that we return for classpath queries.
+  // Generic queries like "Str" can returns several thousand results, so we need
+  // to limit it at some arbitrary point. Exact matches are always included.
+  private val maxNonExactMatches = 10
   private val byReferenceThenAlphabeticalComparator = new Comparator[String] {
     override def compare(a: String, b: String): Int = {
       val byReference = -Integer.compare(packagePriority(a), packagePriority(b))
@@ -20,12 +26,48 @@ class ClasspathSearch(
     }
   }
 
-  override def search(query: String, visitor: SymbolSearchVisitor): Unit = {
-    search(
-      WorkspaceSymbolQuery.exact(query),
-      pkg => visitor.preVisitPackage(pkg),
-      () => visitor.isCancelled
-    )
+  override def search(
+      query: String,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
+    search(WorkspaceSymbolQuery.exact(query), visitor)
+  }
+
+  def search(
+      query: WorkspaceSymbolQuery,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
+    val classfiles =
+      new PriorityQueue[Classfile](new ClassfileComparator(query.query))
+    for {
+      classfile <- search(
+        query,
+        pkg => visitor.preVisitPackage(pkg),
+        () => visitor.isCancelled
+      )
+    } {
+      classfiles.add(classfile)
+    }
+    var nonExactMatches = 0
+    var searchResult = SymbolSearch.Result.COMPLETE
+    for {
+      hit <- classfiles.pollingIterator
+      continue = {
+        val result = !visitor.isCancelled &&
+          nonExactMatches < maxNonExactMatches || hit.isExact(query)
+        if (!result) {
+          searchResult = SymbolSearch.Result.INCOMPLETE
+        }
+        result
+      }
+      if continue
+    } {
+      val added = visitor.visitClassfile(hit.pkg, hit.filename)
+      if (added > 0 && !hit.isExact(query)) {
+        nonExactMatches += added
+      }
+    }
+    searchResult
   }
 
   private def packagesSortedByReferences(): Array[String] = {
@@ -34,11 +76,7 @@ class ClasspathSearch(
     packages
   }
 
-  def search(query: String): Iterator[Classfile] = {
-    search(WorkspaceSymbolQuery.exact(query), _ => true, () => false)
-  }
-
-  def search(
+  private def search(
       query: WorkspaceSymbolQuery,
       visitPackage: String => Boolean,
       isCancelled: () => Boolean

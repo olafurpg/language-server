@@ -17,8 +17,12 @@ object WorkspaceCandidate {
       extends WorkspaceCandidate {
     override def names: Seq[Descriptor] =
       filename
+        .stripSuffix(".class")
         .split('$')
-        .flatMap(s => Descriptor.Term(s) :: Descriptor.Type(s) :: Nil)
+        .iterator
+        .filterNot(_.isEmpty)
+        .map(s => Descriptor.TypeParameter(s))
+        .toList
     def nameString: String = filename
     override def packageString: String = pkg
     override def termCharacter: Char = '$'

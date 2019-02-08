@@ -53,7 +53,7 @@ object CompressedPackageIndex {
       // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
       // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
       // so we should try to keep each of them as small as possible.
-      val compressedMembers = Compression.compress(members.asScala)
+      val compressedMembers = Compression.compress(members.asScala.iterator)
       (pkg, CompressedPackageIndex(bloom, compressedMembers))
     }
   }
