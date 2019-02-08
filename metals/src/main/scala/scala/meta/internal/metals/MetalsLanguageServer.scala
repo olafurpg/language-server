@@ -192,7 +192,7 @@ class MetalsLanguageServer(
       config,
       statusBar,
       time,
-      compilers
+      id => compilers.didCompileSuccessfully(id)
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)

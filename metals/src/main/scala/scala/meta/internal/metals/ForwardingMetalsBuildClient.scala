@@ -27,7 +27,7 @@ final class ForwardingMetalsBuildClient(
     config: MetalsServerConfig,
     statusBar: StatusBar,
     time: Time,
-    compilers: Compilers
+    didCompileSuccessfully: BuildTargetIdentifier => Unit
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -119,7 +119,7 @@ final class ForwardingMetalsBuildClient(
         } {
           diagnostics.onFinishCompileBuildTarget(report.getTarget)
           if (!compilation.isNoOp && report.getErrors == 0) {
-            compilers.didCompileSuccessfully(report.getTarget)
+            didCompileSuccessfully(report.getTarget)
           }
           val target = report.getTarget
           compilation.promise.trySuccess(report)
