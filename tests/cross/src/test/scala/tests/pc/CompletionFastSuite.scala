@@ -269,6 +269,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |org.w3c.dom.xpath.XPathResult org.w3c.dom.xpath
        |java.awt.geom.PathIterator java.awt.geom
        |org.w3c.dom.xpath.XPathEvaluator org.w3c.dom.xpath
+       |org.w3c.dom.xpath.XPathException org.w3c.dom.xpath
        |""".stripMargin
   )
   check(
