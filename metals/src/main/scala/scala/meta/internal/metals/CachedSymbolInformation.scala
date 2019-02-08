@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.{semanticdb => s}
+import MetalsEnrichments._
 
 case class CachedSymbolInformation(
     symbol: String,
@@ -16,5 +18,12 @@ case class CachedSymbolInformation(
       new l.Location(uri, range),
       owner.replace('/', '.')
     )
+  }
+}
+
+object CachedSymbolInformation {
+  def fromDefn(defn: SemanticdbDefinition): CachedSymbolInformation = {
+    val range = defn.occ.range.getOrElse(s.Range())
+    CachedSymbolInformation(defn.info.symbol, defn.info.kind.toLSP, range.toLSP)
   }
 }

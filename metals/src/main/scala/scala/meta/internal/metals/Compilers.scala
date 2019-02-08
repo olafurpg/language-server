@@ -11,11 +11,13 @@ import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.pc.PC
 import scala.meta.pc.SymbolIndexer
+import scala.meta.pc.SymbolSearch
 
 class Compilers(
     buildTargets: BuildTargets,
     buffers: Buffers,
-    indexer: SymbolIndexer
+    indexer: SymbolIndexer,
+    search: SymbolSearch
 ) extends Cancelable {
 
   private val cache = TrieMap.empty[BuildTargetIdentifier, BuildTargetCompiler]
@@ -52,7 +54,7 @@ class Compilers(
     } yield {
       val compiler = cache.getOrElseUpdate(
         target,
-        BuildTargetCompiler.fromClasspath(scalac, scala, indexer)
+        BuildTargetCompiler.fromClasspath(scalac, scala, indexer, search)
       )
       val input = path.toInputFromBuffers(buffers)
       val pos = params.getPosition.toMeta(input)

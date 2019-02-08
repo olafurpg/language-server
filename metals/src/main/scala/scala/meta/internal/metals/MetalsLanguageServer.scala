@@ -112,13 +112,6 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params)
     )
   )
-  private val compilers: Compilers = register(
-    new Compilers(
-      buildTargets,
-      buffers,
-      symbolIndexer
-    )
-  )
   private val indexingPromise = Promise[Unit]()
 
   // These can't be instantiated until we know the workspace root directory.
@@ -139,6 +132,7 @@ class MetalsLanguageServer(
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
+  private var compilers: Compilers = _
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -283,6 +277,14 @@ class MetalsLanguageServer(
         if (mightContain) 0 else 1
       },
       interactiveSemanticdbs.toFileOnDisk
+    )
+    register(
+      new Compilers(
+        buildTargets,
+        buffers,
+        symbolIndexer,
+        workspaceSymbols
+      )
     )
     doctor = new Doctor(
       workspace,
@@ -1061,9 +1063,15 @@ class MetalsLanguageServer(
       val input = source.toInput
       val symbols = ArrayBuffer.empty[CachedSymbolInformation]
       SemanticdbDefinition.foreach(input) {
-        case SemanticdbDefinition(info, _, owner) =>
+        case SemanticdbDefinition(info, occ, owner) =>
           if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-            symbols += info.symbol
+            occ.range.foreach { range =>
+              symbols += CachedSymbolInformation(
+                info.symbol,
+                info.kind.toLSP,
+                range.toLSP
+              )
+            }
           }
           if (sourceDirectory.isDefined &&
             !info.symbol.isPackage &&
