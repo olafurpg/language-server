@@ -276,12 +276,12 @@ object Fuzzy {
       val ch = query.charAt(i)
       ch match {
         case '.' | '/' | '#' | '$' =>
-          result.add(CharBuffer.wrap(query, border, i))
+          result.add(new CharSequenceSlice(query, border, i))
           border = i + 1
         case _ =>
           if (ch.isUpper) {
             if (border != i) {
-              val exactName = CharBuffer.wrap(query, border, i)
+              val exactName = new CharSequenceSlice(query, border, i)
               result.add(exactName)
             }
             upper.append(ch)
@@ -293,7 +293,7 @@ object Fuzzy {
     query.last match {
       case '.' | '/' | '#' | '$' =>
       case _ =>
-        result.add(CharBuffer.wrap(query, border, query.length))
+        result.add(new CharSequenceSlice(query, border, query.length))
     }
     if (includeTrigrams) {
       result ++= new TrigramSubstrings(upper.toString)
