@@ -4,15 +4,11 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util
-import java.util.Comparator
 import java.util.PriorityQueue
 import java.util.concurrent.CancellationException
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -20,6 +16,8 @@ import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SymbolSearchVisitor
 import scala.util.control.NonFatal
 
 /**
@@ -32,7 +30,8 @@ final class WorkspaceSymbolProvider(
     val index: OnDemandSymbolIndex,
     isReferencedPackage: String => Int,
     fileOnDisk: AbsolutePath => AbsolutePath
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext)
+    extends SymbolSearch {
   val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
   var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
   // The maximum number of non-exact matches that we return for classpath queries.
@@ -99,6 +98,37 @@ final class WorkspaceSymbolProvider(
     )
   }
 
+  override def search(query: String, visitor: SymbolSearchVisitor): Unit = {
+    val query = WorkspaceSymbolQuery.exact(query)
+    classpathSearch(query, visitor)
+    // TODO: workspace search
+  }
+
+  def classpathSearch(
+      query: WorkspaceSymbolQuery,
+      visitor: SymbolSearchVisitor
+  ): Unit = {
+    val classfiles = new PriorityQueue[Classfile](
+      (a, b) => Integer.compare(a.filename.length, b.filename.length)
+    )
+    for {
+      classfile <- inDependencies.search(query, () => visitor.isCancelled)
+    } {
+      classfiles.add(classfile)
+    }
+    var nonExactMatches = 0
+    for {
+      hit <- classfiles.pollingIterator
+      if !visitor.isCancelled
+      if nonExactMatches < maxNonExactMatches || hit.isExact(query)
+    } {
+      if (!hit.isExact(query)) {
+        nonExactMatches += 1
+      }
+      visitor.visitClassfile(hit.pkg, hit.filename)
+    }
+  }
+
   private def searchUnsafe(
       textQuery: String,
       token: CancelChecker
@@ -134,37 +164,9 @@ final class WorkspaceSymbolProvider(
       }
     }
     def searchDependencySymbols(): Unit = {
-      val classfiles = new PriorityQueue[Classfile](
-        (a, b) => Integer.compare(a.filename.length, b.filename.length)
-      )
-      for {
-        classfile <- inDependencies.search(query, token)
-      } {
-        classfiles.add(classfile)
-      }
-      val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
-      val isVisited = mutable.Set.empty[AbsolutePath]
-      var nonExactMatches = 0
-      for {
-        hit <- classfiles.pollingIterator
-        _ = token.checkCanceled()
-        if nonExactMatches < maxNonExactMatches || hit.isExact(query)
-        defn <- hit.definition(index)
-        if !isVisited(defn.path)
-      } {
-        isVisited += defn.path
-        if (!hit.isExact(query)) {
-          nonExactMatches += 1
-        }
-        val input = defn.path.toInput
-        lazy val uri = fileOnDisk(defn.path).toURI.toString
-        SemanticdbDefinition.foreach(input) { defn =>
-          if (matches(defn.info)) {
-            classpathEntries += defn.toLSP(uri)
-          }
-        }
-      }
-      classpathEntries.foreach { s =>
+      val visitor = new WorkspaceSymbolVisitor(query, token, index, fileOnDisk)
+      classpathSearch(query, visitor)
+      visitor.classpathEntries.foreach { s =>
         result.add(s)
       }
     }

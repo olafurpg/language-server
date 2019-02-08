@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.util
 import java.util.Comparator
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import scala.collection.concurrent.TrieMap
 import scala.meta.io.AbsolutePath
 
@@ -24,20 +23,20 @@ class ClasspathSearch(
     util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
     packages
   }
+
   def search(query: String): Iterator[Classfile] = {
-    search(WorkspaceSymbolQuery.exact(query), new CancelChecker {
-      override def checkCanceled(): Unit = ()
-    })
+    search(WorkspaceSymbolQuery.exact(query), () => false)
   }
+
   def search(
       query: WorkspaceSymbolQuery,
-      token: CancelChecker
+      isCancelled: () => Boolean
   ): Iterator[Classfile] = {
     val packages = packagesSortedByReferences()
     for {
       pkg <- packages.iterator
+      if !isCancelled()
       compressed = map(pkg)
-      _ = token.checkCanceled()
       if query.matches(compressed.bloom)
       member <- compressed.members
       if member.endsWith(".class")

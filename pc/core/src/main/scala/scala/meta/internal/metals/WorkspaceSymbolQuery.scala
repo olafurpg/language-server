@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 
 import com.google.common.hash.BloomFilter
 import scala.meta.internal.metals.WorkspaceSymbolQuery.AlternativeQuery
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
 
 /**
  * A query for workspace/symbol.
@@ -21,6 +23,10 @@ case class WorkspaceSymbolQuery(
     alternatives.exists(_.matches(bloom))
   def matches(symbol: CharSequence): Boolean =
     alternatives.exists(_.matches(symbol, isTrailingDot))
+  def matches(info: SymbolInformation): Boolean = {
+    WorkspaceSymbolQuery.isRelevantKind(info.kind) &&
+    query.matches(info.symbol)
+  }
 }
 
 object WorkspaceSymbolQuery {
@@ -83,6 +89,15 @@ object WorkspaceSymbolQuery {
       } else {
         Array(AlternativeQuery(query))
       }
+    }
+  }
+  def isRelevantKind(kind: Kind): Boolean = {
+    kind match {
+      case Kind.OBJECT | Kind.PACKAGE_OBJECT | Kind.CLASS | Kind.TRAIT |
+          Kind.INTERFACE =>
+        true
+      case _ =>
+        false
     }
   }
 }
