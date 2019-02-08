@@ -5,17 +5,27 @@ import java.util
 import java.util.Comparator
 import scala.collection.concurrent.TrieMap
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SymbolSearchVisitor
 
 class ClasspathSearch(
     map: collection.Map[String, CompressedPackageIndex],
     packagePriority: String => Int
-) {
+) extends SymbolSearch {
   private val byReferenceThenAlphabeticalComparator = new Comparator[String] {
     override def compare(a: String, b: String): Int = {
       val byReference = -Integer.compare(packagePriority(a), packagePriority(b))
       if (byReference != 0) byReference
       else a.compare(b)
     }
+  }
+
+  override def search(query: String, visitor: SymbolSearchVisitor): Unit = {
+    search(
+      WorkspaceSymbolQuery.exact(query),
+      pkg => visitor.preVisitPackage(pkg),
+      () => visitor.isCancelled
+    )
   }
 
   private def packagesSortedByReferences(): Array[String] = {

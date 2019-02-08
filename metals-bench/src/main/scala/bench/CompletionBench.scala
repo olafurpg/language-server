@@ -16,6 +16,7 @@ import scala.meta.internal.pc.ScalaPC
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.PC
+import scala.meta.pc.SymbolSearch
 import tests.Library
 import tests.SimpleJavaSymbolIndexer
 
@@ -71,14 +72,14 @@ abstract class BaseCompletionBench {
     libraries.flatMap(_.classpath.entries.map(_.toNIO))
   def sources: List[AbsolutePath] = libraries.flatMap(_.sources.entries)
 
-  def newSearch(): ClasspathSearch = {
+  def newSearch(): SymbolSearch = {
     require(libraries.nonEmpty)
     ClasspathSearch.fromClasspath(classpath, _ => 0)
   }
   def newIndexer() = new SimpleJavaSymbolIndexer(sources)
 
   def newPC(
-      search: ClasspathSearch = newSearch(),
+      search: SymbolSearch = newSearch(),
       indexer: SimpleJavaSymbolIndexer = newIndexer()
   ): ScalaPC = {
     new ScalaPC(classpath, Nil, indexer, search)
@@ -108,7 +109,7 @@ class CachedSearchAndCompilerCompletionBench extends BaseCompletionBench {
 
 class CachedSearchCompletionBench extends BaseCompletionBench {
   var pc: PC = _
-  var cachedSearch: ClasspathSearch = _
+  var cachedSearch: SymbolSearch = _
 
   override def runSetup(): Unit = {
     downloadLibraries()
