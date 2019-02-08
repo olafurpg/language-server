@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.nio.file.Path
+import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
@@ -7,6 +9,9 @@ import scala.collection.mutable
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.SymbolSearchVisitor
@@ -278,63 +283,6 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   class WorkspaceMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 
-  class ClassfileComparator(query: String)
-      extends java.util.Comparator[Classfile] {
-    def characterCount(string: String, ch: Char): Int = {
-      var i = 0
-      var count = 0
-      while (i < string.length) {
-        if (string.charAt(i) == ch) {
-          count += 1
-        }
-        i += 1
-      }
-      count
-    }
-    override def compare(o1: Classfile, o2: Classfile): RunId = {
-      val byNameLength = Integer.compare(
-        Fuzzy.nameLength(o1.filename),
-        Fuzzy.nameLength(o2.filename)
-      )
-      if (byNameLength != 0) byNameLength
-      else {
-        val byInnerclassDepth = Integer.compare(
-          characterCount(o1.filename, '$'),
-          characterCount(o2.filename, '$')
-        )
-        if (byInnerclassDepth != 0) byInnerclassDepth
-        else {
-          val byFirstQueryCharacter = Integer.compare(
-            o1.filename.indexOf(query.head),
-            o2.filename.indexOf(query.head)
-          )
-          if (byFirstQueryCharacter != 0) {
-            byFirstQueryCharacter
-          } else {
-            val byPackageDepth = Integer.compare(
-              characterCount(o1.pkg, '/'),
-              characterCount(o2.pkg, '/')
-            )
-            if (byPackageDepth != 0) byPackageDepth
-            else o1.filename.compareTo(o2.filename)
-          }
-        }
-      }
-    }
-  }
-
-  class CompilerSearchVisitor(query: String) extends SymbolSearchVisitor {
-    val candidates =
-      new java.util.PriorityQueue[Classfile](new ClassfileComparator(query))
-    def visitClassfile(pkg: String, filename: String): Boolean = {
-      val _ = candidates.add(Classfile(pkg, filename))
-      true
-    }
-    def preVisitPackage(pkg: String): Boolean = {
-      compiler.metalsContainsPackage(pkg)
-    }
-  }
-
   private def workspaceSymbolListMembers(
       query: String,
       pos: Position
@@ -343,7 +291,8 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       Iterator.empty
     } else {
       val context = doLocateContext(pos)
-      val visitor = new CompilerSearchVisitor(query)
+      val visitor =
+        new CompilerSearchVisitor(query, compiler.metalsContainsPackage)
       search.search(query, visitor)
       for {
         top <- visitor.candidates.pollingIterator
@@ -353,9 +302,11 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
   }
 
-  private def loadSymbolFromClassfile(classfile: Classfile): List[Symbol] = {
+  private def loadSymbolFromClassfile(
+      classfile: WorkspaceCandidate
+  ): List[Symbol] = {
     try {
-      val pkgName = classfile.pkg.stripSuffix("/").replace('/', '.')
+      val pkgName = classfile.packageString.stripSuffix("/").replace('/', '.')
       val pkg = rootMirror.staticPackage(pkgName)
       def isAccessible(sym: Symbol): Boolean = {
         sym != NoSymbol && {
@@ -363,22 +314,17 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           sym.isPublic
         }
       }
-      val member = classfile.filename
-        .stripSuffix(".class")
-        .split("\\$")
-        .foldLeft(List[Symbol](pkg)) {
-          case (accum, "") =>
-            accum
-          case (accum, name) =>
-            accum.flatMap {
-              case sym if !isAccessible(sym) || !sym.isModuleOrModuleClass =>
-                Nil
-              case sym =>
-                val term = sym.info.member(TermName(name))
-                val tpe = sym.info.member(TypeName(name))
-                term :: tpe :: Nil
-            }
-        }
+      val member = classfile.names.foldLeft(List[Symbol](pkg)) {
+        case (accum, desc) =>
+          accum.flatMap {
+            case sym if !isAccessible(sym) || !sym.isModuleOrModuleClass =>
+              Nil
+            case sym =>
+              if (desc.isTerm) sym.info.member(TermName(desc.value)) :: Nil
+              else if (desc.isType) sym.info.member(TypeName(desc.value)) :: Nil
+              else Nil
+          }
+      }
       member.filter(sym => isAccessible(sym))
     } catch {
       case NonFatal(e) =>

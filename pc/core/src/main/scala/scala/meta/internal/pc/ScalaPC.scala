@@ -11,9 +11,6 @@ import scala.meta.pc.PC
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.collection.JavaConverters._
-import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.metals.PackageIndex
-import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.interactive.Global
@@ -32,7 +29,7 @@ class ScalaPC(
   override def withSearch(search: SymbolSearch): PC =
     new ScalaPC(classpath, options, indexer, search, global)
   def this() =
-    this(Nil, Nil, new EmptySymbolIndexer, ClasspathSearch.empty)
+    this(Nil, Nil, new EmptySymbolIndexer, EmptySymbolSearch)
   override def newInstance(
       classpath: util.List[Path],
       options: util.List[String]

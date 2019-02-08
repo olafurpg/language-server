@@ -25,16 +25,18 @@ class ClasspathSearch(
   }
 
   def search(query: String): Iterator[Classfile] = {
-    search(WorkspaceSymbolQuery.exact(query), () => false)
+    search(WorkspaceSymbolQuery.exact(query), _ => true, () => false)
   }
 
   def search(
       query: WorkspaceSymbolQuery,
+      visitPackage: String => Boolean,
       isCancelled: () => Boolean
   ): Iterator[Classfile] = {
     val packages = packagesSortedByReferences()
     for {
       pkg <- packages.iterator
+      if visitPackage(pkg)
       if !isCancelled()
       compressed = map(pkg)
       if query.matches(compressed.bloom)

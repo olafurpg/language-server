@@ -34,7 +34,6 @@ final class WorkspaceSymbolProvider(
     extends SymbolSearch {
   val inWorkspace = TrieMap.empty[Path, CompressedSourceIndex]
   var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
-  val cache = TrieMap.empty[AbsolutePath, l.SymbolInformation]
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
@@ -52,6 +51,10 @@ final class WorkspaceSymbolProvider(
       case _: CancellationException =>
         Nil
     }
+  }
+
+  override def search(query: String, visitor: SymbolSearchVisitor): Unit = {
+    search(WorkspaceSymbolQuery.exact(query), visitor)
   }
 
   def indexClasspath(): Unit = {
@@ -100,13 +103,33 @@ final class WorkspaceSymbolProvider(
     )
   }
 
-  override def search(query: String, visitor: SymbolSearchVisitor): Unit = {
-    val query = WorkspaceSymbolQuery.exact(query)
+  private def search(
+      query: WorkspaceSymbolQuery,
+      visitor: SymbolSearchVisitor
+  ): Unit = {
     classpathSearch(query, visitor)
-    // TODO: workspace search
+    workspaceSearch(query, visitor)
   }
 
-  def classpathSearch(
+  private def workspaceSearch(
+      query: WorkspaceSymbolQuery,
+      visitor: SymbolSearchVisitor
+  ): Unit = {
+    for {
+      (path, index) <- inWorkspace.iterator
+      if visitor.preVisitPath(path)
+      if query.matches(index.bloom)
+      symbol <- index.symbols
+    } {
+      visitor.visitWorkspaceSymbol(
+        path,
+        symbol.symbol,
+        symbol.kind,
+        symbol.range
+      )
+    }
+  }
+  private def classpathSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor
   ): Unit = {
@@ -114,7 +137,11 @@ final class WorkspaceSymbolProvider(
       (a, b) => Integer.compare(a.filename.length, b.filename.length)
     )
     for {
-      classfile <- inDependencies.search(query, () => visitor.isCancelled)
+      classfile <- inDependencies.search(
+        query,
+        pkg => visitor.preVisitPackage(pkg),
+        () => visitor.isCancelled
+      )
     } {
       classfiles.add(classfile)
     }
@@ -135,46 +162,10 @@ final class WorkspaceSymbolProvider(
       textQuery: String,
       token: CancelChecker
   ): Seq[l.SymbolInformation] = {
-    val result = new PriorityQueue[l.SymbolInformation](
-      (o1, o2) => -Integer.compare(o1.getName.length, o2.getName.length)
-    )
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
-    def matches(info: s.SymbolInformation): Boolean = {
-      WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
-      query.matches(info.symbol)
-    }
-    def searchWorkspaceSymbols(): Unit = {
-      var visitsCount = 0
-      var falsePositives = 0
-      for {
-        (path, bloom) <- inWorkspace
-        _ = token.checkCanceled()
-        if query.matches(bloom)
-      } {
-        visitsCount += 1
-        var isFalsePositive = true
-        val input = path.toUriInput
-        SemanticdbDefinition.foreach(input) { defn =>
-          if (matches(defn.info)) {
-            isFalsePositive = false
-            result.add(defn.toLSP(input.path))
-          }
-        }
-        if (isFalsePositive) {
-          falsePositives += 1
-        }
-      }
-    }
-    def searchDependencySymbols(): Unit = {
-      val visitor = new WorkspaceSymbolVisitor(query, token, index, fileOnDisk)
-      classpathSearch(query, visitor)
-      visitor.classpathEntries.foreach { s =>
-        result.add(s)
-      }
-    }
-    searchWorkspaceSymbols()
-    searchDependencySymbols()
-    result.asScala.toSeq.sortBy(_.getName.length)
+    val visitor = new WorkspaceSymbolVisitor(query, token, index, fileOnDisk)
+    search(query, visitor)
+    visitor.results.sortBy(_.getName.length)
   }
 }
 
