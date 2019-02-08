@@ -9,6 +9,7 @@ import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
+import scala.meta.pc.SymbolSearchVisitor
 import scala.util.control.NonFatal
 
 class CompletionProvider(val compiler: PresentationCompiler) {
@@ -322,6 +323,18 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
   }
 
+  class CompilerSearchVisitor(query: String) extends SymbolSearchVisitor {
+    val candidates =
+      new java.util.PriorityQueue[Classfile](new ClassfileComparator(query))
+    def visitClassfile(pkg: String, filename: String): Boolean = {
+      val _ = candidates.add(Classfile(pkg, filename))
+      true
+    }
+    def preVisitPackage(pkg: String): Boolean = {
+      compiler.metalsContainsPackage(pkg)
+    }
+  }
+
   private def workspaceSymbolListMembers(
       query: String,
       pos: Position
@@ -330,13 +343,10 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       Iterator.empty
     } else {
       val context = doLocateContext(pos)
-      val candidates =
-        new java.util.PriorityQueue[Classfile](new ClassfileComparator(query))
-      search.search(query).foreach { classfile =>
-        candidates.add(classfile)
-      }
+      val visitor = new CompilerSearchVisitor(query)
+      search.search(query, visitor)
       for {
-        top <- candidates.pollingIterator
+        top <- visitor.candidates.pollingIterator
         sym <- loadSymbolFromClassfile(top)
         if context.scope.lookup(sym.name) == NoSymbol
       } yield new WorkspaceMember(sym)

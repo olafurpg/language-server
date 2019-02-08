@@ -15,6 +15,7 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.PackageIndex
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolIndexer
+import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
@@ -23,10 +24,12 @@ class ScalaPC(
     classpath: Seq[Path],
     options: Seq[String],
     indexer: SymbolIndexer,
-    search: ClasspathSearch,
+    search: SymbolSearch,
     var _global: PresentationCompiler = null
 ) extends PC {
   override def withIndexer(indexer: SymbolIndexer): PC =
+    new ScalaPC(classpath, options, indexer, search, global)
+  override def withSearch(search: SymbolSearch): PC =
     new ScalaPC(classpath, options, indexer, search, global)
   def this() =
     this(Nil, Nil, new EmptySymbolIndexer, ClasspathSearch.empty)
@@ -138,7 +141,7 @@ object ScalaPC {
       classpaths: Seq[Path],
       scalacOptions: Seq[String],
       indexer: SymbolIndexer,
-      search: ClasspathSearch
+      search: SymbolSearch
   ): PresentationCompiler = {
     val classpath = classpaths.mkString(File.pathSeparator)
     val options = scalacOptions.iterator.filterNot { o =>

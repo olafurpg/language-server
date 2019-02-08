@@ -6,17 +6,20 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
+import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolVisitor
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.metals.ClassPathProxy
 import scala.tools.nsc.reporters.Reporter
 
 class PresentationCompiler(
     settings: Settings,
     reporter: Reporter,
     val indexer: SymbolIndexer,
-    val search: ClasspathSearch
-) extends Global(settings, reporter) { compiler =>
+    val search: SymbolSearch
+) extends Global(settings, reporter)
+    with ClassPathProxy { compiler =>
 
   lazy val semanticdbOps: SemanticdbOps {
     val global: compiler.type
