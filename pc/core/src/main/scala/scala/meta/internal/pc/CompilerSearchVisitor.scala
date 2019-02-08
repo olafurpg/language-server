@@ -21,11 +21,11 @@ class CompilerSearchVisitor(
     visit(WorkspaceCandidate.Workspace(symbol))
   }
 
-  override def preVisitPath(path: Path): Boolean = {
+  override def shouldVisitPath(path: Path): Boolean = {
     // TODO: filter out paths that are guaranteed on a source dependency
     true
   }
-  def preVisitPackage(pkg: String): Boolean = {
+  def shouldVisitPackage(pkg: String): Boolean = {
     // TODO come up with less hacky check, maybe staticPackageSymbol(..)
     containsPackage(pkg.stripSuffix("/").replace('/', '.'))
   }

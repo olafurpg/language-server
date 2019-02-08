@@ -42,7 +42,7 @@ class ClasspathSearch(
     for {
       classfile <- search(
         query,
-        pkg => visitor.preVisitPackage(pkg),
+        pkg => visitor.shouldVisitPackage(pkg),
         () => visitor.isCancelled
       )
     } {
@@ -52,15 +52,14 @@ class ClasspathSearch(
     var searchResult = SymbolSearch.Result.COMPLETE
     for {
       hit <- classfiles.pollingIterator
-      continue = {
-        val result = !visitor.isCancelled &&
+      if {
+        val isContinue = !visitor.isCancelled &&
           (nonExactMatches < maxNonExactMatches || hit.isExact(query))
-        if (!result) {
+        if (!isContinue) {
           searchResult = SymbolSearch.Result.INCOMPLETE
         }
-        result
+        isContinue
       }
-      if continue
     } {
       val added = visitor.visitClassfile(hit.pkg, hit.filename)
       if (added > 0 && !hit.isExact(query)) {

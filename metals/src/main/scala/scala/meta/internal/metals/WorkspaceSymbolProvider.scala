@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
+import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
@@ -114,9 +115,10 @@ final class WorkspaceSymbolProvider(
   ): Unit = {
     for {
       (path, index) <- inWorkspace.iterator
-      if visitor.preVisitPath(path)
+      if visitor.shouldVisitPath(path)
       if query.matches(index.bloom)
       symbol <- index.symbols
+      if query.matches(symbol.symbol)
     } {
       visitor.visitWorkspaceSymbol(
         path,

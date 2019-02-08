@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
-import org.eclipse.lsp4j
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
@@ -38,8 +37,8 @@ class WorkspaceSymbolVisitor(
       index.definition(term)
     }
   }
-  override def preVisitPackage(pkg: String): Boolean = true
-  override def preVisitPath(path: Path): Boolean = true
+  override def shouldVisitPackage(pkg: String): Boolean = true
+  override def shouldVisitPath(path: Path): Boolean = true
 
   override def visitWorkspaceSymbol(
       path: Path,
@@ -57,21 +56,22 @@ class WorkspaceSymbolVisitor(
     1
   }
   override def visitClassfile(pkg: String, filename: String): Int = {
-    var added = 0
+    var isHit = false
     for {
       defn <- definition(pkg, filename, index)
       if !isVisited(defn.path)
     } {
+      isVisited += defn.path
       val input = defn.path.toInput
       lazy val uri = fileOnDisk(defn.path).toURI.toString
       SemanticdbDefinition.foreach(input) { defn =>
         if (query.matches(defn.info)) {
           results += defn.toLSP(uri)
-          added += 1
+          isHit = true
         }
       }
     }
-    added
+    if (isHit) 1 else 0
   }
   override def isCancelled: Boolean = token.isCancelled
 }

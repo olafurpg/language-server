@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.CharBuffer
 import scala.annotation.tailrec
 import scala.collection.mutable
 
@@ -275,12 +276,12 @@ object Fuzzy {
       val ch = query.charAt(i)
       ch match {
         case '.' | '/' | '#' | '$' =>
-          result.add(query.subSequence(border, i))
+          result.add(CharBuffer.wrap(query, border, i))
           border = i + 1
         case _ =>
           if (ch.isUpper) {
             if (border != i) {
-              val exactName = query.subSequence(border, i)
+              val exactName = CharBuffer.wrap(query, border, i)
               result.add(exactName)
             }
             upper.append(ch)
@@ -292,7 +293,7 @@ object Fuzzy {
     query.last match {
       case '.' | '/' | '#' | '$' =>
       case _ =>
-        result.add(query.subSequence(border, query.length))
+        result.add(CharBuffer.wrap(query, border, query.length))
     }
     if (includeTrigrams) {
       result ++= new TrigramSubstrings(upper.toString)

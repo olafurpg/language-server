@@ -25,7 +25,7 @@ case class WorkspaceSymbolQuery(
     alternatives.exists(_.matches(symbol, isTrailingDot))
   def matches(info: SymbolInformation): Boolean = {
     WorkspaceSymbolQuery.isRelevantKind(info.kind) &&
-    query.matches(info.symbol)
+    this.matches(info.symbol)
   }
 }
 
