@@ -32,8 +32,9 @@ final class WorkspaceSymbolProvider(
     fileOnDisk: AbsolutePath => AbsolutePath
 )(implicit ec: ExecutionContext)
     extends SymbolSearch {
-  val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
+  val inWorkspace = TrieMap.empty[Path, CompressedSourceIndex]
   var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
+  val cache = TrieMap.empty[AbsolutePath, l.SymbolInformation]
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
@@ -68,18 +69,19 @@ final class WorkspaceSymbolProvider(
 
   def didChange(
       source: AbsolutePath,
-      symbols: Seq[String]
+      symbols: Seq[CachedSymbolInformation]
   ): Unit = {
-    val bloomFilterStrings = Fuzzy.bloomFilterSymbolStrings(symbols)
+    val bloomFilterStrings =
+      Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
     val bloom = BloomFilter.create[CharSequence](
       Funnels.stringFunnel(StandardCharsets.UTF_8),
       Integer.valueOf(bloomFilterStrings.size),
       0.01
     )
-    inWorkspace(source.toNIO) = bloom
     bloomFilterStrings.foreach { c =>
       bloom.put(c)
     }
+    inWorkspace(source.toNIO) = CompressedSourceIndex(bloom, symbols)
   }
 
   private def indexClasspathUnsafe(): Unit = {

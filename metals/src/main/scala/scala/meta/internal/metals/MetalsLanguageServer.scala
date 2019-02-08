@@ -1059,7 +1059,7 @@ class MetalsLanguageServer(
     try {
       val reluri = source.toIdeallyRelativeURI(sourceDirectory)
       val input = source.toInput
-      val symbols = ArrayBuffer.empty[String]
+      val symbols = ArrayBuffer.empty[CachedSymbolInformation]
       SemanticdbDefinition.foreach(input) {
         case SemanticdbDefinition(info, _, owner) =>
           if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {

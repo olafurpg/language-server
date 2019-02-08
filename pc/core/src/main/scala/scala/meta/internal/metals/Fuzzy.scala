@@ -231,6 +231,7 @@ object Fuzzy {
    * @param symbols all symbols in a source file or a package.
    */
   def bloomFilterSymbolStrings(
+      // TODO: can be iterator
       symbols: Iterable[String],
       result: mutable.Set[CharSequence] = mutable.Set.empty
   ): mutable.Set[CharSequence] = {
