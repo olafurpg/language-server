@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-class CharSequenceSlice(underlying: CharSequence, start: Int, end: Int)
+class ZeroCopySubSequence(underlying: CharSequence, start: Int, end: Int)
     extends CharSequence {
   override def length(): Int = end - start
 
@@ -9,7 +9,7 @@ class CharSequenceSlice(underlying: CharSequence, start: Int, end: Int)
   }
 
   override def subSequence(newStart: Int, newEnd: Int): CharSequence = {
-    new CharSequenceSlice(underlying, start + newStart, start + end)
+    new ZeroCopySubSequence(underlying, start + newStart, start + end)
   }
 
   override def toString: String = underlying.subSequence(start, end).toString
