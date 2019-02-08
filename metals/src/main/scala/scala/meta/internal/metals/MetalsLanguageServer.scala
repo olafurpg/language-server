@@ -278,7 +278,7 @@ class MetalsLanguageServer(
       },
       interactiveSemanticdbs.toFileOnDisk
     )
-    register(
+    compilers = register(
       new Compilers(
         buildTargets,
         buffers,
