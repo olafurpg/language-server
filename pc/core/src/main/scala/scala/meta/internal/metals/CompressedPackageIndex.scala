@@ -25,11 +25,11 @@ object CompressedPackageIndex {
     // NOTE(olafur) At some point we may consider making this list configurable, I can
     // imagine that some people wouldn't mind excluding more packages or including for
     // example javax._.
-    pkg.startsWith("jdk/internal/") ||
+    pkg.startsWith("jdk/") ||
     pkg.startsWith("sun/") ||
     pkg.startsWith("javax/") ||
-    pkg.startsWith("org/omg/") ||
     pkg.startsWith("oracle/") ||
+    pkg.startsWith("org/omg/") ||
     pkg.startsWith("com/oracle/") ||
     pkg.startsWith("com/sun/") ||
     pkg.startsWith("com/apple/")

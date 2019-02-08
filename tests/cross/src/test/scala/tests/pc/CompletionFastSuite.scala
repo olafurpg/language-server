@@ -282,5 +282,17 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |java.sql.ResultSetMetaData java.sql
        |""".stripMargin
   )
+  check(
+    "duplicate",
+    """
+      |package a
+      |import scala.util.DynamicVariable
+      |import DynamicVaria@@
+      |""".stripMargin,
+    """|java.sql.DatabaseMetaData java.sql
+       |java.sql.ParameterMetaData java.sql
+       |java.sql.ResultSetMetaData java.sql
+       |""".stripMargin
+  )
 
 }

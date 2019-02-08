@@ -329,6 +329,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     if (query.isEmpty) {
       Iterator.empty
     } else {
+      val context = doLocateContext(pos)
       val candidates =
         new java.util.PriorityQueue[Classfile](new ClassfileComparator(query))
       search.search(query).foreach { classfile =>
@@ -337,6 +338,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       for {
         top <- candidates.pollingIterator
         sym <- loadSymbolFromClassfile(top)
+        if context.scope.lookup(sym.name) == NoSymbol
       } yield new WorkspaceMember(sym)
     }
   }

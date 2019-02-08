@@ -115,14 +115,12 @@ final class ForwardingMetalsBuildClient(
       case TaskDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
-          _ = {
-            diagnostics.onFinishCompileBuildTarget(report.getTarget)
-            if (report.getErrors == 0) {
-              compilers.didCompileSuccessfully(report.getTarget)
-            }
-          }
           compilation <- compilations.get(report.getTarget)
         } {
+          diagnostics.onFinishCompileBuildTarget(report.getTarget)
+          if (!compilation.isNoOp && report.getErrors == 0) {
+            compilers.didCompileSuccessfully(report.getTarget)
+          }
           val target = report.getTarget
           compilation.promise.trySuccess(report)
           val name = buildTargets.info(report.getTarget) match {
