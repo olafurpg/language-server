@@ -41,10 +41,12 @@ object MetalsTestEnrichments {
   implicit class XtensionTestBuildTargets(wsp: WorkspaceSymbolProvider) {
     def indexWorkspace(): Unit = {
       val files = new WorkspaceSources(wsp.workspace)
+      pprint.log(files.all.toList)
       for {
         source <- files.all
         if source.isScalaOrJava
       } {
+        pprint.log(source)
         val input = source.toInput
         val symbols = ArrayBuffer.empty[CachedSymbolInformation]
         SemanticdbDefinition.foreach(input) {
@@ -53,6 +55,7 @@ object MetalsTestEnrichments {
               symbols += CachedSymbolInformation.fromDefn(defn)
             }
         }
+        pprint.log(symbols)
         wsp.didChange(source, symbols)
       }
     }

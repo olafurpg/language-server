@@ -54,7 +54,7 @@ class ClasspathSearch(
       hit <- classfiles.pollingIterator
       continue = {
         val result = !visitor.isCancelled &&
-          nonExactMatches < maxNonExactMatches || hit.isExact(query)
+          (nonExactMatches < maxNonExactMatches || hit.isExact(query))
         if (!result) {
           searchResult = SymbolSearch.Result.INCOMPLETE
         }
@@ -93,7 +93,9 @@ class ClasspathSearch(
       symbol = new ConcatSequence(pkg, member)
       isMatch = query.matches(symbol)
       if isMatch
-    } yield Classfile(pkg, member)
+    } yield {
+      Classfile(pkg, member)
+    }
   }
 
 }
