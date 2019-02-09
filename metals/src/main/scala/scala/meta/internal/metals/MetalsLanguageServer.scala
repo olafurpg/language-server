@@ -1052,7 +1052,7 @@ class MetalsLanguageServer(
       paths: Seq[AbsolutePath]
   ): Unit = {
     for {
-      path <- paths
+      path <- paths.iterator
       if path.isScalaOrJava
     } {
       indexSourceFile(path, buildTargets.inverseSourceDirectory(path), Nil)
