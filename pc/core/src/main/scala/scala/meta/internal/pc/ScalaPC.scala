@@ -67,6 +67,7 @@ class ScalaPC(
   override def shutdown(): Unit = {
     access.shutdown()
   }
+
   override def newInstance(
       buildTargetIdentifier: String,
       classpath: util.List[Path],

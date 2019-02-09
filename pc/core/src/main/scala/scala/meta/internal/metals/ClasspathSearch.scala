@@ -28,6 +28,7 @@ class ClasspathSearch(
 
   override def search(
       query: String,
+      buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     search(WorkspaceSymbolQuery.exact(query), visitor)

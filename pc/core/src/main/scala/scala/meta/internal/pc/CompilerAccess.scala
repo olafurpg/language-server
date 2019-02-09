@@ -32,12 +32,6 @@ class CompilerAccess(newCompiler: () => PresentationCompiler) {
   private def loadCompiler(): PresentationCompiler = {
     if (_compiler == null) {
       _compiler = newCompiler()
-//        ScalaPC.newCompiler(
-//        classpath,
-//        options,
-//        indexer,
-//        search
-//      )
     }
     _compiler.reporter.reset()
     _compiler

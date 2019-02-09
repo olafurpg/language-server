@@ -1,11 +1,13 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
@@ -50,9 +52,14 @@ final class WorkspaceSymbolProvider(
 
   override def search(
       query: String,
+      buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
-    search(WorkspaceSymbolQuery.exact(query), visitor)
+    search(
+      WorkspaceSymbolQuery.exact(query),
+      visitor,
+      Some(new BuildTargetIdentifier(buildTargetIdentifier))
+    )
   }
 
   def indexClasspath(): Unit = {
@@ -103,18 +110,28 @@ final class WorkspaceSymbolProvider(
 
   private def search(
       query: WorkspaceSymbolQuery,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
+      target: Option[BuildTargetIdentifier]
   ): SymbolSearch.Result = {
-    workspaceSearch(query, visitor)
+    workspaceSearch(query, visitor, target)
     inDependencies.search(query, visitor)
   }
 
   private def workspaceSearch(
       query: WorkspaceSymbolQuery,
-      visitor: SymbolSearchVisitor
+      visitor: SymbolSearchVisitor,
+      id: Option[BuildTargetIdentifier]
   ): Unit = {
     for {
-      (path, index) <- inWorkspace.iterator
+      (path, index) <- id match {
+        case None =>
+          inWorkspace.iterator
+        case Some(target) =>
+          for {
+            source <- buildTargets.buildTargetTransitiveSources(target)
+            index <- inWorkspace.get(source.toNIO)
+          } yield (source.toNIO, index)
+      }
       if visitor.shouldVisitPath(path)
       if query.matches(index.bloom)
       symbol <- index.symbols
@@ -135,7 +152,7 @@ final class WorkspaceSymbolProvider(
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     val visitor = new WorkspaceSymbolVisitor(query, token, index, fileOnDisk)
-    search(query, visitor)
+    search(query, visitor, None)
     visitor.results.sortBy(_.getName.length)
   }
 }

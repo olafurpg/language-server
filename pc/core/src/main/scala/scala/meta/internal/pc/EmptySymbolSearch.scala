@@ -6,6 +6,7 @@ import scala.meta.pc.SymbolSearchVisitor
 object EmptySymbolSearch extends SymbolSearch {
   override def search(
       query: String,
+      buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     SymbolSearch.Result.COMPLETE

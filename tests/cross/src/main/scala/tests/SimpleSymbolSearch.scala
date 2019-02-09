@@ -13,6 +13,7 @@ class SimpleSymbolSearch(classpath: ClasspathSearch) extends SymbolSearch {
   val path = Paths.get("A.scala")
   override def search(
       textQuery: String,
+      buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
