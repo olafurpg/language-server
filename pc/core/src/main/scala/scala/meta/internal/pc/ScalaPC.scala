@@ -18,19 +18,33 @@ import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
-import scala.util.control.NonFatal
 
 class ScalaPC(
     classpath: Seq[Path],
     options: Seq[String],
     indexer: SymbolIndexer,
     search: SymbolSearch,
-    access: CompilerAccess
+    access: CompilerAccess,
+    buildTargetIdentifier: String
 ) extends PC {
   override def withIndexer(indexer: SymbolIndexer): PC =
-    new ScalaPC(classpath, options, indexer, search, access)
+    new ScalaPC(
+      classpath,
+      options,
+      indexer,
+      search,
+      access,
+      buildTargetIdentifier
+    )
   override def withSearch(search: SymbolSearch): PC =
-    new ScalaPC(classpath, options, indexer, search, access)
+    new ScalaPC(
+      classpath,
+      options,
+      indexer,
+      search,
+      access,
+      buildTargetIdentifier
+    )
   def this() =
     this(
       Nil,
@@ -43,7 +57,8 @@ class ScalaPC(
             Nil,
             Nil,
             new EmptySymbolIndexer,
-            EmptySymbolSearch
+            EmptySymbolSearch,
+            ""
           )
         }
       )
@@ -53,6 +68,7 @@ class ScalaPC(
     access.shutdown()
   }
   override def newInstance(
+      buildTargetIdentifier: String,
       classpath: util.List[Path],
       options: util.List[String]
   ): PC = {
@@ -67,10 +83,12 @@ class ScalaPC(
             classpath.asScala,
             options.asScala,
             indexer,
-            search
+            search,
+            buildTargetIdentifier
           )
         }
-      )
+      ),
+      buildTargetIdentifier
     )
   }
 
@@ -159,7 +177,8 @@ object ScalaPC {
       classpaths: Seq[Path],
       scalacOptions: Seq[String],
       indexer: SymbolIndexer,
-      search: SymbolSearch
+      search: SymbolSearch,
+      buildTargetIdentifier: String
   ): PresentationCompiler = {
     val classpath = classpaths.mkString(File.pathSeparator)
     val options = scalacOptions.iterator.filterNot { o =>
@@ -178,7 +197,13 @@ object ScalaPC {
       settings.processArguments(options, processAll = true)
     require(isSuccess, unprocessed)
     require(unprocessed.isEmpty, unprocessed)
-    new PresentationCompiler(settings, new StoreReporter, indexer, search)
+    new PresentationCompiler(
+      settings,
+      new StoreReporter,
+      indexer,
+      search,
+      buildTargetIdentifier
+    )
   }
 
   def ask[A](f: Response[A] => Unit): Response[A] = {

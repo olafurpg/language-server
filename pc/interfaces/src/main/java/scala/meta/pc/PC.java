@@ -15,5 +15,5 @@ public abstract class  PC {
     public abstract List<String> diagnostics();
     public abstract PC withIndexer(SymbolIndexer indexer);
     public abstract PC withSearch(SymbolSearch search);
-    public abstract PC newInstance(List<Path> classpath, List<String> options);
+    public abstract PC newInstance(String buildTargetIdentifier,  List<Path> classpath, List<String> options);
 }

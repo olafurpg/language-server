@@ -29,7 +29,7 @@ object BuildTargetCompiler {
     val pc = new ScalaPC()
       .withIndexer(indexer)
       .withSearch(search)
-      .newInstance(classpath.asJava, scalac.getOptions)
+      .newInstance(scalac.getTarget.getUri, classpath.asJava, scalac.getOptions)
     BuildTargetCompiler(pc, search)
   }
 }

@@ -596,6 +596,11 @@ class MetalsLanguageServer(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path())
     if (!savedFiles.isRecentlyActive(path) && path.isScalaOrJava) {
+      event.eventType() match {
+        case EventType.CREATE =>
+          buildTargets.onCreate(path)
+        case _ =>
+      }
       onChange(List(path))
     } else if (path.isSemanticdb) {
       CompletableFuture.completedFuture {
@@ -1034,12 +1039,12 @@ class MetalsLanguageServer(
 
   private def indexWorkspaceSources(): Unit = {
     for {
-      sourceDirectory <- buildTargets.sourceDirectories
+      (sourceDirectory, targets) <- buildTargets.sourceDirectoriesToBuildTarget
       if sourceDirectory.isDirectory
       source <- ListFiles(sourceDirectory)
       if source.isScalaOrJava
     } {
-      indexSourceFile(source, Some(sourceDirectory))
+      indexSourceFile(source, Some(sourceDirectory), targets.asScala)
     }
   }
 
@@ -1056,7 +1061,8 @@ class MetalsLanguageServer(
 
   private def indexSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
+      sourceDirectory: Option[AbsolutePath],
+      targets: Iterable[BuildTargetIdentifier]
   ): Unit = {
     try {
       val reluri = source.toIdeallyRelativeURI(sourceDirectory)

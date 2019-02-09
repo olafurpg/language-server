@@ -17,7 +17,8 @@ class PresentationCompiler(
     settings: Settings,
     reporter: Reporter,
     val indexer: SymbolIndexer,
-    val search: SymbolSearch
+    val search: SymbolSearch,
+    val buildTargetIdentifier: String
 ) extends Global(settings, reporter)
     with ClassPathProxy { compiler =>
 
