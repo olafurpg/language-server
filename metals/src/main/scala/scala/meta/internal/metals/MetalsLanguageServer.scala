@@ -1044,7 +1044,10 @@ class MetalsLanguageServer(
       source <- ListFiles(sourceDirectory)
       if source.isScalaOrJava
     } {
-      indexSourceFile(source, Some(sourceDirectory), targets.asScala)
+      targets.asScala.foreach { target =>
+        buildTargets.linkSourceFile(target, source)
+      }
+      indexSourceFile(source, Some(sourceDirectory))
     }
   }
 
@@ -1055,14 +1058,13 @@ class MetalsLanguageServer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceDirectory(path), Nil)
+      indexSourceFile(path, buildTargets.inverseSourceDirectory(path))
     }
   }
 
   private def indexSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath],
-      targets: Iterable[BuildTargetIdentifier]
+      sourceDirectory: Option[AbsolutePath]
   ): Unit = {
     try {
       val reluri = source.toIdeallyRelativeURI(sourceDirectory)

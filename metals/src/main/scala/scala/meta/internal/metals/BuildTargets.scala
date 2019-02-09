@@ -70,13 +70,14 @@ final class BuildTargets() {
     for {
       buildTarget <- sourceBuildTargets(source)
     } {
-      addSourceFile(buildTarget, source)
+      linkSourceFile(buildTarget, source)
     }
   }
 
   def buildTargetTransitiveSources(
       id: BuildTargetIdentifier
   ): Iterator[AbsolutePath] = {
+    pprint.log(buildTargetSources)
     for {
       dependency <- buildTargetTransitiveDependencies(id).iterator
       sources <- buildTargetSources.get(dependency).iterator
@@ -89,10 +90,12 @@ final class BuildTargets() {
   ): Iterable[BuildTargetIdentifier] = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val toVisit = new java.util.ArrayDeque[BuildTargetIdentifier]
+    toVisit.add(id)
     while (!toVisit.isEmpty) {
       val next = toVisit.pop()
       if (!isVisited(next)) {
         isVisited.add(next)
+        pprint.log(next)
         for {
           info <- info(next).iterator
           dependency <- info.getDependencies.asScala.iterator
@@ -104,7 +107,7 @@ final class BuildTargets() {
     isVisited
   }
 
-  def addSourceFile(id: BuildTargetIdentifier, source: AbsolutePath): Unit = {
+  def linkSourceFile(id: BuildTargetIdentifier, source: AbsolutePath): Unit = {
     val set = buildTargetSources.getOrElseUpdate(id, ConcurrentHashSet.empty)
     set.add(source)
   }
