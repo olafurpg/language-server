@@ -61,7 +61,8 @@ class ScalaPC(
             ""
           )
         }
-      )
+      ),
+      ""
     )
 
   override def shutdown(): Unit = {

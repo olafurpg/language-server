@@ -304,7 +304,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           added
         }
       )
-      search.search(query, visitor)
+      search.search(query, buildTargetIdentifier, visitor)
     }
   }
 

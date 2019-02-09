@@ -1039,7 +1039,7 @@ class MetalsLanguageServer(
 
   private def indexWorkspaceSources(): Unit = {
     for {
-      (sourceDirectory, targets) <- buildTargets.sourceDirectoriesToBuildTarget
+      (sourceDirectory, targets) <- buildTargets.sourceDirectoriesToBuildTargets
       if sourceDirectory.isDirectory
       source <- ListFiles(sourceDirectory)
       if source.isScalaOrJava
@@ -1055,7 +1055,7 @@ class MetalsLanguageServer(
       path <- paths
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceDirectory(path))
+      indexSourceFile(path, buildTargets.inverseSourceDirectory(path), Nil)
     }
   }
 
