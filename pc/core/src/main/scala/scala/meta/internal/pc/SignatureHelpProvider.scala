@@ -113,13 +113,15 @@ class SignatureHelpProvider(
             }
           }
           val symbol = treeSymbol(tree)
-          val (refQual, argss) = symbol.paramss match {
-            case _ :: tail =>
-              loop(qual, tail, args :: Nil)
-            case _ =>
-              (qual, args :: Nil)
+          Option(symbol.paramss).map { paramss =>
+            val (refQual, argss) = paramss match {
+              case _ :: tail =>
+                loop(qual, tail, args :: Nil)
+              case _ =>
+                (qual, args :: Nil)
+            }
+            MethodCall(refQual, symbol, tparams, argss)
           }
-          Some(MethodCall(refQual, symbol, tparams, argss))
         case _ => None
       }
     }
@@ -222,7 +224,10 @@ class SignatureHelpProvider(
           // In this case, the `foo(x$1, x$2)` has a transparent position, which we don't visit by default, so we
           // make an exception and visit it nevertheless.
           case Block(stats, expr)
-              if tree.symbol == null && stats.forall(_.symbol.isArtifact) =>
+              if tree.symbol == null &&
+                stats.forall { stat =>
+                  stat.symbol != null && stat.symbol.isArtifact
+                } =>
             Some(expr)
           case _ =>
             if (tree.pos.isTransparent) None
@@ -239,7 +244,7 @@ class SignatureHelpProvider(
     }
     def visit(tree: Tree): Unit = tree match {
       case MethodCall(call) =>
-        var start = call.qual.pos
+        var start = call.qual.pos.end
         for {
           (args, i) <- call.margss.zipWithIndex
           (arg, j) <- args.zipWithIndex
@@ -248,12 +253,12 @@ class SignatureHelpProvider(
           if (realPos.isRange) {
             // NOTE(olafur): We don't use `arg.pos` because it does not enclose the full
             // range from the previous argument. Instead, we use
-            val argPos = realPos.withStart(math.min(arg.pos.start, start.end))
-            start = arg.pos
-            if (argPos.includes(pos)) {
+            val end = arg.pos.end
+            if (start <= pos.start && pos.end <= end) {
               activeCallsite = call
               activeArg = Arg(arg, i, j)
             }
+            start = end
           }
           traverse(arg)
         }
