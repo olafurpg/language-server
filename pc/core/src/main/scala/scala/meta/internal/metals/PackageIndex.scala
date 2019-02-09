@@ -37,15 +37,16 @@ class PackageIndex {
         }
       } catch {
         case NonFatal(e) =>
-          pprint.log(e)
-//          scribe.error(s"failed to process classpath entry $entry", e)
+          scribe.error(entry.toURI.toString, e)
       }
     }
   }
 
   def addMember(pkg: String, member: String): Unit = {
-    val members = packages.computeIfAbsent(pkg, enterPackage)
-    members.add(member)
+    if (!member.contains("module-info.class")) {
+      val members = packages.computeIfAbsent(pkg, enterPackage)
+      members.add(member)
+    }
   }
 
   private def visitDirectoryEntry(dir: AbsolutePath): Unit = {

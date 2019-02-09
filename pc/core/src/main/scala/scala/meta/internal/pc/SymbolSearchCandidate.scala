@@ -2,20 +2,19 @@ package scala.meta.internal.pc
 
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.mtags.Symbol
 
-sealed abstract class WorkspaceCandidate {
+sealed abstract class SymbolSearchCandidate {
   final def nameLength(query: String): Int = Fuzzy.nameLength(nameString)
   final def innerClassDepth: Int =
-    WorkspaceCandidate.characterCount(nameString, termCharacter)
+    SymbolSearchCandidate.characterCount(nameString, termCharacter)
   def names: Seq[String]
   def termCharacter: Char
   def nameString: String
   def packageString: String
 }
-object WorkspaceCandidate {
+object SymbolSearchCandidate {
   final case class Classfile(pkg: String, filename: String)
-      extends WorkspaceCandidate {
+      extends SymbolSearchCandidate {
     override def names: Seq[String] =
       filename
         .stripSuffix(".class")
@@ -27,7 +26,7 @@ object WorkspaceCandidate {
     override def packageString: String = pkg
     override def termCharacter: Char = '$'
   }
-  final case class Workspace(symbol: String) extends WorkspaceCandidate {
+  final case class Workspace(symbol: String) extends SymbolSearchCandidate {
     def nameString: String = symbol
     override def names: Seq[String] = {
       val buf = List.newBuilder[String]
@@ -53,10 +52,10 @@ object WorkspaceCandidate {
     override def termCharacter: Char = '.'
   }
   class Comparator(query: String)
-      extends java.util.Comparator[WorkspaceCandidate] {
+      extends java.util.Comparator[SymbolSearchCandidate] {
     override def compare(
-        o1: WorkspaceCandidate,
-        o2: WorkspaceCandidate
+        o1: SymbolSearchCandidate,
+        o2: SymbolSearchCandidate
     ): Int = {
       val byNameLength =
         Integer.compare(o1.nameLength(query), o2.nameLength(query))

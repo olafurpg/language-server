@@ -26,7 +26,10 @@ object BuildTargetCompiler {
     }
     val classpath = scalac.classpath.map(_.toNIO).toSeq
     // TODO(olafur) match exact scala version
-    val pc = new ScalaPC(classpath, scalac.getOptions.asScala, indexer, search)
+    val pc = new ScalaPC()
+      .withIndexer(indexer)
+      .withSearch(search)
+      .newInstance(classpath.asJava, scalac.getOptions)
     BuildTargetCompiler(pc, search)
   }
 }

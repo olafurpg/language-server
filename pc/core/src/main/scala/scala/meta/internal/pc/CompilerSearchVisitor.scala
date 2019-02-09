@@ -7,10 +7,10 @@ import org.eclipse.{lsp4j => l}
 class CompilerSearchVisitor(
     query: String,
     containsPackage: String => Boolean,
-    visit: WorkspaceCandidate => Int
+    visit: SymbolSearchCandidate => Int
 ) extends SymbolSearchVisitor {
   def visitClassfile(pkg: String, filename: String): Int = {
-    visit(WorkspaceCandidate.Classfile(pkg, filename))
+    visit(SymbolSearchCandidate.Classfile(pkg, filename))
   }
   def visitWorkspaceSymbol(
       path: Path,
@@ -18,7 +18,7 @@ class CompilerSearchVisitor(
       kind: l.SymbolKind,
       range: l.Range
   ): Int = {
-    visit(WorkspaceCandidate.Workspace(symbol))
+    visit(SymbolSearchCandidate.Workspace(symbol))
   }
 
   override def shouldVisitPath(path: Path): Boolean = {

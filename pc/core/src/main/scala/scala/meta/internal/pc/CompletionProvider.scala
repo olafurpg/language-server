@@ -309,7 +309,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   }
 
   private def loadSymbolFromClassfile(
-      classfile: WorkspaceCandidate
+      classfile: SymbolSearchCandidate
   ): List[Symbol] = {
     try {
       val pkgName = classfile.packageString.stripSuffix("/").replace('/', '.')
@@ -333,8 +333,8 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       }
       members.filter(sym => isAccessible(sym))
     } catch {
-      case NonFatal(e) =>
-        scribe.error(e.getMessage, e)
+      case NonFatal(_) =>
+        scribe.error(s"no such symbol: $classfile")
         Nil
     }
   }

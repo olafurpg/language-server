@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Path
 import java.util
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.meta.pc.CompletionItems
@@ -11,107 +12,127 @@ import scala.meta.pc.PC
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.collection.JavaConverters._
+import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
+import scala.util.control.NonFatal
 
 class ScalaPC(
     classpath: Seq[Path],
     options: Seq[String],
     indexer: SymbolIndexer,
     search: SymbolSearch,
-    var _global: PresentationCompiler = null
+    access: CompilerAccess
 ) extends PC {
   override def withIndexer(indexer: SymbolIndexer): PC =
-    new ScalaPC(classpath, options, indexer, search, global)
+    new ScalaPC(classpath, options, indexer, search, access)
   override def withSearch(search: SymbolSearch): PC =
-    new ScalaPC(classpath, options, indexer, search, global)
+    new ScalaPC(classpath, options, indexer, search, access)
   def this() =
-    this(Nil, Nil, new EmptySymbolIndexer, EmptySymbolSearch)
+    this(
+      Nil,
+      Nil,
+      new EmptySymbolIndexer,
+      EmptySymbolSearch,
+      new CompilerAccess(
+        () => {
+          ScalaPC.newCompiler(
+            Nil,
+            Nil,
+            new EmptySymbolIndexer,
+            EmptySymbolSearch
+          )
+        }
+      )
+    )
+
+  override def shutdown(): Unit = {
+    access.shutdown()
+  }
   override def newInstance(
       classpath: util.List[Path],
       options: util.List[String]
   ): PC = {
-    new ScalaPC(classpath.asScala, options.asScala, indexer, search)
-  }
-  def global: PresentationCompiler = {
-    if (_global == null) {
-      _global = ScalaPC.newCompiler(
-        classpath,
-        options,
-        indexer,
-        search
+    new ScalaPC(
+      classpath.asScala,
+      options.asScala,
+      indexer,
+      search,
+      new CompilerAccess(
+        () => {
+          ScalaPC.newCompiler(
+            classpath.asScala,
+            options.asScala,
+            indexer,
+            search
+          )
+        }
       )
-    }
-    _global.reporter.reset()
-    _global
+    )
   }
 
   override def diagnostics(): util.List[String] = {
-    if (_global == null) Collections.emptyList()
-    else {
-      _global.reporter
-        .asInstanceOf[StoreReporter]
-        .infos
-        .iterator
-        .map(
-          info =>
-            new StringBuilder()
-              .append(info.pos.source.file.path)
-              .append(":")
-              .append(info.pos.column)
-              .append(" ")
-              .append(info.msg)
-              .append("\n")
-              .append(info.pos.lineContent)
-              .append("\n")
-              .append(info.pos.lineCaret)
-              .toString
-        )
-        .filterNot(_.contains("_CURSOR_"))
-        .toList
-        .asJava
-    }
+    access.reporter
+      .asInstanceOf[StoreReporter]
+      .infos
+      .iterator
+      .map(
+        info =>
+          new StringBuilder()
+            .append(info.pos.source.file.path)
+            .append(":")
+            .append(info.pos.column)
+            .append(" ")
+            .append(info.msg)
+            .append("\n")
+            .append(info.pos.lineContent)
+            .append("\n")
+            .append(info.pos.lineCaret)
+            .toString
+      )
+      .filterNot(_.contains("_CURSOR_"))
+      .toList
+      .asJava
   }
 
+  def emptyCompletion = new CompletionItems(LookupKind.None, Nil.asJava)
   override def complete(
       filename: String,
       text: String,
       offset: Int
-  ): CompletionItems = {
-    new CompletionProvider(global).completions(filename, text, offset)
-  }
-
-  override def hover(filename: String, text: String, offset: Int): Hover = {
-    new HoverProvider(global).hover(filename, text, offset).orNull
-  }
-
-  override def shutdown(): Unit = {
-    if (_global != null) {
-      _global.askShutdown()
+  ): CompletionItems =
+    access.withCompiler(emptyCompletion) { global =>
+      new CompletionProvider(global).completions(filename, text, offset)
     }
-  }
+
+  override def hover(filename: String, text: String, offset: Int): Hover =
+    access.withCompiler(new Hover()) { global =>
+      new HoverProvider(global).hover(filename, text, offset).orNull
+    }
 
   override def signatureHelp(
       filename: String,
       text: String,
       offset: Int
-  ): SignatureHelp = {
+  ): SignatureHelp = access.withCompiler(new SignatureHelp()) { global =>
     new SignatureHelpProvider(global, indexer)
       .signatureHelp(filename, text, offset)
   }
 
   override def symbol(filename: String, text: String, offset: Int): String = {
-    val unit = ScalaPC.addCompilationUnit(
-      global = global,
-      code = text,
-      filename = filename,
-      cursor = None
-    )
-    val pos = unit.position(offset)
-    global.typedTreeAt(pos).symbol.fullName
+    access.withCompiler("") { global =>
+      val unit = ScalaPC.addCompilationUnit(
+        global = global,
+        code = text,
+        filename = filename,
+        cursor = None
+      )
+      val pos = unit.position(offset)
+      global.typedTreeAt(pos).symbol.fullName
+    }
   }
 }
 object ScalaPC {

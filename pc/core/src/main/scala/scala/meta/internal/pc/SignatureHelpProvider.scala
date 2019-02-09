@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
 import scala.meta.pc
 import scala.meta.pc.SymbolIndexer
+import scala.util.control.NonFatal
 
 class SignatureHelpProvider(
     val compiler: PresentationCompiler,
@@ -254,7 +255,8 @@ class SignatureHelpProvider(
             // NOTE(olafur): We don't use `arg.pos` because it does not enclose the full
             // range from the previous argument. Instead, we use
             val end = arg.pos.end
-            if (start <= pos.start && pos.end <= end) {
+            val isEnclosed = start <= pos.start && pos.end <= end
+            if (isEnclosed) {
               activeCallsite = call
               activeArg = Arg(arg, i, j)
             }
