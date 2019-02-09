@@ -1,21 +1,13 @@
 package scala.meta.internal.pc
 
-import java.nio.file.Path
-import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.Fuzzy
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.pc
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SymbolSearchVisitor
 import scala.util.control.NonFatal
 
 class CompletionProvider(val compiler: PresentationCompiler) {
@@ -329,28 +321,20 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         }
       }
       val members = classfile.names.foldLeft(List[Symbol](pkg)) {
-        case (accum, desc) =>
-          accum.flatMap {
-            case sym if !isAccessible(sym) || !sym.isModuleOrModuleClass =>
-              Nil
-            case sym =>
-              if (desc.isTypeParameter) {
-                sym.info.member(TermName(desc.value)) ::
-                  sym.info.member(TypeName(desc.value)) ::
-                  Nil
-              } else if (desc.isTerm) {
-                sym.info.member(TermName(desc.value)) :: Nil
-              } else if (desc.isType) {
-                sym.info.member(TypeName(desc.value)) :: Nil
-              } else {
+        case (accum, name) =>
+          accum.flatMap { sym =>
+            if (!isAccessible(sym) || !sym.isModuleOrModuleClass) Nil
+            else {
+              sym.info.member(TermName(name)) ::
+                sym.info.member(TypeName(name)) ::
                 Nil
-              }
+            }
           }
       }
       members.filter(sym => isAccessible(sym))
     } catch {
       case NonFatal(e) =>
-        pprint.log(e)
+        scribe.error(e.getMessage, e)
         Nil
     }
   }

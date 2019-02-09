@@ -2,12 +2,13 @@ package scala.meta.internal.pc
 
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.mtags.Symbol
 
 sealed abstract class WorkspaceCandidate {
   final def nameLength(query: String): Int = Fuzzy.nameLength(nameString)
   final def innerClassDepth: Int =
     WorkspaceCandidate.characterCount(nameString, termCharacter)
-  def names: Seq[Descriptor]
+  def names: Seq[String]
   def termCharacter: Char
   def nameString: String
   def packageString: String
@@ -15,13 +16,12 @@ sealed abstract class WorkspaceCandidate {
 object WorkspaceCandidate {
   final case class Classfile(pkg: String, filename: String)
       extends WorkspaceCandidate {
-    override def names: Seq[Descriptor] =
+    override def names: Seq[String] =
       filename
         .stripSuffix(".class")
         .split('$')
         .iterator
         .filterNot(_.isEmpty)
-        .map(s => Descriptor.TypeParameter(s))
         .toList
     def nameString: String = filename
     override def packageString: String = pkg
@@ -29,20 +29,27 @@ object WorkspaceCandidate {
   }
   final case class Workspace(symbol: String) extends WorkspaceCandidate {
     def nameString: String = symbol
-    override def names: Seq[Descriptor] = {
-      val buf = List.newBuilder[Descriptor]
+    override def names: Seq[String] = {
+      val buf = List.newBuilder[String]
       def loop(s: String): Unit = {
-        if (s.isNone && s.isPackage) ()
+        if (s.isNone || s.isPackage) ()
         else {
           val (desc, owner) = DescriptorParser(s)
           loop(owner)
-          buf += desc
+          buf += desc.value
         }
       }
       loop(symbol)
       buf.result()
     }
-    override def packageString: String = symbol
+    override def packageString: String = {
+      def loop(s: String): String = {
+        if (s.isNone) s
+        else if (s.isPackage) s
+        else loop(s.owner)
+      }
+      loop(symbol)
+    }
     override def termCharacter: Char = '.'
   }
   class Comparator(query: String)

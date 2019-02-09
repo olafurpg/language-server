@@ -283,5 +283,19 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |java.sql.ResultSetMetaData java.sql
        |""".stripMargin
   )
+  check(
+    "source",
+    """
+      |package a
+      |object Main {
+      |  import Inner@@
+      |}
+      |object Outer {
+      |  class Inner
+      |}
+      |""".stripMargin,
+    """|a.Outer.Inner a.Outer
+       |""".stripMargin
+  )
 
 }

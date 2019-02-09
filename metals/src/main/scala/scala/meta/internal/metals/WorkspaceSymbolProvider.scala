@@ -141,13 +141,6 @@ final class WorkspaceSymbolProvider(
 }
 
 object WorkspaceSymbolProvider {
-  def isRelevantKind(kind: Kind): Boolean = {
-    kind match {
-      case Kind.OBJECT | Kind.PACKAGE_OBJECT | Kind.CLASS | Kind.TRAIT |
-          Kind.INTERFACE =>
-        true
-      case _ =>
-        false
-    }
-  }
+  def isRelevantKind(kind: Kind): Boolean =
+    WorkspaceSymbolQuery.isRelevantKind(kind)
 }

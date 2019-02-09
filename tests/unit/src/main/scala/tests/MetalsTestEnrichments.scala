@@ -50,7 +50,7 @@ object MetalsTestEnrichments {
         SemanticdbDefinition.foreach(input) {
           case defn @ SemanticdbDefinition(info, _, _) =>
             if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-              symbols += CachedSymbolInformation.fromDefn(defn)
+              symbols += defn.toCached
             }
         }
         wsp.didChange(source, symbols)

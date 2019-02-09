@@ -31,7 +31,9 @@ abstract class BasePCSuite extends BaseSuite {
   val myclasspath: List[Path] = extraClasspath ++ scalaLibrary.toList
   val index = OnDemandSymbolIndex()
   val indexer = new MetalsSymbolIndexer(index)
-  val search = ClasspathSearch.fromClasspath(myclasspath, _ => 0)
+  val search = new SimpleSymbolSearch(
+    ClasspathSearch.fromClasspath(myclasspath, _ => 0)
+  )
   val pc = new ScalaPC(myclasspath, Nil, indexer, search)
 
   override def beforeAll(): Unit = {
@@ -63,6 +65,7 @@ abstract class BasePCSuite extends BaseSuite {
     if (offset < 0) {
       fail("missing @@")
     }
+    search.source = code2
     (code2, offset)
   }
   def doc(e: JEither[String, MarkupContent]): String = {
