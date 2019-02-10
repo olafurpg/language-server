@@ -105,8 +105,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  new scala.util.control.Exception.Catch(@@)
       |}
     """.stripMargin,
-    """|A container class for catch/finally logic.
-       |<init>(T: util.control.Exception.Catcher[T], pf: Option[util.control.Exception.Finally] = {}, fin: Throwable => Boolean = None): scala.util.control.Exception.Catch[T]
+    """|<init>(T: util.control.Exception.Catcher[T], pf: Option[util.control.Exception.Finally] = {}, fin: Throwable => Boolean = None): scala.util.control.Exception.Catch[T]
        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
        |  @param T result type of bodies used in try and catch blocks
        |  @param pf Partial function used when applying catch logic to determine result value
