@@ -122,7 +122,6 @@ final class WorkspaceSymbolProvider(
       visitor: SymbolSearchVisitor,
       id: Option[BuildTargetIdentifier]
   ): Unit = {
-    pprint.log(id)
     for {
       (path, index) <- id match {
         case None =>

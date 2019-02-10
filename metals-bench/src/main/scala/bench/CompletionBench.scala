@@ -81,8 +81,11 @@ abstract class BaseCompletionBench {
   def newPC(
       search: SymbolSearch = newSearch(),
       indexer: SimpleJavaSymbolIndexer = newIndexer()
-  ): ScalaPC = {
-    new ScalaPC(classpath, Nil, indexer, search)
+  ): PC = {
+    new ScalaPC()
+      .withIndexer(indexer)
+      .withSearch(search)
+      .newInstance("", classpath.asJava, Nil.asJava)
   }
 
   def scopeComplete(pc: PC): CompletionItems = {
