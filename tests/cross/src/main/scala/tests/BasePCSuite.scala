@@ -7,13 +7,14 @@ import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
 import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import scala.collection.JavaConverters._
+import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsSymbolIndexer
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.ScalaPC
 import scala.meta.io.AbsolutePath
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import scala.meta.internal.metals.ClasspathSearch
 import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
@@ -34,7 +35,10 @@ abstract class BasePCSuite extends BaseSuite {
   val search = new SimpleSymbolSearch(
     ClasspathSearch.fromClasspath(myclasspath, _ => 0)
   )
-  val pc = new ScalaPC(myclasspath, Nil, indexer, search)
+  val pc = new ScalaPC()
+    .withIndexer(indexer)
+    .withSearch(search)
+    .newInstance("", myclasspath.asJava, Nil.asJava)
 
   override def beforeAll(): Unit = {
     index.addSourceJar(JdkSources().get)
