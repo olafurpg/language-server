@@ -10,8 +10,9 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolVisitor
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
-import scala.tools.nsc.metals.ClassPathProxy
+//import scala.tools.nsc.metals.ClassPathProxy
 import scala.tools.nsc.reporters.Reporter
+import scala.tools.nsc.typechecker.ClassPathProxy
 
 class PresentationCompiler(
     settings: Settings,

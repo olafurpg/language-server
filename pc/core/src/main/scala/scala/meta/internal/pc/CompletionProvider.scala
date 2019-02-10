@@ -27,7 +27,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
-    val (qual, kind, i) = safeCompletionsAt(position, unit.contexts)
+    val (qual, kind, i) = safeCompletionsAt(position)
     val items = i.results.sorted(byRelevance).iterator.zipWithIndex.map {
       case (r, idx) =>
         val label = r.symNameDropLocal.decoded
@@ -133,6 +133,8 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     val searchResults =
       if (kind == LookupKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
+      } else if (kind == LookupKind.Type) {
+        workspaceSymbolTypeMembers(query, pos, visit)
       } else {
         SymbolSearch.Result.COMPLETE
       }
@@ -197,8 +199,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   }
 
   private def safeCompletionsAt(
-      position: Position,
-      contexts: Contexts
+      position: Position
   ): (Option[Type], LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
       e.printStackTrace()
@@ -279,6 +280,78 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   }
   class WorkspaceMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
+  private def workspaceSymbolTypeMembers(
+      query: String,
+      pos: Position,
+      visit: Member => Boolean
+  ): SymbolSearch.Result = {
+    if (query.isEmpty) SymbolSearch.Result.COMPLETE
+    else {
+      val context = metalsNewContext(doLocateContext(pos))
+      val seqAsJavaListConverter = rootMirror
+        .staticPackage("scala.collection")
+        .info
+        .member(TermName("JavaConverters"))
+        .info
+        .member(TermName("seqAsJavaListConverter"))
+      context.scope.enter(seqAsJavaListConverter)
+      val tree0 = typedTreeAt(pos) match {
+        case sel @ Select(qual, _) if sel.tpe == ErrorType => qual
+        case Import(expr, _) => expr
+        case t => t
+      }
+      val shouldTypeQualifier = tree0.tpe match {
+        case null => true
+        case mt: MethodType => mt.isImplicit
+        case pt: PolyType => isImplicitMethodType(pt.resultType)
+        case _ => false
+      }
+
+      // TODO: guard with try/catch to deal with ill-typed qualifiers.
+      val tree =
+        if (shouldTypeQualifier) analyzer newTyper context typedQualifier tree0
+        else tree0
+      val pre = stabilizedType(tree)
+
+      val ownerTpe = tree.tpe match {
+        case ImportType(expr) => expr.tpe
+        case null => pre
+        case MethodType(List(), rtpe) => rtpe
+        case _ => tree.tpe
+      }
+
+      pprint.log(context.scope.lookup(TermName("seqAsJavaListConverter")))
+      val candidates = new analyzer.ImplicitSearch(
+        tree,
+        definitions.functionType(List(ownerTpe), definitions.AnyTpe),
+        isView = true,
+        context0 = context.makeImplicit(reportAmbiguousErrors = false)
+      ).allImplicits
+      pprint.log(candidates)
+      def viewApply(view: analyzer.SearchResult): Tree = {
+        assert(view.tree != EmptyTree)
+        val t = analyzer
+          .newTyper(context.makeImplicit(reportAmbiguousErrors = false))
+          .typed(Apply(view.tree, List(tree)) setPos tree.pos)
+        if (!t.tpe.isErroneous) t
+        else
+          analyzer
+            .newTyper(context.makeSilent(reportAmbiguousErrors = true))
+            .typed(Apply(view.tree, List(tree)) setPos tree.pos)
+            .onTypeError(EmptyTree)
+      }
+      for (view <- candidates) {
+        val vtree = viewApply(view)
+        val vpre = stabilizedType(vtree)
+        pprint.log(vpre)
+        for (sym <- vtree.tpe.members if sym.isTerm) {
+          pprint.log(sym.fullName)
+//          addTypeMember(sym, vpre, inherited = false, view.tree.symbol)
+        }
+      }
+      SymbolSearch.Result.COMPLETE
+    }
+  }
 
   private def workspaceSymbolListMembers(
       query: String,
@@ -295,7 +368,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           var added = 0
           for {
             sym <- loadSymbolFromClassfile(top)
-            if context.scope.lookup(sym.name) == NoSymbol
+            if !context.isNameInScope(sym.name)
           } {
             if (visit(new WorkspaceMember(sym))) {
               added += 1

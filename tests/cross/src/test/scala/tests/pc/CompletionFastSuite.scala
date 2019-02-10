@@ -298,4 +298,15 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "extension",
+    """
+      |package a
+      |object App {
+      |  List(1).asJav@@
+      |}
+      |""".stripMargin,
+    """|a.Outer.Inner a.Outer
+       |""".stripMargin
+  )
 }
