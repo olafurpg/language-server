@@ -27,41 +27,40 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
-    val (qual, kind, i) = safeCompletionsAt(position, unit.contexts)
-    val items = i.results.sorted(byRelevance).iterator.zipWithIndex.map {
-      case (r, idx) =>
-        val label = r.symNameDropLocal.decoded
-        val item = new CompletionItem(label)
-        item.setPreselect(true)
-        // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
-        val detail = qual match {
-          case Some(tpe) if !r.sym.hasPackageFlag =>
-            // Compute type parameters based on the qualifier.
-            // Example: Map[Int, String].applyOrE@@
-            // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
-            // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
-            r.sym.infoString(tpe.memberType(r.sym))
-          case _ =>
-            if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
-              " " + r.sym.owner.fullName
-            } else {
-              // NOTE(olafur): We use `signatureString` because it is presumably fast due
-              // to not completing the symbol's type. It seems to produce readable output
-              // excluding type bounds `<: <?>` that we remove via string processing.
-              r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
-            }
-        }
-        r match {
-          case w: WorkspaceMember =>
-            item.setInsertText(w.sym.fullName)
-          case _ =>
-        }
-        item.setDetail(detail)
-        item.setKind(completionItemKind(r))
-        item.setSortText(f"${idx}%05d")
-        item
+    val (qual, kind, i) = safeCompletionsAt(position)
+    val items = i.results.map { r =>
+      val label = r.symNameDropLocal.decoded
+      val item = new CompletionItem(label)
+      item.setPreselect(true)
+      // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
+      val detail = qual match {
+        case Some(tpe) if !r.sym.hasPackageFlag =>
+          // Compute type parameters based on the qualifier.
+          // Example: Map[Int, String].applyOrE@@
+          // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
+          // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
+          r.sym.infoString(tpe.memberType(r.sym))
+        case _ =>
+          if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
+            " " + r.sym.owner.fullName
+          } else {
+            // NOTE(olafur): We use `signatureString` because it is presumably fast due
+            // to not completing the symbol's type. It seems to produce readable output
+            // excluding type bounds `<: <?>` that we remove via string processing.
+            r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
+          }
+      }
+      r match {
+        case w: WorkspaceMember =>
+          item.setInsertText(w.sym.fullName)
+        case _ =>
+      }
+      item.setDetail(detail)
+      item.setKind(completionItemKind(r))
+      item.setSortText(f"${relevance(r)}%05d")
+      item
     }
-    val result = new CompletionItems(kind, items.toSeq.asJava)
+    val result = new CompletionItems(kind, items.asJava)
     result.setIsIncomplete(i.isIncomplete)
     result
   }
@@ -197,8 +196,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
   }
 
   private def safeCompletionsAt(
-      position: Position,
-      contexts: Contexts
+      position: Position
   ): (Option[Type], LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
       e.printStackTrace()
@@ -249,32 +247,17 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
   }
 
-  implicit val byRelevance: Ordering[Member] = new Ordering[Member] {
-    val relevanceCache = new java.util.HashMap[Member, Int]
-    def relevance(m: Member): Int = {
-      relevanceCache.computeIfAbsent(
-        m,
-        new java.util.function.Function[Member, Int] {
-          override def apply(t: compiler.Member): Int = t match {
-            case TypeMember(sym, _, true, inherited, viaView) =>
-              // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
-              -computeRelevance(sym, viaView, inherited)
-            case w: WorkspaceMember =>
-              w.sym.name.length()
-            case ScopeMember(sym, _, true, _) =>
-              -computeRelevance(sym, NoSymbol, inherited = false)
-            case _ =>
-              Int.MaxValue
-          }
-        }
-      )
-    }
-    override def compare(x: Member, y: Member): Int = {
-      val byRelevance = Integer.compare(relevance(x), relevance(y))
-      if (byRelevance != 0) byRelevance
-      else {
-        IdentifierComparator.compare(x.sym.name, y.sym.name)
-      }
+  def relevance(m: Member): Int = {
+    m match {
+      case TypeMember(sym, _, true, inherited, viaView) =>
+        // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
+        -computeRelevance(sym, viaView, inherited)
+      case w: WorkspaceMember =>
+        w.sym.name.length()
+      case ScopeMember(sym, _, true, _) =>
+        -computeRelevance(sym, NoSymbol, inherited = false)
+      case _ =>
+        Int.MaxValue
     }
   }
   class WorkspaceMember(sym: Symbol)
@@ -295,7 +278,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           var added = 0
           for {
             sym <- loadSymbolFromClassfile(top)
-            if !context.isNameInScope(sym.name)
+            if context.scope.lookup(sym.name) != sym
           } {
             if (visit(new WorkspaceMember(sym))) {
               added += 1

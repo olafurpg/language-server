@@ -192,6 +192,7 @@ object ScalaPC {
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
+    settings.YcachePluginClassLoader.value = "last-modified"
     if (classpath.isEmpty) {
       settings.usejavacp.value = true
     }

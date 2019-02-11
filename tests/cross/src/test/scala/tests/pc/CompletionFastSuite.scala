@@ -316,4 +316,22 @@ object CompletionFastSuite extends BaseCompletionSuite {
     ""
   )
 
+  check(
+    "duplicate2",
+    """
+      |package a
+      |import java.nio.file.Files
+      |
+      |final class AbsolutePath private (val underlying: String) extends AnyVal {
+      |  def syntax: String = Files@@
+      |}
+      |
+      |object Outer {
+      |  class Files
+      |  object Files
+      |}
+      |""".stripMargin,
+    ""
+  )
+
 }

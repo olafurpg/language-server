@@ -34,8 +34,9 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       val out = new StringBuilder()
       val items = result.getItems.asScala.sorted(new Ordering[CompletionItem] {
         override def compare(o1: CompletionItem, o2: CompletionItem): Int = {
-          if (o1.getLabel == o2.getLabel) o1.getDetail.compareTo(o2.getDetail)
-          else o1.getSortText.compareTo(o2.getSortText)
+          val bySortText = o1.getSortText.compareTo(o2.getSortText)
+          if (bySortText != 0) bySortText
+          else o1.getDetail.compareTo(o2.getDetail)
         }
       })
       items.foreach { item =>
