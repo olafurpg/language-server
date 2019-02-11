@@ -1,9 +1,12 @@
 package scala.meta.internal.pc
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.semanticdb.TypeMessage.SealedValue.ByNameType
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
+import scala.reflect.internal.{Flags => gf}
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
@@ -90,10 +93,80 @@ class PresentationCompiler(
     )
   }
 
+  def metalsToLongString(
+      tpe: Type,
+      history: ShortenedNames
+  ): String = {
+    // The following pattern match is an adaptation of this pattern match:
+    // https://github.com/scalameta/scalameta/blob/dc639c83f1c26627c39aef9bfb3dae779ecdb237/semanticdb/scalac/library/src/main/scala/scala/meta/internal/semanticdb/scalac/TypeOps.scala
+    def shortType(tpe: Type, name: Option[Name]): Type = tpe match {
+      case TypeRef(pre, sym, args) =>
+        TypeRef(
+          shortType(pre, Some(sym.name)),
+          sym,
+          args.map(arg => shortType(arg, name))
+        )
+      case SingleType(pre, sym) =>
+        if (sym.hasPackageFlag) {
+          if (history.tryShortenName(name, sym)) NoPrefix
+          else tpe
+        } else {
+          SingleType(shortType(pre, Some(sym.name)), sym)
+        }
+      case ThisType(sym) =>
+        if (sym.hasPackageFlag) {
+          if (history.tryShortenName(name, sym)) NoPrefix
+          else tpe
+        } else {
+          TypeRef(NoPrefix, sym, Nil)
+        }
+      case ConstantType(Constant(sym: TermSymbol))
+          if sym.hasFlag(gf.JAVA_ENUM) =>
+        shortType(SingleType(sym.owner.thisPrefix, sym), None)
+      case ConstantType(Constant(tpe: Type)) =>
+        ConstantType(Constant(shortType(tpe, None)))
+      case SuperType(thistpe, supertpe) =>
+        SuperType(shortType(thistpe, None), shortType(supertpe, None))
+      case RefinedType(parents, decls) =>
+        RefinedType(parents.map(parent => shortType(parent, None)), decls)
+      case AnnotatedType(annotations, underlying) =>
+        AnnotatedType(annotations, shortType(underlying, None))
+      case ExistentialType(quantified, underlying) =>
+        ExistentialType(quantified, shortType(underlying, None))
+      case PolyType(tparams, resultType) =>
+        PolyType(tparams, resultType.map(t => shortType(t, None)))
+      case t => t
+    }
+    shortType(tpe, None).toLongString
+  }
+
+//  def metalsToShortString(tpe: Type): String = {
+//    val sb = new StringBuilder()
+//    def loop(t: Type): Unit = {}
+//    sb.toString()
+//  }
+
   val methodInfos = TrieMap.empty[String, MethodInformation]
 
   // Only needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
+
+  class ShortenedNames(history: mutable.Map[Name, Symbol] = mutable.Map.empty) {
+    def tryShortenName(name: Option[Name], sym: Symbol): Boolean =
+      name match {
+        case Some(n) =>
+          history.get(n) match {
+            case Some(other) =>
+              if (other == sym) true
+              else false
+            case _ =>
+              history(n) = sym
+              true
+          }
+        case _ =>
+          false
+      }
+  }
 
 }

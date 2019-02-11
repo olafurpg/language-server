@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.meta.pc
 import scala.meta.pc.SymbolIndexer
 
@@ -285,13 +286,15 @@ class SignatureHelpProvider(
           .find(_.sym.name == qual.name)
         if !completion.sym.isErroneous
       } yield completion.sym
-      completionFallback.getOrElse {
-        val qual = tree0 match {
-          case TreeApply(q @ Select(New(_), _), _) => q
-          case _ => tree0
+      completionFallback
+        .orElse {
+          val qual = tree0 match {
+            case TreeApply(q @ Select(New(_), _), _) => q
+            case _ => tree0
+          }
+          Option(compiler.typedTreeAt(qual.pos).symbol)
         }
-        compiler.typedTreeAt(qual.pos).symbol
-      }
+        .getOrElse(NoSymbol)
     }
   }
 
@@ -301,6 +304,7 @@ class SignatureHelpProvider(
     val activeParent = t.call.nonOverload
     var activeSignature: Integer = null
     var activeParameter: Integer = null
+    val shortenedNames = new ShortenedNames()
     val infos = t.alternatives.zipWithIndex.collect {
       case (method: MethodSymbol, i) =>
         val isActiveSignature = method == activeParent
@@ -326,7 +330,13 @@ class SignatureHelpProvider(
             }
             paramss
           }
-        toSignatureInformation(t, method, paramss, isActiveSignature)
+        toSignatureInformation(
+          t,
+          method,
+          paramss,
+          isActiveSignature,
+          shortenedNames
+        )
     }
     new SignatureHelp(infos.asJava, activeSignature, activeParameter)
   }
@@ -340,7 +350,8 @@ class SignatureHelpProvider(
       t: EnclosingMethodCall,
       method: MethodSymbol,
       mparamss: List[List[Symbol]],
-      isActiveSignature: Boolean
+      isActiveSignature: Boolean,
+      shortenedNames: ShortenedNames
   ): SignatureInformation = {
     def arg(i: Int, j: Int): Option[Tree] =
       t.call.all.lift(i).flatMap(_.lift(j))
@@ -357,6 +368,7 @@ class SignatureHelpProvider(
     }
     val infoParams = infoParamsA.lift
     var k = 0
+    val returnType = metalsToLongString(method.returnType, shortenedNames)
     val paramLabels = mparamss.zipWithIndex.map {
       case (params, i) =>
         val byName: Map[Name, Int] =
@@ -385,6 +397,7 @@ class SignatureHelpProvider(
         sortedByName.zipWithIndex.map {
           case (param, j) =>
             val index = k
+            val paramTypeString = metalsToLongString(param.info, shortenedNames)
             k += 1
             val paramInfo = infoParams(index)
             val name = paramInfo match {
@@ -393,7 +406,7 @@ class SignatureHelpProvider(
             }
             val label =
               if (param.isTypeParameter) {
-                name + param.info.toLongString
+                name + paramTypeString
               } else {
                 val default =
                   if (param.isParamWithDefault) {
@@ -406,10 +419,10 @@ class SignatureHelpProvider(
                     ""
                   }
                 if (isActiveSignature) {
-                  val tpe = param.info.toLongString
+                  val tpe = paramTypeString
                   s"$name: $tpe$default"
                 } else {
-                  s"$name: ${param.info.toLongString}$default"
+                  s"$name: ${paramTypeString}$default"
                 }
               }
             val docstring: String = paramInfo match {
@@ -425,7 +438,7 @@ class SignatureHelpProvider(
             if (isActiveSignature && t.activeArg.matches(param, i, j)) {
               arg(i, j) match {
                 case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
-                  val tpe = a.tpe.widen.toLongString
+                  val tpe = metalsToLongString(a.tpe.widen, shortenedNames)
                   val typeString =
                     if (tpe.endsWith("=> Null")) {
                       tpe.stripSuffix("=> Null") + "=> ???"
@@ -455,11 +468,7 @@ class SignatureHelpProvider(
             params.map(_.getLabel).mkString("(", ", ", ")")
           }
       }
-      .mkString(
-        method.nameString,
-        "",
-        s": ${method.returnType.toLongString}"
-      )
+      .mkString(method.nameString, "", s": ${returnType}")
     val docstring = info match {
       case Some(value) if isDocs => value.docstring()
       case _ => ""

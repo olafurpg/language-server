@@ -54,7 +54,7 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
       |  List(1).map(@@)
       |}
     """.stripMargin,
-    """|map[B, That](f: Int => B)(bf: scala.collection.generic.CanBuildFrom[List[Int],B,That]): That
+    """|map[B, That](f: Int => B)(bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
        |""".stripMargin
   )
@@ -65,10 +65,10 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
       |  new scala.util.Random(@@)
       |}
     """.stripMargin,
-    """|<init>(): scala.util.Random
-       |<init>(seed: Int): scala.util.Random
-       |<init>(seed: Long): scala.util.Random
-       |<init>(self: java.util.Random): scala.util.Random
+    """|<init>(): Random
+       |<init>(seed: Int): Random
+       |<init>(seed: Long): Random
+       |<init>(self: java.util.Random): Random
        |""".stripMargin
   )
   check(
@@ -79,7 +79,7 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
       |}
     """.stripMargin,
     """|<init>(x$1: String*): ProcessBuilder
-       |<init>(x$1: java.util.List[String]): ProcessBuilder
+       |<init>(x$1: List[String]): ProcessBuilder
        |""".stripMargin
   )
 
@@ -193,7 +193,7 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
       |  Map.empty[I@@]
       |}
     """.stripMargin,
-    """|empty[K, V]: scala.collection.immutable.Map[K,V]
+    """|empty[K, V]: Map[K,V]
        |      ^
        |""".stripMargin
   )
@@ -307,6 +307,28 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
     """|user(name: String, age: Int, street: Int): Int
        |     ^^^^^^^^^^^^
        |user(name: String, age: Int): Int
+       |""".stripMargin
+  )
+  check(
+    "short-name",
+    """
+      |object A {
+      |  new scala.util.control.Exception.Catch(@@)
+      |}
+    """.stripMargin,
+    """|<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = {}, rethrow: Throwable => Boolean = {}): Exception.Catch[T]
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^
+       |""".stripMargin
+  )
+  check(
+    "short-name1",
+    """
+      |object A {
+      |  new java.util.HashMap[String, Int]().computeIfAbsent(@@)
+      |}
+    """.stripMargin,
+    """|computeIfAbsent(x$1: String, x$2: Function[_ >: String, _ <: Int]): V
+       |                ^^^^^^^^^^^
        |""".stripMargin
   )
 }

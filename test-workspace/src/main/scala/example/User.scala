@@ -2,4 +2,6 @@ package myexample
 
 import java.nio.file.Files
 
-object A {}
+object A {
+  new java.util.HashMap[String, Int]().computeIfAbsent()
+}
