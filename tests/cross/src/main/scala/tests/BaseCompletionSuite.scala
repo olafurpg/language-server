@@ -1,6 +1,5 @@
 package tests
 
-import org.eclipse.lsp4j.CompletionItem
 import scala.collection.JavaConverters._
 import scala.util.Properties
 
@@ -26,25 +25,24 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       expected: String,
       includeDocs: Boolean = false,
+      includeCommitCharacter: Boolean = false,
       compat: Map[String, String] = Map.empty
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
       val result = pc.complete("A.scala", code, offset)
       val out = new StringBuilder()
-      val items = result.getItems.asScala.sorted(new Ordering[CompletionItem] {
-        override def compare(o1: CompletionItem, o2: CompletionItem): Int = {
-          val bySortText = o1.getSortText.compareTo(o2.getSortText)
-          if (bySortText != 0) bySortText
-          else o1.getDetail.compareTo(o2.getDetail)
-        }
-      })
-      items.foreach { item =>
+      result.getItems.asScala.sortBy(_.getSortText).foreach { item =>
         val label =
           if (item.getInsertText == null) item.getLabel else item.getInsertText
+        val commitCharacter =
+          if (includeCommitCharacter)
+            item.getCommitCharacters.asScala.mkString(" (commit: '", " ", "')")
+          else ""
         out
           .append(label)
           .append(item.getDetail)
+          .append(commitCharacter)
           .append("\n")
       }
       assertNoDiff(out.toString(), getExpected(expected, compat))

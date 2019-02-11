@@ -28,48 +28,69 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     )
     val position = unit.position(offset)
     val (qual, kind, i) = safeCompletionsAt(position)
-    val items = i.results.map { r =>
-      val label = r.symNameDropLocal.decoded
-      val item = new CompletionItem(label)
-      item.setPreselect(true)
-      // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
-      val detail = qual match {
-        case Some(tpe) if !r.sym.hasPackageFlag =>
-          // Compute type parameters based on the qualifier.
-          // Example: Map[Int, String].applyOrE@@
-          // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
-          // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
-          r.sym.infoString(tpe.memberType(r.sym))
-        case _ =>
-          if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
-            " " + r.sym.owner.fullName
-          } else {
-            // NOTE(olafur): We use `signatureString` because it is presumably fast due
-            // to not completing the symbol's type. It seems to produce readable output
-            // excluding type bounds `<: <?>` that we remove via string processing.
-            r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
-          }
+    val sorted = i.results.sorted(new Ordering[Member] {
+      override def compare(o1: Member, o2: Member): Int = {
+        val byRelevance =
+          Integer.compare(relevancePenalty(o1), relevancePenalty(o2))
+        if (byRelevance != 0) byRelevance
+        else IdentifierComparator.compare(o1.sym.name, o2.sym.name)
       }
-      r match {
-        case w: WorkspaceMember =>
-          item.setInsertText(w.sym.fullName)
-        case _ =>
-      }
-      item.setDetail(detail)
-      item.setKind(completionItemKind(r))
-      item.setSortText(f"${relevance(r)}%05d")
-      item
+    })
+    val items = sorted.iterator.zipWithIndex.map {
+      case (r, idx) =>
+        val label = r.symNameDropLocal.decoded
+        val item = new CompletionItem(label)
+        // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
+        val detail = qual match {
+          case Some(tpe) if !r.sym.hasPackageFlag =>
+            // Compute type parameters based on the qualifier.
+            // Example: Map[Int, String].applyOrE@@
+            // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
+            // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
+            r.sym.infoString(tpe.memberType(r.sym))
+          case _ =>
+            if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
+              " " + r.sym.owner.fullName
+            } else {
+              // NOTE(olafur): We use `signatureString` because it is presumably fast due
+              // to not completing the symbol's type. It seems to produce readable output
+              // excluding type bounds `<: <?>` that we remove via string processing.
+              r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
+            }
+        }
+        r match {
+          case w: WorkspaceMember =>
+            item.setInsertText(w.sym.fullName)
+          case _ =>
+        }
+        item.setDetail(detail)
+        item.setKind(completionItemKind(r))
+        item.setSortText(f"${idx}%05d")
+        val commitCharacter =
+          if (r.sym.isMethod && !isNullary(r.sym)) "("
+          else "."
+        item.setCommitCharacters(List(commitCharacter).asJava)
+        if (idx == 0) {
+          item.setPreselect(true)
+        }
+        item
     }
-    val result = new CompletionItems(kind, items.asJava)
+    val result = new CompletionItems(kind, items.toSeq.asJava)
     result.setIsIncomplete(i.isIncomplete)
     result
+  }
+
+  def isNullary(sym: Symbol): Boolean = sym.info match {
+    case _: NullaryMethodType => true
+    case PolyType(_, _: NullaryMethodType) => true
+    case _ => false
   }
 
   case class InterestingMembers(
       results: List[Member],
       searchResult: SymbolSearch.Result
   ) {
-    def isIncomplete = searchResult == SymbolSearch.Result.INCOMPLETE
+    def isIncomplete: Boolean = searchResult == SymbolSearch.Result.INCOMPLETE
   }
 
   private def filterInteresting(
@@ -168,30 +189,38 @@ class CompletionProvider(val compiler: PresentationCompiler) {
    * This is an adaptation of
    * https://github.com/scala-ide/scala-ide/blob/a17ace0ee1be1875b8992664069d8ad26162eeee/org.scala-ide.sdt.core/src/org/scalaide/core/completion/ProposalRelevanceCalculator.scala
    */
-  private def computeRelevance(
+  private def computeRelevancePenalty(
       sym: Symbol,
-      viaView: Symbol,
-      inherited: Boolean
+      viaImplicitConversion: Boolean,
+      isInherited: Boolean
   ): Int = {
+    import MemberOrdering._
     var relevance = 0
     // local symbols are more relevant
-    if (sym.isLocalToBlock) relevance += 10
+    if (!sym.isLocalToBlock) relevance |= IsNotLocalByBlock
     // fields are more relevant than non fields
-    if (sym.hasGetter) relevance += 5
+    if (!sym.hasGetter) relevance |= IsNotGetter
     // non-inherited members are more relevant
-    if (!inherited) relevance += 10
-    // symbols not provided via an implicit are more relevant
-    if (viaView == NoSymbol) relevance += 20
-    if (!sym.hasPackageFlag) relevance += 30
-    // accessors of case class members are more relevant
-    if (sym.isCaseAccessor) relevance += 10
-    // public symbols are more relevant
-    if (sym.isPublic) relevance += 10
-    // synthetic symbols are less relevant (e.g. `copy` on case classes)
-    if (!sym.isSynthetic) relevance += 10
+    if (isInherited) relevance |= IsInherited
     // symbols whose owner is a base class are less relevant
-    if (sym.owner != definitions.AnyClass && sym.owner != definitions.AnyRefClass && sym.owner != definitions.ObjectClass)
-      relevance += 40
+    val isInheritedBaseMethod = sym.owner match {
+      case definitions.AnyClass | definitions.AnyRefClass |
+          definitions.ObjectClass =>
+        true
+      case _ =>
+        false
+    }
+    if (isInheritedBaseMethod)
+      relevance |= IsInheritedBaseMethod
+    // symbols not provided via an implicit are more relevant
+    if (viaImplicitConversion) relevance |= IsImplicitConversion
+    if (sym.hasPackageFlag) relevance |= IsPackage
+    // accessors of case class members are more relevant
+    if (!sym.isCaseAccessor) relevance |= IsNotCaseAccessor
+    // public symbols are more relevant
+    if (!sym.isPublic) relevance |= IsNotCaseAccessor
+    // synthetic symbols are less relevant (e.g. `copy` on case classes)
+    if (sym.isSynthetic) relevance |= IsSynthetic
     relevance
   }
 
@@ -199,8 +228,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       position: Position
   ): (Option[Type], LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
-      e.printStackTrace()
-      println(s"Expected error '${e.getMessage}'")
+      scribe.info(e.getMessage)
       (
         None,
         LookupKind.None,
@@ -247,19 +275,25 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
   }
 
-  def relevance(m: Member): Int = {
-    m match {
-      case TypeMember(sym, _, true, inherited, viaView) =>
-        // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
-        -computeRelevance(sym, viaView, inherited)
-      case w: WorkspaceMember =>
-        w.sym.name.length()
-      case ScopeMember(sym, _, true, _) =>
-        -computeRelevance(sym, NoSymbol, inherited = false)
-      case _ =>
-        Int.MaxValue
-    }
+  /**
+   * Returns a high number for less relevant symbols and low number for relevant numbers.
+   *
+   * Relevance is computed based on several factors such as
+   * - local vs global
+   * - public vs private
+   * - synthetic vs non-synthetic
+   */
+  def relevancePenalty(m: Member): Int = m match {
+    case TypeMember(sym, _, true, isInherited, _) =>
+      computeRelevancePenalty(sym, m.implicitlyAdded, isInherited)
+    case w: WorkspaceMember =>
+      MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
+    case ScopeMember(sym, _, true, _) =>
+      computeRelevancePenalty(sym, m.implicitlyAdded, isInherited = false)
+    case _ =>
+      Int.MaxValue
   }
+
   class WorkspaceMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 

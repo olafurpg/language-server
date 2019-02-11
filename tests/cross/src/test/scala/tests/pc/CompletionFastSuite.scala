@@ -188,8 +188,8 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |java.security.cert.CertPathBuilderSpi java.security.cert
        |scala.sys.process.ProcessBuilderImpl scala.sys.process
        |java.security.cert.CertPathBuilderResult java.security.cert
-       |java.security.cert.PKIXBuilderParameters java.security.cert
        |java.security.cert.CertPathBuilderException java.security.cert
+       |java.security.cert.PKIXBuilderParameters java.security.cert
        |java.security.cert.PKIXCertPathBuilderResult java.security.cert
        |""".stripMargin
   )
@@ -327,11 +327,26 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |}
       |
       |object Outer {
-      |  class Files
       |  object Files
       |}
       |""".stripMargin,
-    ""
+    """Files java.nio.file
+      |a.Outer.Files a.Outer
+      |""".stripMargin
+  )
+
+  check(
+    "commit",
+    """
+      |package a
+      |
+      |object Main{
+      |  Map.emp@@
+      |}
+      |""".stripMargin,
+    """|empty[K, V]: scala.collection.immutable.Map[K,V] (commit: '.')
+       |""".stripMargin,
+    includeCommitCharacter = true
   )
 
 }
