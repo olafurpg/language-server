@@ -1,16 +1,16 @@
 package scala.meta.internal.pc
 
+import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.language.implicitConversions
-import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.semanticdb.TypeMessage.SealedValue.ByNameType
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
-import scala.reflect.internal.{Flags => gf}
+import scala.meta.pc
 import scala.meta.pc.MethodInformation
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolVisitor
+import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.metals.ClassPathProxy
@@ -24,6 +24,8 @@ class PresentationCompiler(
     val buildTargetIdentifier: String
 ) extends Global(settings, reporter)
     with ClassPathProxy { compiler =>
+
+  def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 
   lazy val semanticdbOps: SemanticdbOps {
     val global: compiler.type
@@ -68,7 +70,10 @@ class PresentationCompiler(
   }
 
   def methodInfo(symbol: Symbol): Option[MethodInformation] = {
-    val sym = compiler.semanticdbSymbol(symbol)
+    val actualSymbol =
+      if (!symbol.isJava && symbol.isPrimaryConstructor) symbol.owner
+      else symbol
+    val sym = compiler.semanticdbSymbol(actualSymbol)
     methodInfos.get(sym) match {
       case Some(null) => None
       case s: Some[t] => s
@@ -167,6 +172,66 @@ class PresentationCompiler(
         case _ =>
           false
       }
+  }
+
+  class SignaturePrinter(
+      method: MethodSymbol,
+      shortenedNames: ShortenedNames
+  ) {
+    private val info = methodInfo(method)
+    private val infoParamsA: Seq[pc.ParameterInformation] = info match {
+      case Some(value) =>
+        value.typeParameters().asScala ++
+          value.parameters().asScala
+      case None =>
+        IndexedSeq.empty
+    }
+    private val infoParams =
+      infoParamsA.lift
+    private val returnType =
+      metalsToLongString(method.returnType, shortenedNames)
+
+    def methodDocstring: String = {
+      if (isDocs) info.fold("")(_.docstring())
+      else ""
+    }
+    def methodSignature(paramLabels: Iterator[Iterator[String]]): String =
+      paramLabels.zipWithIndex
+        .map {
+          case (params, i) =>
+            if (method.typeParams.nonEmpty && i == 0) {
+              params.mkString("[", ", ", "]")
+            } else {
+              params.mkString("(", ", ", ")")
+            }
+        }
+        .mkString(method.nameString, "", s": ${returnType}")
+    def paramDocstring(paramIndex: Int): String = {
+      if (isDocs) infoParams(paramIndex).fold("")(_.docstring())
+      else ""
+    }
+    def paramLabel(param: Symbol, index: Int): String = {
+      val paramTypeString = metalsToLongString(param.info, shortenedNames)
+      val name = infoParams(index) match {
+        case Some(value) => value.name()
+        case None => param.nameString
+      }
+      if (param.isTypeParameter) {
+        name + paramTypeString
+      } else {
+        val default =
+          if (param.isParamWithDefault) {
+            val defaultValue = infoParams(index).map(_.defaultValue()) match {
+              case Some(value) if !value.isEmpty => value
+              case _ => "{}"
+            }
+            s" = $defaultValue"
+          } else {
+            ""
+          }
+        s"$name: ${paramTypeString}$default"
+      }
+    }
   }
 
 }

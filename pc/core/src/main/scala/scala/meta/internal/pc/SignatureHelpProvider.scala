@@ -5,8 +5,6 @@ import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.meta.pc
 import scala.meta.pc.SymbolIndexer
 
 class SignatureHelpProvider(
@@ -14,7 +12,6 @@ class SignatureHelpProvider(
     indexer: SymbolIndexer
 ) {
   import compiler._
-  def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 
   def signatureHelp(
       filename: String,
@@ -355,20 +352,8 @@ class SignatureHelpProvider(
   ): SignatureInformation = {
     def arg(i: Int, j: Int): Option[Tree] =
       t.call.all.lift(i).flatMap(_.lift(j))
-    val info = methodInfo(
-      if (!method.isJava && method.isPrimaryConstructor) method.owner
-      else method
-    )
-    val infoParamsA: Seq[pc.ParameterInformation] = info match {
-      case Some(value) =>
-        value.typeParameters().asScala ++
-          value.parameters().asScala
-      case None =>
-        IndexedSeq.empty
-    }
-    val infoParams = infoParamsA.lift
     var k = 0
-    val returnType = metalsToLongString(method.returnType, shortenedNames)
+    val printer = new SignaturePrinter(method, shortenedNames)
     val paramLabels = mparamss.zipWithIndex.map {
       case (params, i) =>
         val byName: Map[Name, Int] =
@@ -397,38 +382,9 @@ class SignatureHelpProvider(
         sortedByName.zipWithIndex.map {
           case (param, j) =>
             val index = k
-            val paramTypeString = metalsToLongString(param.info, shortenedNames)
             k += 1
-            val paramInfo = infoParams(index)
-            val name = paramInfo match {
-              case Some(value) => value.name()
-              case None => param.nameString
-            }
-            val label =
-              if (param.isTypeParameter) {
-                name + paramTypeString
-              } else {
-                val default =
-                  if (param.isParamWithDefault) {
-                    val defaultValue = paramInfo.map(_.defaultValue()) match {
-                      case Some(value) if !value.isEmpty => value
-                      case _ => "{}"
-                    }
-                    s" = $defaultValue"
-                  } else {
-                    ""
-                  }
-                if (isActiveSignature) {
-                  val tpe = paramTypeString
-                  s"$name: $tpe$default"
-                } else {
-                  s"$name: ${paramTypeString}$default"
-                }
-              }
-            val docstring: String = paramInfo match {
-              case Some(value) if isDocs => value.docstring()
-              case _ => ""
-            }
+            val label = printer.paramLabel(param, index)
+            val docstring = printer.paramDocstring(index)
             val byNameLabel =
               if (isByNamedOrdered) s"<$label>"
               else label
@@ -459,23 +415,11 @@ class SignatureHelpProvider(
             lparam
         }
     }
-    val methodSignature = paramLabels.iterator.zipWithIndex
-      .map {
-        case (params, i) =>
-          if (method.typeParams.nonEmpty && i == 0) {
-            params.map(_.getLabel).mkString("[", ", ", "]")
-          } else {
-            params.map(_.getLabel).mkString("(", ", ", ")")
-          }
-      }
-      .mkString(method.nameString, "", s": ${returnType}")
-    val docstring = info match {
-      case Some(value) if isDocs => value.docstring()
-      case _ => ""
-    }
     new SignatureInformation(
-      methodSignature,
-      docstring,
+      printer.methodSignature(
+        paramLabels.iterator.map(_.iterator.map(_.getLabel))
+      ),
+      printer.methodDocstring,
       paramLabels.iterator.flatten.toSeq.asJava
     )
   }
