@@ -7,7 +7,6 @@ import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
 import scala.meta.pc
 import scala.meta.pc.SymbolIndexer
-import scala.util.control.NonFatal
 
 class SignatureHelpProvider(
     val compiler: PresentationCompiler,
@@ -213,27 +212,24 @@ class SignatureHelpProvider(
     }
 
     def toVisit(tree: Tree): Option[Tree] = {
-      if (tree.tpe == null) None
-      else {
-        tree match {
-          // Special case: a method call with named arguments like `foo(a = 1, b = 2)` gets desugared into the following:
-          // {
-          //   val x$1 = 1
-          //   val x$2 = 2
-          //   foo(x$1, x$2)
-          // }
-          // In this case, the `foo(x$1, x$2)` has a transparent position, which we don't visit by default, so we
-          // make an exception and visit it nevertheless.
-          case Block(stats, expr)
-              if tree.symbol == null &&
-                stats.forall { stat =>
-                  stat.symbol != null && stat.symbol.isArtifact
-                } =>
-            Some(expr)
-          case _ =>
-            if (tree.pos.isTransparent) None
-            else Some(tree)
-        }
+      tree match {
+        // Special case: a method call with named arguments like `foo(a = 1, b = 2)` gets desugared into the following:
+        // {
+        //   val x$1 = 1
+        //   val x$2 = 2
+        //   foo(x$1, x$2)
+        // }
+        // In this case, the `foo(x$1, x$2)` has a transparent position, which we don't visit by default, so we
+        // make an exception and visit it nevertheless.
+        case Block(stats, expr)
+            if tree.symbol == null &&
+              stats.forall { stat =>
+                stat.symbol != null && stat.symbol.isArtifact
+              } =>
+          Some(expr)
+        case _ =>
+          if (tree.pos.isTransparent) None
+          else Some(tree)
       }
     }
     override def traverse(tree: compiler.Tree): Unit = {

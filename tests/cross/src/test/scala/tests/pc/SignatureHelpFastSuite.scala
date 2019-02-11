@@ -133,6 +133,16 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
        |""".stripMargin
   )
   check(
+    "nested3",
+    """
+      |object a {
+      |  List(Option(@@))
+      |}
+    """.stripMargin,
+    """|apply[A](x: A): Option[A]
+       |""".stripMargin
+  )
+  check(
     "vararg",
     """
       |object a {
