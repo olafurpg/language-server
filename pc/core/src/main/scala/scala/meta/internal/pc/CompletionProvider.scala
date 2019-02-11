@@ -134,10 +134,6 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         TermName("→").encode
       )
     ).flatMap(_.alternatives)
-    def isSynthetic(sym: Symbol): Boolean = {
-      !sym.hasPackageFlag &&
-      sym.isJava && sym.isModuleOrModuleClass
-    }
     val isSeen = mutable.Set.empty[String]
     val buf = List.newBuilder[Member]
     def visit(head: Member): Boolean = {
@@ -147,9 +143,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         } else {
           semanticdbSymbol(head.sym)
         }
-      if (!isSeen(id) &&
-        !isUninterestingSymbol(head.sym) &&
-        !isSynthetic(head.sym)) {
+      if (!isSeen(id) && !isUninterestingSymbol(head.sym)) {
         isSeen += id
         buf += head
         true

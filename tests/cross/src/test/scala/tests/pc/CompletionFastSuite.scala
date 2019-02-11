@@ -14,8 +14,8 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    439,
-    compat = Map("2.11" -> 438)
+    457,
+    compat = Map("2.11" -> 456)
   )
 
   check(
@@ -347,6 +347,44 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|empty[K, V]: scala.collection.immutable.Map[K,V] (commit: '.')
        |""".stripMargin,
     includeCommitCharacter = true
+  )
+
+  check(
+    "numeric-sort",
+    """
+      |package a
+      |
+      |object Main{
+      |  scala.Function@@
+      |}
+      |""".stripMargin,
+    // assert that we don't sort lexicographically: Function1, Function11, ..., Function2, ...
+    """|Function
+       |Function0
+       |Function1
+       |Function2
+       |Function3
+       |Function4
+       |Function5
+       |Function6
+       |Function7
+       |Function8
+       |Function9
+       |Function10
+       |Function11
+       |Function12
+       |Function13
+       |Function14
+       |Function15
+       |Function16
+       |Function17
+       |Function18
+       |Function19
+       |Function20
+       |Function21
+       |Function22
+       |PartialFunction
+       |""".stripMargin
   )
 
 }
