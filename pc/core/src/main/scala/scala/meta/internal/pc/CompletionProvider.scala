@@ -295,7 +295,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           var added = 0
           for {
             sym <- loadSymbolFromClassfile(top)
-            if context.scope.lookup(sym.name) == NoSymbol
+            if !context.isNameInScope(sym.name)
           } {
             if (visit(new WorkspaceMember(sym))) {
               added += 1

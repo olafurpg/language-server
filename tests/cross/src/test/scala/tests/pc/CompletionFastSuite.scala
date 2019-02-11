@@ -254,6 +254,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|scala.util.control.Exception.Catch scala.util.control.Exception
        |""".stripMargin
   )
+
   check(
     "import3",
     """
@@ -272,6 +273,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |org.w3c.dom.xpath.XPathException org.w3c.dom.xpath
        |""".stripMargin
   )
+
   check(
     "accessible",
     """
@@ -283,6 +285,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |java.sql.ResultSetMetaData java.sql
        |""".stripMargin
   )
+
   check(
     "source",
     """
@@ -296,6 +299,21 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|a.Outer.Inner a.Outer
        |""".stripMargin
+  )
+
+  check(
+    "duplicate",
+    """
+      |package a
+      |object Main {
+      |  import a.Outer.Inner
+      |  import Inner@@
+      |}
+      |object Outer {
+      |  class Inner
+      |}
+      |""".stripMargin,
+    ""
   )
 
 }

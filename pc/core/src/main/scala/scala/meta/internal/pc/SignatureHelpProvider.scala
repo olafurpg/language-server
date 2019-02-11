@@ -114,8 +114,8 @@ class SignatureHelpProvider(
             }
           }
           val symbol = treeSymbol(tree)
-          Option(symbol.paramss).map { paramss =>
-            val (refQual, argss) = paramss match {
+          Option(symbol.info).map { info =>
+            val (refQual, argss) = info.paramss match {
               case _ :: tail =>
                 loop(qual, tail, args :: Nil)
               case _ =>
