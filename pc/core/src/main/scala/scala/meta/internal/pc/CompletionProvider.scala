@@ -28,12 +28,36 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     )
     val position = unit.position(offset)
     val (qual, kind, i) = safeCompletionsAt(position)
+    def detailString(r: Member): String = {
+      qual match {
+        case Some(tpe) if !r.sym.hasPackageFlag =>
+          // Compute type parameters based on the qualifier.
+          // Example: Map[Int, String].applyOrE@@
+          // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
+          // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
+          r.sym.infoString(tpe.memberType(r.sym))
+        case _ =>
+          if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
+            " " + r.sym.owner.fullName
+          } else {
+            // NOTE(olafur): We use `signatureString` because it is presumably fast due
+            // to not completing the symbol's type. It seems to produce readable output
+            // excluding type bounds `<: <?>` that we remove via string processing.
+            r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
+          }
+      }
+    }
     val sorted = i.results.sorted(new Ordering[Member] {
       override def compare(o1: Member, o2: Member): Int = {
         val byRelevance =
           Integer.compare(relevancePenalty(o1), relevancePenalty(o2))
         if (byRelevance != 0) byRelevance
-        else IdentifierComparator.compare(o1.sym.name, o2.sym.name)
+        else {
+          val byIdentifier =
+            IdentifierComparator.compare(o1.sym.name, o2.sym.name)
+          if (byIdentifier != 0) byIdentifier
+          else detailString(o1).compareTo(detailString(o2))
+        }
       }
     })
     val items = sorted.iterator.zipWithIndex.map {
@@ -41,23 +65,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
         // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
-        val detail = qual match {
-          case Some(tpe) if !r.sym.hasPackageFlag =>
-            // Compute type parameters based on the qualifier.
-            // Example: Map[Int, String].applyOrE@@
-            // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
-            // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
-            r.sym.infoString(tpe.memberType(r.sym))
-          case _ =>
-            if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
-              " " + r.sym.owner.fullName
-            } else {
-              // NOTE(olafur): We use `signatureString` because it is presumably fast due
-              // to not completing the symbol's type. It seems to produce readable output
-              // excluding type bounds `<: <?>` that we remove via string processing.
-              r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
-            }
-        }
+        val detail = detailString(r)
         r match {
           case w: WorkspaceMember =>
             item.setInsertText(w.sym.fullName)
@@ -312,7 +320,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           var added = 0
           for {
             sym <- loadSymbolFromClassfile(top)
-            if context.scope.lookup(sym.name) != sym
+            if context.lookupSymbol(sym.name, _ => true).symbol != sym
           } {
             if (visit(new WorkspaceMember(sym))) {
               added += 1

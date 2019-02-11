@@ -24,10 +24,10 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  Lis@@
       |}""".stripMargin,
-    """|java.awt.List java.awt
+    """|List: collection.immutable.List.type
+       |java.awt.List java.awt
        |java.util.List java.util
        |scala.collection.immutable.List scala.collection.immutable
-       |List: collection.immutable.List.type
        |scala.collection.immutable.ListMap scala.collection.immutable
        |scala.collection.mutable.ListMap scala.collection.mutable
        |scala.collection.immutable.ListSet scala.collection.immutable
@@ -188,8 +188,8 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |java.security.cert.CertPathBuilderSpi java.security.cert
        |scala.sys.process.ProcessBuilderImpl scala.sys.process
        |java.security.cert.CertPathBuilderResult java.security.cert
-       |java.security.cert.CertPathBuilderException java.security.cert
        |java.security.cert.PKIXBuilderParameters java.security.cert
+       |java.security.cert.CertPathBuilderException java.security.cert
        |java.security.cert.PKIXCertPathBuilderResult java.security.cert
        |""".stripMargin
   )
