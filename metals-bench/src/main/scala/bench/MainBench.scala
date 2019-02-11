@@ -1,6 +1,5 @@
 package bench
 
-import scala.collection.JavaConverters._
 
 object MainBench {
   def main(args: Array[String]): Unit = {

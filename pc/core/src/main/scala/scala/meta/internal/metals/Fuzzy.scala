@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.CharBuffer
 import scala.annotation.tailrec
 import scala.collection.mutable
 

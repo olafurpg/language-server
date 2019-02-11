@@ -15,19 +15,6 @@ import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolVisitor
 import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
-import scala.tools.nsc.doc.base.comment.Bold
-import scala.tools.nsc.doc.base.comment.Chain
-import scala.tools.nsc.doc.base.comment.EntityLink
-import scala.tools.nsc.doc.base.comment.HtmlTag
-import scala.tools.nsc.doc.base.comment.Inline
-import scala.tools.nsc.doc.base.comment.Italic
-import scala.tools.nsc.doc.base.comment.Link
-import scala.tools.nsc.doc.base.comment.Monospace
-import scala.tools.nsc.doc.base.comment.Subscript
-import scala.tools.nsc.doc.base.comment.Summary
-import scala.tools.nsc.doc.base.comment.Superscript
-import scala.tools.nsc.doc.base.comment.Text
-import scala.tools.nsc.doc.base.comment.Underline
 import scala.util.control.NonFatal
 
 class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {

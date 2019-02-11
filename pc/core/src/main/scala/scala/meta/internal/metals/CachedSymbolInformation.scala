@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.{semanticdb => s}
 
 case class CachedSymbolInformation(
     symbol: String,

@@ -6,7 +6,6 @@ import com.google.gson.JsonElement
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,7 +18,6 @@ import java.util.concurrent.CompletionStage
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
-import scala.collection.AbstractIterator
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters

@@ -3,8 +3,6 @@ package scala.meta.internal.pc
 import java.io.File
 import java.nio.file.Path
 import java.util
-import java.util.Collections
-import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.meta.pc.CompletionItems
@@ -15,7 +13,6 @@ import scala.collection.JavaConverters._
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
-import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 
@@ -144,8 +141,7 @@ class ScalaPC(
 
   override def symbol(filename: String, text: String, offset: Int): String = {
     access.withCompiler("") { global =>
-      val unit = ScalaPC.addCompilationUnit(
-        global = global,
+      val unit = global.addCompilationUnit(
         code = text,
         filename = filename,
         cursor = None
@@ -156,24 +152,6 @@ class ScalaPC(
   }
 }
 object ScalaPC {
-
-  def addCompilationUnit(
-      global: Global,
-      code: String,
-      filename: String,
-      cursor: Option[Int],
-      cursorName: String = "_CURSOR_"
-  ): global.RichCompilationUnit = {
-    val codeWithCursor = cursor match {
-      case Some(offset) =>
-        code.take(offset) + cursorName + code.drop(offset)
-      case _ => code
-    }
-    val unit = global.newCompilationUnit(codeWithCursor, filename)
-    val richUnit = new global.RichCompilationUnit(unit.source)
-    global.unitOfFile(richUnit.source.file) = richUnit
-    richUnit
-  }
 
   def newCompiler(
       classpaths: Seq[Path],

@@ -3,14 +3,12 @@ package scala.meta.internal.pc
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkedString
-import scala.tools.nsc.interactive.Global
 import scala.collection.JavaConverters._
 
-class HoverProvider(compiler: Global) {
+class HoverProvider(compiler: PresentationCompiler) {
   import compiler._
   def hover(filename: String, text: String, offset: Int): Option[Hover] = {
-    val unit = ScalaPC.addCompilationUnit(
-      global = compiler,
+    val unit = addCompilationUnit(
       code = text,
       filename = filename,
       cursor = None

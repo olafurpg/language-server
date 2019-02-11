@@ -234,4 +234,21 @@ class PresentationCompiler(
     }
   }
 
+  def addCompilationUnit(
+      code: String,
+      filename: String,
+      cursor: Option[Int],
+      cursorName: String = "_CURSOR_"
+  ): RichCompilationUnit = {
+    val codeWithCursor = cursor match {
+      case Some(offset) =>
+        code.take(offset) + cursorName + code.drop(offset)
+      case _ => code
+    }
+    val unit = newCompilationUnit(codeWithCursor, filename)
+    val richUnit = new RichCompilationUnit(unit.source)
+    unitOfFile(richUnit.source.file) = richUnit
+    richUnit
+  }
+
 }

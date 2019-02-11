@@ -1,10 +1,5 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.mtags.SymbolDefinition
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.Scala.Symbols
 
 case class Classfile(pkg: String, filename: String) {
   def isExact(query: WorkspaceSymbolQuery): Boolean =

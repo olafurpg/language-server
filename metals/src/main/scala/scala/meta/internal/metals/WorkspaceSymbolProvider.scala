@@ -3,11 +3,9 @@ package scala.meta.internal.metals
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
-import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
-import javax.swing.plaf.basic.BasicInternalFrameTitlePane
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap

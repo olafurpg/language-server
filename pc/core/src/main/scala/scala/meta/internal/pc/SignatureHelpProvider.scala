@@ -18,13 +18,13 @@ class SignatureHelpProvider(
       text: String,
       offset: Int
   ): SignatureHelp = {
-    val unit = ScalaPC.addCompilationUnit(
-      global = compiler,
+    val unit = addCompilationUnit(
       code = text,
       filename = filename,
       cursor = cursor(offset, text)
     )
     val pos = unit.position(offset)
+    // TODO(olafur) validate we need `typeCheck` and `typedTreeAtPos` is not sufficient.
     compiler.typeCheck(unit)
     EnclosingMethodCall
       .fromPosition(pos, unit.body.asInstanceOf[compiler.Tree])

@@ -20,8 +20,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       text: String,
       offset: Int
   ): CompletionItems = {
-    val unit = ScalaPC.addCompilationUnit(
-      global = compiler,
+    val unit = addCompilationUnit(
       code = text,
       filename = filename,
       cursor = Some(offset)
