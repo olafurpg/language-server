@@ -105,11 +105,12 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  new scala.util.control.Exception.Catch(@@)
       |}
     """.stripMargin,
-    """|<init>(T: Exception.Catcher[T], pf: Option[Exception.Finally] = {}, fin: Throwable => Boolean = None): Exception.Catch[T]
-       |       ^^^^^^^^^^^^^^^^^^^^^^^
-       |  @param T result type of bodies used in try and catch blocks
+    """|
+       |<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = None, rethrow: Throwable => Boolean = shouldRethrow): Exception.Catch[T]
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^
        |  @param pf Partial function used when applying catch logic to determine result value
        |  @param fin ally logic.
+       |  @param rethrow if you want to probably
        |""".stripMargin
   )
   check(
@@ -172,6 +173,19 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |valueOf(b: Boolean): String
        |valueOf(data: Array[Char]): String
        |valueOf(obj: Any): String
+       |""".stripMargin
+  )
+  checkDoc(
+    "ctor2",
+    """
+      |object a {
+      |  new Some(10@@)
+      |}
+    """.stripMargin,
+    """|
+       |<init>(value: Int): Some[Int]
+       |       ^^^^^^^^^^
+       |  @param value s of type
        |""".stripMargin
   )
 }

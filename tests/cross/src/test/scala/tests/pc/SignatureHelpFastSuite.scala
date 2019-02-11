@@ -82,6 +82,17 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
        |<init>(x$1: List[String]): ProcessBuilder
        |""".stripMargin
   )
+  check(
+    "ctor2",
+    """
+      |object a {
+      |  new Some(10@@)
+      |}
+    """.stripMargin,
+    """|<init>(value: Int): Some[Int]
+       |       ^^^^^^^^^^
+       |""".stripMargin
+  )
 
   check(
     "apply",

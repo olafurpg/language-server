@@ -93,7 +93,9 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
                         occ.symbol,
                         t.name.value,
                         markdown,
-                        t.tparams.map(mparam).asJava,
+                        // Type parameters are intentionally excluded because constructors
+                        // cannot have type parameters: t.tparams.map(mparam).asJava
+                        Nil.asJava,
                         t.ctor.paramss.flatten.map(mparam).asJava
                       )
                     )
