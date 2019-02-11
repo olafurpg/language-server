@@ -66,7 +66,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |}
     """.stripMargin,
     """|
-       |map[B, That](f: Int => B)(bf: scala.collection.generic.CanBuildFrom[List[Int],B,That]): That
+       |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
        |  @param f Int => ???
        |""".stripMargin
@@ -92,7 +92,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """| Returns an immutable set containing only the specified object.
        |The returned set is serializable.
-       |singleton[T](o: T): java.util.Set[T]
+       |singleton[T](o: T): Set[T]
        |             ^^^^
        |  @param T <T> the class of the objects in the set
        |  @param o o the sole object to be stored in the returned set.
@@ -105,8 +105,8 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  new scala.util.control.Exception.Catch(@@)
       |}
     """.stripMargin,
-    """|<init>(T: util.control.Exception.Catcher[T], pf: Option[util.control.Exception.Finally] = {}, fin: Throwable => Boolean = None): scala.util.control.Exception.Catch[T]
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """|<init>(T: Exception.Catcher[T], pf: Option[Exception.Finally] = {}, fin: Throwable => Boolean = None): Exception.Catch[T]
+       |       ^^^^^^^^^^^^^^^^^^^^^^^
        |  @param T result type of bodies used in try and catch blocks
        |  @param pf Partial function used when applying catch logic to determine result value
        |  @param fin ally logic.
@@ -119,10 +119,10 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  new java.io.File(@@)
       |}
     """.stripMargin,
-    """|<init>(uri: java.net.URI): java.io.File
-       |<init>(parent: java.io.File, child: String): java.io.File
-       |<init>(parent: String, child: String): java.io.File
-       |<init>(pathname: String): java.io.File
+    """|<init>(uri: URI): File
+       |<init>(parent: File, child: String): File
+       |<init>(parent: String, child: String): File
+       |<init>(pathname: String): File
        |""".stripMargin
   )
   check(

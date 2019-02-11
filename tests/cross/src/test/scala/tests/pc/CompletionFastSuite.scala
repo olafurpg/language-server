@@ -90,10 +90,10 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  Map.empty[Int, String].getOrEl@@
       |}""".stripMargin,
-    """|getOrElse[V1 >: String](key: Int,default: => V1): V1
+    """|getOrElse[V1 >: String](key: Int, default: => V1): V1
        |""".stripMargin,
     compat = Map(
-      "2.11" -> "getOrElse[B1 >: String](key: Int,default: => B1): B1"
+      "2.11" -> "getOrElse[B1 >: String](key: Int, default: => B1): B1"
     )
   )
 
@@ -115,32 +115,32 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  List.@@
       |}""".stripMargin,
     """|apply[A](xs: A*): List[A]
-       |canBuildFrom[A]: scala.collection.generic.CanBuildFrom[scala.collection.immutable.List.Coll,A,List[A]]
+       |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
        |empty[A]: List[A]
-       |newBuilder[A]: scala.collection.mutable.Builder[A,List[A]]
+       |newBuilder[A]: Builder[A,List[A]]
        |GenericCanBuildFrom[A <: <?>] extends CanBuildFrom[List[_],A,List[A]]
-       |ReusableCBF: scala.collection.immutable.List.GenericCanBuildFrom[Nothing]
+       |ReusableCBF: List.GenericCanBuildFrom[Nothing]
        |concat[A](xss: Traversable[A]*): List[A]
-       |fill[A](n1: Int,n2: Int)(elem: => A): List[List[A]]
-       |fill[A](n1: Int,n2: Int,n3: Int)(elem: => A): List[List[List[A]]]
-       |fill[A](n1: Int,n2: Int,n3: Int,n4: Int)(elem: => A): List[List[List[List[A]]]]
-       |fill[A](n1: Int,n2: Int,n3: Int,n4: Int,n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
+       |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
+       |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
+       |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
+       |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
        |fill[A](n: Int)(elem: => A): List[A]
-       |iterate[A](start: A,len: Int)(f: A => A): List[A]
-       |range[T](start: T,end: T)(implicit evidence$1: Integral[T]): List[T]
-       |range[T](start: T,end: T,step: T)(implicit evidence$2: Integral[T]): List[T]
-       |tabulate[A](n1: Int,n2: Int)(f: (Int, Int) => A): List[List[A]]
-       |tabulate[A](n1: Int,n2: Int,n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
-       |tabulate[A](n1: Int,n2: Int,n3: Int,n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
-       |tabulate[A](n1: Int,n2: Int,n3: Int,n4: Int,n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
+       |iterate[A](start: A, len: Int)(f: A => A): List[A]
+       |range[T](start: T, end: T)(implicit evidence$1: Integral[T]): List[T]
+       |range[T](start: T, end: T, step: T)(implicit evidence$2: Integral[T]): List[T]
+       |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
        |tabulate[A](n: Int)(f: Int => A): List[A]
        |unapplySeq[A](x: List[A]): Some[List[A]]
        |->[B](y: B): (A, B)
        |+(other: String): String
        |ensuring(cond: A => Boolean): A
-       |ensuring(cond: A => Boolean,msg: => Any): A
+       |ensuring(cond: A => Boolean, msg: => Any): A
        |ensuring(cond: Boolean): A
-       |ensuring(cond: Boolean,msg: => Any): A
+       |ensuring(cond: Boolean, msg: => Any): A
        |formatted(fmtstr: String): String
        |asInstanceOf[T0]: T0
        |equals(x$1: Any): Boolean
@@ -344,7 +344,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  Map.emp@@
       |}
       |""".stripMargin,
-    """|empty[K, V]: scala.collection.immutable.Map[K,V] (commit: '.')
+    """|empty[K, V]: Map[K,V] (commit: '.')
        |""".stripMargin,
     includeCommitCharacter = true
   )
@@ -395,6 +395,17 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|toCharArray(): Array[Char]
+       |""".stripMargin
+  )
+
+  check(
+    "implicit",
+    """
+      |object A {
+      |  Array.concat@@
+      |}
+    """.stripMargin,
+    """|concat[T](xss: Array[T]*)(implicit evidence$8: ClassTag[T]): Array[T]
        |""".stripMargin
   )
 

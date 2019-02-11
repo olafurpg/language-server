@@ -27,7 +27,7 @@ class SignatureHelpProvider(
     // TODO(olafur) validate we need `typeCheck` and `typedTreeAtPos` is not sufficient.
     compiler.typeCheck(unit)
     EnclosingMethodCall
-      .fromPosition(pos, unit.body.asInstanceOf[compiler.Tree])
+      .fromPosition(pos, unit.body)
       .map(toSignatureHelp)
       .getOrElse(new SignatureHelp())
   }
@@ -305,12 +305,15 @@ class SignatureHelpProvider(
     val infos = t.alternatives.zipWithIndex.collect {
       case (method: MethodSymbol, i) =>
         val isActiveSignature = method == activeParent
+        val tpe =
+          if (isActiveSignature) t.call.qualTpe
+          else method.info
         val paramss: List[List[Symbol]] =
           if (!isActiveSignature) {
-            mparamss(method.info)
+            mparamss(tpe)
           } else {
             activeSignature = i
-            val paramss = this.mparamss(t.call.qualTpe)
+            val paramss = this.mparamss(tpe)
             val gparamss = for {
               (params, i) <- paramss.zipWithIndex
               (param, j) <- params.zipWithIndex
@@ -330,6 +333,7 @@ class SignatureHelpProvider(
         toSignatureInformation(
           t,
           method,
+          tpe,
           paramss,
           isActiveSignature,
           shortenedNames
@@ -346,6 +350,7 @@ class SignatureHelpProvider(
   def toSignatureInformation(
       t: EnclosingMethodCall,
       method: MethodSymbol,
+      methodType: Type,
       mparamss: List[List[Symbol]],
       isActiveSignature: Boolean,
       shortenedNames: ShortenedNames
@@ -353,7 +358,7 @@ class SignatureHelpProvider(
     def arg(i: Int, j: Int): Option[Tree] =
       t.call.all.lift(i).flatMap(_.lift(j))
     var k = 0
-    val printer = new SignaturePrinter(method, shortenedNames)
+    val printer = new SignaturePrinter(method, shortenedNames, methodType)
     val paramLabels = mparamss.zipWithIndex.map {
       case (params, i) =>
         val byName: Map[Name, Int] =

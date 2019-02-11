@@ -29,14 +29,19 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     val shortenedNames = new ShortenedNames()
     val (qual, kind, i) = safeCompletionsAt(position)
     def methodString(method: MethodSymbol, info: Type): String = {
-      val printer = new SignaturePrinter(method, shortenedNames)
+      val printer = new SignaturePrinter(method, shortenedNames, info)
       var i = 0
-      val params = info.paramss.iterator.map { params =>
-        params.iterator.map { param =>
+      val paramss = info.typeParams match {
+        case Nil => info.paramss
+        case tparams => tparams :: info.paramss
+      }
+      val params = paramss.iterator.map { params =>
+        val labels = params.iterator.map { param =>
           val result = printer.paramLabel(param, i)
           i += 1
           result
         }
+        labels
       }
       printer.methodSignature(params, name = "")
     }

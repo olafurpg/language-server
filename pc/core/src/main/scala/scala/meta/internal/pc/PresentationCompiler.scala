@@ -176,7 +176,8 @@ class PresentationCompiler(
 
   class SignaturePrinter(
       method: MethodSymbol,
-      shortenedNames: ShortenedNames
+      shortenedNames: ShortenedNames,
+      methodType: Type
   ) {
     private val info = methodInfo(method)
     private val infoParamsA: Seq[pc.ParameterInformation] = info match {
@@ -189,26 +190,51 @@ class PresentationCompiler(
     private val infoParams =
       infoParamsA.lift
     private val returnType =
-      metalsToLongString(method.returnType, shortenedNames)
+      metalsToLongString(methodType.finalResultType, shortenedNames)
 
     def methodDocstring: String = {
       if (isDocs) info.fold("")(_.docstring())
       else ""
     }
+    def isTypeParameters: Boolean = methodType.typeParams.nonEmpty
+    def isImplicit: Boolean = methodType.paramss.lastOption match {
+      case Some(head :: _) => head.isImplicit
+      case _ => false
+    }
+    def mparamss: List[List[Symbol]] =
+      methodType.typeParams match {
+        case Nil => methodType.paramss
+        case tparams => tparams :: methodType.paramss
+      }
+
     def methodSignature(
         paramLabels: Iterator[Iterator[String]],
         name: String = method.nameString
-    ): String =
-      paramLabels.zipWithIndex
+    ): String = {
+      paramLabels
+        .zip(mparamss.iterator)
         .map {
-          case (params, i) =>
-            if (method.typeParams.nonEmpty && i == 0) {
-              params.mkString("[", ", ", "]")
-            } else {
-              params.mkString("(", ", ", ")")
+          case (params, syms) =>
+            paramsKind(syms) match {
+              case Params.TypeParameterKind =>
+                params.mkString("[", ", ", "]")
+              case Params.NormalKind =>
+                params.mkString("(", ", ", ")")
+              case Params.ImplicitKind =>
+                params.mkString("(implicit ", ", ", ")")
             }
         }
         .mkString(name, "", s": ${returnType}")
+    }
+    def paramsKind(syms: List[Symbol]): Params.Kind = {
+      syms match {
+        case head :: _ =>
+          if (head.isType) Params.TypeParameterKind
+          else if (head.isImplicit) Params.ImplicitKind
+          else Params.NormalKind
+        case Nil => Params.NormalKind
+      }
+    }
     def paramDocstring(paramIndex: Int): String = {
       if (isDocs) infoParams(paramIndex).fold("")(_.docstring())
       else ""

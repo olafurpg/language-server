@@ -54,7 +54,7 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
       |  List(1).map(@@)
       |}
     """.stripMargin,
-    """|map[B, That](f: Int => B)(bf: CanBuildFrom[List[Int],B,That]): That
+    """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
        |""".stripMargin
   )
@@ -327,7 +327,7 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
       |  new java.util.HashMap[String, Int]().computeIfAbsent(@@)
       |}
     """.stripMargin,
-    """|computeIfAbsent(x$1: String, x$2: Function[_ >: String, _ <: Int]): V
+    """|computeIfAbsent(x$1: String, x$2: Function[_ >: String, _ <: Int]): Int
        |                ^^^^^^^^^^^
        |""".stripMargin
   )
