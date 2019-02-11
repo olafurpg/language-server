@@ -3,5 +3,5 @@ package myexample
 import java.nio.file.Files
 
 object A {
-  new java.util.HashMap[String, Int]().computeIfAbsent()
+  new java.util.ArrayList[String]().forEach(p => p.toShort)
 }

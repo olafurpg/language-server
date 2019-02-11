@@ -387,4 +387,15 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "sam",
+    """
+      |object A {
+      |  new java.util.ArrayList[String]().forEach(p => p.toChar@@)
+      |}
+    """.stripMargin,
+    """|toCharArray(): Array[Char]
+       |""".stripMargin
+  )
+
 }
