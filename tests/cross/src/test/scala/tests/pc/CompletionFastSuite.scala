@@ -398,16 +398,4 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
-  check(
-    "java",
-    """
-      |object A {
-      |  "".substrin@@
-      |}
-    """.stripMargin,
-    """|substring(x$1: Int): String
-       |substring(x$1: Int,x$2: Int): String
-       |""".stripMargin
-  )
-
 }

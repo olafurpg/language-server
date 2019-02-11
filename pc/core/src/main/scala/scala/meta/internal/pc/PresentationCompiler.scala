@@ -195,7 +195,10 @@ class PresentationCompiler(
       if (isDocs) info.fold("")(_.docstring())
       else ""
     }
-    def methodSignature(paramLabels: Iterator[Iterator[String]]): String =
+    def methodSignature(
+        paramLabels: Iterator[Iterator[String]],
+        name: String = method.nameString
+    ): String =
       paramLabels.zipWithIndex
         .map {
           case (params, i) =>
@@ -205,7 +208,7 @@ class PresentationCompiler(
               params.mkString("(", ", ", ")")
             }
         }
-        .mkString(method.nameString, "", s": ${returnType}")
+        .mkString(name, "", s": ${returnType}")
     def paramDocstring(paramIndex: Int): String = {
       if (isDocs) infoParams(paramIndex).fold("")(_.docstring())
       else ""

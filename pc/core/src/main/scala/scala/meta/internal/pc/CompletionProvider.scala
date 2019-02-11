@@ -26,7 +26,24 @@ class CompletionProvider(val compiler: PresentationCompiler) {
       cursor = Some(offset)
     )
     val position = unit.position(offset)
+    val shortenedNames = new ShortenedNames()
     val (qual, kind, i) = safeCompletionsAt(position)
+    def methodString(method: MethodSymbol, info: Type): String = {
+      val printer = new SignaturePrinter(method, shortenedNames)
+      var i = 0
+      val params = info.paramss.iterator.map { params =>
+        params.iterator.map { param =>
+          val result = printer.paramLabel(param, i)
+          i += 1
+          result
+        }
+      }
+      printer.methodSignature(params, name = "")
+    }
+    def infoString(sym: Symbol, info: Type): String = sym match {
+      case m: MethodSymbol => methodString(m, info)
+      case _ => sym.infoString(info)
+    }
     def detailString(r: Member): String = {
       qual match {
         case Some(tpe) if !r.sym.hasPackageFlag =>
@@ -34,15 +51,13 @@ class CompletionProvider(val compiler: PresentationCompiler) {
           // Example: Map[Int, String].applyOrE@@
           // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
           // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
-          r.sym.infoString(tpe.memberType(r.sym))
+          infoString(r.sym, tpe.memberType(r.sym))
         case _ =>
           if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
             " " + r.sym.owner.fullName
           } else {
-            // NOTE(olafur): We use `signatureString` because it is presumably fast due
-            // to not completing the symbol's type. It seems to produce readable output
-            // excluding type bounds `<: <?>` that we remove via string processing.
-            r.sym.signatureString.replaceAllLiterally(" <: <?>", "")
+            if (r.sym.hasRawInfo) infoString(r.sym, r.sym.rawInfo)
+            else "<_>"
           }
       }
     }
