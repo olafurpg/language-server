@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-
 case class Classfile(pkg: String, filename: String) {
   def isExact(query: WorkspaceSymbolQuery): Boolean =
     name == query.query

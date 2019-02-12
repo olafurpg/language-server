@@ -11,6 +11,7 @@ import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.collection.JavaConverters._
 import scala.meta.pc.CompletionItems.LookupKind
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.interactive.Response
@@ -116,37 +117,29 @@ class ScalaPC(
   }
 
   def emptyCompletion = new CompletionItems(LookupKind.None, Nil.asJava)
-  override def complete(
-      filename: String,
-      text: String,
-      offset: Int
-  ): CompletionItems =
+  override def complete(params: OffsetParams): CompletionItems =
     access.withCompiler(emptyCompletion) { global =>
-      new CompletionProvider(global).completions(filename, text, offset)
+      new CompletionProvider(global).completions(params)
     }
 
-  override def hover(filename: String, text: String, offset: Int): Hover =
+  override def hover(params: OffsetParams): Hover =
     access.withCompiler(new Hover()) { global =>
-      new HoverProvider(global).hover(filename, text, offset).orNull
+      new HoverProvider(global).hover(params).orNull
     }
 
-  override def signatureHelp(
-      filename: String,
-      text: String,
-      offset: Int
-  ): SignatureHelp = access.withCompiler(new SignatureHelp()) { global =>
-    new SignatureHelpProvider(global, indexer)
-      .signatureHelp(filename, text, offset)
-  }
+  override def signatureHelp(params: OffsetParams): SignatureHelp =
+    access.withCompiler(new SignatureHelp()) { global =>
+      new SignatureHelpProvider(global, indexer).signatureHelp(params)
+    }
 
-  override def symbol(filename: String, text: String, offset: Int): String = {
+  override def symbol(params: OffsetParams): String = {
     access.withCompiler("") { global =>
       val unit = global.addCompilationUnit(
-        code = text,
-        filename = filename,
+        code = params.text(),
+        filename = params.filename(),
         cursor = None
       )
-      val pos = unit.position(offset)
+      val pos = unit.position(params.offset())
       global.typedTreeAt(pos).symbol.fullName
     }
   }

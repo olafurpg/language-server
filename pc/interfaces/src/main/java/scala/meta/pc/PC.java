@@ -8,10 +8,10 @@ import java.util.List;
 
 public abstract class  PC {
     public abstract void shutdown();
-    public abstract String symbol(String filename, String text, int offset);
-    public abstract SignatureHelp signatureHelp(String filename, String text, int offset);
-    public abstract Hover hover(String filename, String text, int offset);
-    public abstract CompletionItems complete(String filename, String text, int offset);
+    public abstract String symbol(OffsetParams params);
+    public abstract SignatureHelp signatureHelp(OffsetParams params);
+    public abstract Hover hover(OffsetParams params);
+    public abstract CompletionItems complete(OffsetParams params);
     public abstract List<String> diagnostics();
     public abstract PC withIndexer(SymbolIndexer indexer);
     public abstract PC withSearch(SymbolSearch search);

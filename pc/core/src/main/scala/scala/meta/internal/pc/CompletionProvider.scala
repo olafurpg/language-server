@@ -7,6 +7,7 @@ import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
 
@@ -15,17 +16,13 @@ class CompletionProvider(val compiler: PresentationCompiler) {
 
   val maxWorkspaceSymbolResults = 10
 
-  def completions(
-      filename: String,
-      text: String,
-      offset: Int
-  ): CompletionItems = {
+  def completions(params: OffsetParams): CompletionItems = {
     val unit = addCompilationUnit(
-      code = text,
-      filename = filename,
-      cursor = Some(offset)
+      code = params.text,
+      filename = params.filename,
+      cursor = Some(params.offset)
     )
-    val position = unit.position(offset)
+    val position = unit.position(params.offset)
     val shortenedNames = new ShortenedNames()
     val (qual, kind, i) = safeCompletionsAt(position)
     def methodString(method: MethodSymbol, info: Type): String = {

@@ -1,6 +1,7 @@
 package tests
 
 import scala.collection.JavaConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.util.Properties
 
 abstract class BaseCompletionSuite extends BasePCSuite {
@@ -12,7 +13,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
-      val result = pc.complete("A.scala", code, offset)
+      val result = pc.complete(CompilerOffsetParams("A.scala", code, offset))
       assertEquals(
         result.getItems.size(),
         getExpected(expected, compat)
@@ -30,7 +31,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
-      val result = pc.complete("A.scala", code, offset)
+      val result = pc.complete(CompilerOffsetParams("A.scala", code, offset))
       val out = new StringBuilder()
       result.getItems.asScala.sortBy(_.getSortText).foreach { item =>
         val label =

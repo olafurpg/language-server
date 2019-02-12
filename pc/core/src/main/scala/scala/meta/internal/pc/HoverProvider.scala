@@ -4,16 +4,17 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkedString
 import scala.collection.JavaConverters._
+import scala.meta.pc.OffsetParams
 
 class HoverProvider(compiler: PresentationCompiler) {
   import compiler._
-  def hover(filename: String, text: String, offset: Int): Option[Hover] = {
+  def hover(params: OffsetParams): Option[Hover] = {
     val unit = addCompilationUnit(
-      code = text,
-      filename = filename,
+      code = params.text(),
+      filename = params.filename(),
       cursor = None
     )
-    val pos = unit.position(offset)
+    val pos = unit.position(params.offset())
     val typedTree = compiler.typedTreeAt(pos)
     for {
       tpeName <- typeOfTree(typedTree)

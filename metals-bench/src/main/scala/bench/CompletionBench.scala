@@ -12,6 +12,7 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.pc.ScalaPC
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItems
@@ -90,7 +91,7 @@ abstract class BaseCompletionBench {
 
   def scopeComplete(pc: PC): CompletionItems = {
     val code = "import Java\n"
-    pc.complete("A.scala", code, code.length - 2)
+    pc.complete(CompilerOffsetParams("A.scala", code, code.length - 2))
   }
 }
 

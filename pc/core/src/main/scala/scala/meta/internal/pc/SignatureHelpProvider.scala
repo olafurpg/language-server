@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolIndexer
 
 class SignatureHelpProvider(
@@ -14,16 +15,14 @@ class SignatureHelpProvider(
   import compiler._
 
   def signatureHelp(
-      filename: String,
-      text: String,
-      offset: Int
+      params: OffsetParams
   ): SignatureHelp = {
     val unit = addCompilationUnit(
-      code = text,
-      filename = filename,
-      cursor = cursor(offset, text)
+      code = params.text(),
+      filename = params.filename(),
+      cursor = cursor(params.offset(), params.text())
     )
-    val pos = unit.position(offset)
+    val pos = unit.position(params.offset())
     // TODO(olafur) validate we need `typeCheck` and `typedTreeAtPos` is not sufficient.
     compiler.typeCheck(unit)
     EnclosingMethodCall

@@ -662,8 +662,8 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
-    CompletableFutures.computeAsync { _ =>
-      compilers.hover(params).orNull
+    CompletableFutures.computeAsync { token =>
+      compilers.hover(params, token).orNull
     }
 
   @JsonRequest("textDocument/documentHighlight")
@@ -796,16 +796,16 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
-    CompletableFutures.computeAsync { _ =>
-      compilers.completions(params).orNull
+    CompletableFutures.computeAsync { token =>
+      compilers.completions(params, token).orNull
     }
 
   @JsonRequest("textDocument/signatureHelp")
   def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
-    CompletableFutures.computeAsync { _ =>
-      compilers.signatureHelp(params).orNull
+    CompletableFutures.computeAsync { token =>
+      compilers.signatureHelp(params, token).orNull
     }
 
   @JsonRequest("textDocument/codeAction")

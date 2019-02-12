@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -29,17 +30,32 @@ class Compilers(
     cache.remove(id).foreach(_.cancel())
   }
 
-  def completions(params: CompletionParams): Option[CompletionList] =
+  def completions(
+      params: CompletionParams,
+      token: CancelChecker
+  ): Option[CompletionList] =
     withPC(params) { (pc, pos) =>
-      pc.complete(pos.input.syntax, pos.input.text, pos.start)
+      pc.complete(
+        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
+      )
     }
-  def hover(params: TextDocumentPositionParams): Option[Hover] =
+  def hover(
+      params: TextDocumentPositionParams,
+      token: CancelChecker
+  ): Option[Hover] =
     withPC(params) { (pc, pos) =>
-      pc.hover(pos.input.syntax, pos.input.text, pos.start)
+      pc.hover(
+        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
+      )
     }
-  def signatureHelp(params: TextDocumentPositionParams): Option[SignatureHelp] =
+  def signatureHelp(
+      params: TextDocumentPositionParams,
+      token: CancelChecker
+  ): Option[SignatureHelp] =
     withPC(params) { (pc, pos) =>
-      pc.signatureHelp(pos.input.syntax, pos.input.text, pos.start)
+      pc.signatureHelp(
+        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
+      )
     }
 
   private def withPC[T](
