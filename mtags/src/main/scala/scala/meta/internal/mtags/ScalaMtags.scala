@@ -92,12 +92,15 @@ class ScalaMtags(val input: Input.VirtualFile)
             paramss: List[List[Term.Param]],
             kind: Kind
         ): Unit = {
+          val old = myCurrentTree
+          myCurrentTree = member
           val disambiguator = overloads.disambiguator(name.value)
           withOwner() {
             method(name, disambiguator, kind, 0)
             enterTypeParameters(tparams)
             enterTermParameters(paramss, isPrimaryCtor = false)
           }
+          myCurrentTree = old
         }
         t.stats.foreach {
           case t: Ctor.Secondary =>

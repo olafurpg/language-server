@@ -33,7 +33,12 @@ trait PCEnrichments {
 
   implicit class XtensionCompletionItemData(item: CompletionItem) {
     def data: Option[CompletionItemData] =
-      decodeJson(item.getData, classOf[CompletionItemData])
+      item.getData match {
+        case d: CompletionItemData =>
+          Some(d)
+        case data =>
+          decodeJson(data, classOf[CompletionItemData])
+      }
   }
   implicit class XtensionRangeBuildProtocol(range: s.Range) {
     def toLocation(uri: String): l.Location = {

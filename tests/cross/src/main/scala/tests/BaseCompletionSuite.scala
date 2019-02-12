@@ -2,9 +2,12 @@ package tests
 
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.pc.CompletionItems
+import scala.meta.internal.metals.PCEnrichments._
 import scala.util.Properties
 
 abstract class BaseCompletionSuite extends BasePCSuite {
+
   def checkLength(
       name: String,
       original: String,
@@ -21,6 +24,18 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     }
   }
 
+  private def resolvedCompletions(
+      params: CompilerOffsetParams
+  ): CompletionItems = {
+    val result = pc.complete(params)
+    val newItems = result.getItems.asScala.map { item =>
+      val symbol = item.data.get.symbol
+      pc.completionItemResolve(item, symbol)
+    }
+    result.setItems(newItems.asJava)
+    result
+  }
+
   def check(
       name: String,
       original: String,
@@ -31,7 +46,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
-      val result = pc.complete(CompilerOffsetParams("A.scala", code, offset))
+      val result =
+        resolvedCompletions(CompilerOffsetParams("A.scala", code, offset))
       val out = new StringBuilder()
       result.getItems.asScala.sortBy(_.getSortText).foreach { item =>
         val label =
@@ -40,6 +56,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           if (includeCommitCharacter)
             item.getCommitCharacters.asScala.mkString(" (commit: '", " ", "')")
           else ""
+        val documentation = doc(item.getDocumentation)
+        if (includeDocs && documentation.nonEmpty) {
+          out.append(documentation).append("\n")
+        }
         out
           .append(label)
           .append(item.getDetail)

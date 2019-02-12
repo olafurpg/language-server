@@ -30,11 +30,14 @@ class CompletionProvider(
     val position = unit.position(params.offset)
     val shortenedNames = new ShortenedNames()
     val (qual, kind, i) = safeCompletionsAt(position)
+    val history = new ShortenedNames()
     def infoString(sym: Symbol, info: Type): String = sym match {
       case m: MethodSymbol =>
         new SignaturePrinter(m, shortenedNames, info, includeDocs = false).defaultMethodSignature
-      case _ => sym.infoString(info)
+      case _ =>
+        sym.infoString(info)
     }
+    Predef.println()
     def detailString(r: Member): String = {
       qual match {
         case Some(tpe) if !r.sym.hasPackageFlag =>
@@ -47,8 +50,11 @@ class CompletionProvider(
           if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
             " " + r.sym.owner.fullName
           } else {
-            if (r.sym.hasRawInfo) infoString(r.sym, r.sym.rawInfo)
-            else "<_>"
+            if (r.sym.hasRawInfo) {
+              infoString(r.sym, shortType(r.sym.rawInfo, history))
+            } else {
+              "<_>"
+            }
           }
       }
     }

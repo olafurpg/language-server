@@ -79,5 +79,5 @@ abstract class BasePCSuite extends BaseSuite {
     } else {
       " " + e.getRight.getValue
     }
-  }
+  }.trim
 }

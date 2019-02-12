@@ -26,6 +26,8 @@ class PresentationCompiler(
     with ClassPathProxy { compiler =>
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
+  def isJavaSymbol(sym: Symbol): Boolean =
+    !sym.hasPackageFlag && sym.isJava
 
   lazy val semanticdbOps: SemanticdbOps {
     val global: compiler.type
@@ -69,11 +71,17 @@ class PresentationCompiler(
     }
   }
 
+  def methodInfoSymbol(symbol: Symbol): Symbol =
+    if (!symbol.isJava && symbol.isPrimaryConstructor) symbol.owner
+    else symbol
+  def rawMethodInfo(symbol: Symbol): Option[MethodInformation] = {
+    for {
+      info <- methodInfos.get(semanticdbSymbol(methodInfoSymbol(symbol)))
+      if info != null
+    } yield info
+  }
   def methodInfo(symbol: Symbol): Option[MethodInformation] = {
-    val actualSymbol =
-      if (!symbol.isJava && symbol.isPrimaryConstructor) symbol.owner
-      else symbol
-    val sym = compiler.semanticdbSymbol(actualSymbol)
+    val sym = compiler.semanticdbSymbol(methodInfoSymbol(symbol))
     methodInfos.get(sym) match {
       case Some(null) => None
       case s: Some[t] => s
@@ -98,25 +106,22 @@ class PresentationCompiler(
     )
   }
 
-  def metalsToLongString(
-      tpe: Type,
-      history: ShortenedNames
-  ): String = {
-    // The following pattern match is an adaptation of this pattern match:
-    // https://github.com/scalameta/scalameta/blob/dc639c83f1c26627c39aef9bfb3dae779ecdb237/semanticdb/scalac/library/src/main/scala/scala/meta/internal/semanticdb/scalac/TypeOps.scala
-    def shortType(tpe: Type, name: Option[Name]): Type = tpe match {
+  // The following pattern match is an adaptation of this pattern match:
+  // https://github.com/scalameta/scalameta/blob/dc639c83f1c26627c39aef9bfb3dae779ecdb237/semanticdb/scalac/library/src/main/scala/scala/meta/internal/semanticdb/scalac/TypeOps.scala
+  def shortType(longType: Type, history: ShortenedNames): Type = {
+    def loop(tpe: Type, name: Option[Name]): Type = tpe match {
       case TypeRef(pre, sym, args) =>
         TypeRef(
-          shortType(pre, Some(sym.name)),
+          loop(pre, Some(sym.name)),
           sym,
-          args.map(arg => shortType(arg, name))
+          args.map(arg => loop(arg, name))
         )
       case SingleType(pre, sym) =>
         if (sym.hasPackageFlag) {
           if (history.tryShortenName(name, sym)) NoPrefix
           else tpe
         } else {
-          SingleType(shortType(pre, Some(sym.name)), sym)
+          SingleType(loop(pre, Some(sym.name)), sym)
         }
       case ThisType(sym) =>
         if (sym.hasPackageFlag) {
@@ -127,22 +132,26 @@ class PresentationCompiler(
         }
       case ConstantType(Constant(sym: TermSymbol))
           if sym.hasFlag(gf.JAVA_ENUM) =>
-        shortType(SingleType(sym.owner.thisPrefix, sym), None)
+        loop(SingleType(sym.owner.thisPrefix, sym), None)
       case ConstantType(Constant(tpe: Type)) =>
-        ConstantType(Constant(shortType(tpe, None)))
+        ConstantType(Constant(loop(tpe, None)))
       case SuperType(thistpe, supertpe) =>
-        SuperType(shortType(thistpe, None), shortType(supertpe, None))
+        SuperType(loop(thistpe, None), loop(supertpe, None))
       case RefinedType(parents, decls) =>
-        RefinedType(parents.map(parent => shortType(parent, None)), decls)
+        RefinedType(parents.map(parent => loop(parent, None)), decls)
       case AnnotatedType(annotations, underlying) =>
-        AnnotatedType(annotations, shortType(underlying, None))
+        AnnotatedType(annotations, loop(underlying, None))
       case ExistentialType(quantified, underlying) =>
-        ExistentialType(quantified, shortType(underlying, None))
+        ExistentialType(quantified, loop(underlying, None))
       case PolyType(tparams, resultType) =>
-        PolyType(tparams, resultType.map(t => shortType(t, None)))
+        PolyType(tparams, resultType.map(t => loop(t, None)))
       case t => t
     }
-    shortType(tpe, None).toLongString
+    loop(longType, None)
+  }
+
+  def metalsToLongString(tpe: Type, history: ShortenedNames): String = {
+    shortType(tpe, history).toLongString
   }
 
 //  def metalsToShortString(tpe: Type): String = {
@@ -176,48 +185,51 @@ class PresentationCompiler(
 
   def inverseSemanticdbSymbol(symbol: String): Symbol = {
     import scala.meta.internal.semanticdb.Scala._
-    def loop(s: String): Symbol = {
-      if (s.isNone || s.isRootPackage) rootMirror.RootPackage
-      else if (s.isEmptyPackage) rootMirror.EmptyPackage
+    if (!symbol.isGlobal) return NoSymbol
+    def loop(s: String): List[Symbol] = {
+      if (s.isNone || s.isRootPackage) rootMirror.RootPackage :: Nil
+      else if (s.isEmptyPackage) rootMirror.EmptyPackage :: Nil
       else {
         val (desc, parent) = DescriptorParser(s)
-        val owner = loop(parent)
-        pprint.log(owner)
-        owner match {
-          case NoSymbol =>
-            NoSymbol
-          case owner =>
-            desc match {
-              case Descriptor.None =>
-                owner
-              case Descriptor.Type(value) =>
-                owner.info.member(TypeName(value))
-              case Descriptor.Term(value) =>
-                owner.info.member(TermName(value))
-              case Descriptor.Package(value) =>
-                owner.info.member(TermName(value))
-              case Descriptor.Parameter(value) =>
-                owner.paramss.flatten
-                  .find(_.name.containsName(value))
-                  .getOrElse(NoSymbol)
-              case Descriptor.TypeParameter(value) =>
-                owner.typeParams
-                  .find(_.name.containsName(value))
-                  .getOrElse(NoSymbol)
-              case Descriptor.Method(value, _) =>
-                owner.info
-                  .member(TermName(value))
-                  .alternatives
-                  .iterator
-                  .filter(sym => semanticdbSymbol(sym) == s)
-                  .toList
-                  .headOption
-                  .getOrElse(NoSymbol)
-            }
-        }
+        val parentSymbol = loop(parent)
+        def tryMember(sym: Symbol): List[Symbol] =
+          sym match {
+            case NoSymbol =>
+              Nil
+            case owner =>
+              desc match {
+                case Descriptor.None =>
+                  Nil
+                case Descriptor.Type(value) =>
+                  val member = owner.info.member(TypeName(value)) :: Nil
+                  if (sym.isJava) owner.info.member(TermName(value)) :: member
+                  else member
+                case Descriptor.Term(value) =>
+                  owner.info.member(TermName(value)) :: Nil
+                case Descriptor.Package(value) =>
+                  owner.info.member(TermName(value)) :: Nil
+                case Descriptor.Parameter(value) =>
+                  owner.paramss.flatten.filter(_.name.containsName(value))
+                case Descriptor.TypeParameter(value) =>
+                  owner.typeParams.filter(_.name.containsName(value))
+                case Descriptor.Method(value, _) =>
+                  owner.info
+                    .member(TermName(value))
+                    .alternatives
+                    .iterator
+                    .filter(sym => semanticdbSymbol(sym) == s)
+                    .toList
+              }
+          }
+        parentSymbol.flatMap(tryMember)
       }
     }
-    loop(symbol)
+    loop(symbol) match {
+      case head :: _ =>
+        head
+      case Nil =>
+        NoSymbol
+    }
   }
 
   class SignaturePrinter(
@@ -228,7 +240,7 @@ class PresentationCompiler(
   ) {
     private val info =
       if (includeDocs) methodInfo(method)
-      else None
+      else rawMethodInfo(method)
     private val infoParamsA: Seq[pc.ParameterInformation] = info match {
       case Some(value) =>
         value.typeParameters().asScala ++

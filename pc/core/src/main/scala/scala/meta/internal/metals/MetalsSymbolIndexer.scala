@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.tools.nsc.doc.base.comment._
 import scala.collection.JavaConverters._
 import scala.meta._
 import scala.meta.internal.mtags.Symbol
@@ -35,7 +36,9 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
                 val docstring = currentTree.origin match {
                   case Origin.None => ""
                   case parsed: Origin.Parsed =>
-                    findLeadingDocstring(source.tokens, parsed.pos.start - 1) match {
+                    val leadingDocstring =
+                      findLeadingDocstring(source.tokens, parsed.pos.start - 1)
+                    leadingDocstring match {
                       case Some(value) => value
                       case None => ""
                     }
@@ -108,8 +111,7 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
             try mtags.indexRoot()
             catch {
               case NonFatal(e) =>
-                pprint.log(e)
-//                scribe.error(defn.path.toURI.toString, e)
+                scribe.error(defn.path.toURI.toString, e)
             }
           case _ =>
         }
@@ -117,51 +119,50 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
     }
   }
 
-  def toMarkdown(docstring: String): String = ""
-//  def toMarkdown(docstring: String): String = {
-//    val comment = ScaladocParser.parseAtSymbol(docstring)
-//    val out = new StringBuilder()
-//    def loop(i: Inline): Unit = i match {
-//      case Chain(items) =>
-//        items.foreach(loop)
-//      case Italic(text) =>
-//        out.append('*')
-//        loop(text)
-//        out.append('*')
-//      case Bold(text) =>
-//        out.append("**")
-//        loop(text)
-//        out.append("**")
-//      case Underline(text) =>
-//        out.append("_")
-//        loop(text)
-//        out.append("_")
-//      case Superscript(text) =>
-//        loop(text)
-//      case Subscript(text) =>
-//        loop(text)
-//      case Link(target, title) =>
-//        out.append("[")
-//        loop(title)
-//        out
-//          .append("](")
-//          .append(target)
-//          .append(")")
-//      case Monospace(text) =>
-//        out.append("`")
-//        loop(text)
-//        out.append("`")
-//      case Text(text) =>
-//        out.append(text)
-//      case _: EntityLink =>
-//      case HtmlTag(data) =>
-//        out.append(data)
-//      case Summary(text) =>
-//        loop(text)
-//    }
-//    loop(comment.short)
-//    out.toString().trim
-//  }
+  def toMarkdown(docstring: String): String = {
+    val comment = ScaladocParser.parseAtSymbol(docstring)
+    val out = new StringBuilder()
+    def loop(i: Inline): Unit = i match {
+      case Chain(items) =>
+        items.foreach(loop)
+      case Italic(text) =>
+        out.append('*')
+        loop(text)
+        out.append('*')
+      case Bold(text) =>
+        out.append("**")
+        loop(text)
+        out.append("**")
+      case Underline(text) =>
+        out.append("_")
+        loop(text)
+        out.append("_")
+      case Superscript(text) =>
+        loop(text)
+      case Subscript(text) =>
+        loop(text)
+      case Link(target, title) =>
+        out.append("[")
+        loop(title)
+        out
+          .append("](")
+          .append(target)
+          .append(")")
+      case Monospace(text) =>
+        out.append("`")
+        loop(text)
+        out.append("`")
+      case Text(text) =>
+        out.append(text)
+      case _: EntityLink =>
+      case HtmlTag(data) =>
+        out.append(data)
+      case Summary(text) =>
+        loop(text)
+    }
+    loop(comment.short)
+    out.toString().trim
+  }
 
   def findLeadingDocstring(tokens: Tokens, start: Int): Option[String] =
     if (start < 0) None
