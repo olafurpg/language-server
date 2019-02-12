@@ -342,4 +342,17 @@ object SignatureHelpFastSuite extends BaseSignatureHelpSuite {
        |                ^^^^^^^^^^^
        |""".stripMargin
   )
+  check(
+    "curry5",
+    """
+      |object a {
+      |  def curry(a: Int)(c: Int) = a
+      |  curry(1)(3@@)
+      |}
+    """.stripMargin,
+    """|
+       |curry(a: Int)(c: Int): Int
+       |              ^^^^^^
+       |""".stripMargin
+  )
 }

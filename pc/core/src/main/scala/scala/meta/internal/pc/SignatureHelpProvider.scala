@@ -107,7 +107,7 @@ class SignatureHelpProvider(
                 tparams = args0
                 (qual0, accum)
               case _ =>
-                (qual, accum)
+                (t, accum)
             }
           }
           val symbol = treeSymbol(tree)
