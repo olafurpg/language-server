@@ -1,7 +1,5 @@
 package scala.meta.internal.pc
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
