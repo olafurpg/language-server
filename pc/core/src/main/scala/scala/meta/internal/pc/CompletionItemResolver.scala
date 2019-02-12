@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 class CompletionItemResolver(
     val compiler: PresentationCompiler
@@ -10,7 +11,7 @@ class CompletionItemResolver(
     val gsym = compiler.inverseSemanticdbSymbol(msym)
     if (gsym != compiler.NoSymbol) {
       compiler.methodInfo(gsym) match {
-        case Some(info) =>
+        case Some(info) if item.getDetail != null =>
           if (compiler.isJavaSymbol(gsym)) {
             val newDetail = info
               .parameters()
@@ -39,8 +40,14 @@ class CompletionItemResolver(
             matcher.appendTail(out)
             item.setDetail(out.toString)
           }
-          item.setDocumentation(info.docstring())
-        case None =>
+          val docstring =
+            if (info.docstring().isEmpty) {
+              compiler.methodInfo(gsym.companion).fold("")(_.docstring())
+            } else {
+              info.docstring()
+            }
+          item.setDocumentation(docstring)
+        case _ =>
       }
       item
     } else {

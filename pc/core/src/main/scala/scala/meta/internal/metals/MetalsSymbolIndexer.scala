@@ -32,7 +32,7 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
             val mtags = new ScalaMtags(input) {
               override def visitOccurrence(
                   occ: SymbolOccurrence,
-                  info: SymbolInformation,
+                  sinfo: SymbolInformation,
                   owner: _root_.scala.Predef.String
               ): Unit = {
                 val docstring = currentTree.origin match {
@@ -77,6 +77,17 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
                   param(member.name.value, default)
                 }
                 val info = currentTree match {
+                  case _: Defn.Trait | _: Pkg.Object | _: Defn.Val |
+                      _: Defn.Var | _: Decl.Val | _: Decl.Var | _: Defn.Type |
+                      _: Decl.Type =>
+                    Some(
+                      new MetalsSymbolDocumentation(
+                        occ.symbol,
+                        sinfo.displayName,
+                        markdown,
+                        ""
+                      )
+                    )
                   case t: Defn.Def =>
                     Some(
                       new MetalsSymbolDocumentation(

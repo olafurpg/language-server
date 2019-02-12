@@ -116,6 +116,31 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
+  check(
+    "scala5",
+    """
+      |object A {
+      |  scala.concurrent.ExecutionContext.Implicits.global@@
+      |}
+    """.stripMargin,
+    """|> The implicit global `ExecutionContext`.
+       |global: ExecutionContext
+       |""".stripMargin,
+    includeDocs = true
+  )
+  check(
+    "scala6",
+    """
+      |object A {
+      |  scala.util.Try@@
+      |}
+    """.stripMargin,
+    """|> The `Try` type represents a computation that may either result in an exception, or return a
+       |successfully computed value.
+       |Try
+       |""".stripMargin,
+    includeDocs = true
+  )
 
   check(
     "local",
