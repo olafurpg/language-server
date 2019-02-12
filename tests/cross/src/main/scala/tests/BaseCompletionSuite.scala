@@ -58,7 +58,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           else ""
         val documentation = doc(item.getDocumentation)
         if (includeDocs && documentation.nonEmpty) {
-          out.append(documentation).append("\n")
+          out.append("> ").append(documentation).append("\n")
         }
         out
           .append(label)

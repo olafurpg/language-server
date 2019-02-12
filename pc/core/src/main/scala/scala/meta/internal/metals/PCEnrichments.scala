@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import org.eclipse.lsp4j.CompletionItem
 import scala.meta.internal.{semanticdb => s}
 import org.eclipse.{lsp4j => l}

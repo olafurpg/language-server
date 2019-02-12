@@ -81,10 +81,38 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |  println@@
       |}
     """.stripMargin,
-    """|Prints a newline character on the default output.
+    """|> Prints a newline character on the default output.
        |println(): Unit
-       |Prints out an object to the default output, followed by a newline character.
+       |> Prints out an object to the default output, followed by a newline character.
        |println(x: Any): Unit
+       |""".stripMargin,
+    includeDocs = true
+  )
+  check(
+    "scala3",
+    """
+      |object A {
+      |  Predef@@
+      |}
+    """.stripMargin,
+    """|DeprecatedPredef scala
+       |> The `Predef` object provides definitions that are accessible in all Scala
+       | compilation units without explicit qualification.
+       |Predef scala
+       |""".stripMargin,
+    includeDocs = true
+  )
+  check(
+    "scala4",
+    """
+      |object A {
+      |  scala.collection.Iterator@@
+      |}
+    """.stripMargin,
+    """|AbstractIterator
+       |BufferedIterator
+       |> The `Iterator` object provides various functions for creating specialized iterators.
+       |Iterator
        |""".stripMargin,
     includeDocs = true
   )

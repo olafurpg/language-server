@@ -8,16 +8,18 @@ import com.thoughtworks.qdox.model.JavaParameter
 import com.thoughtworks.qdox.model.JavaTypeVariable
 import java.util
 import scala.collection.JavaConverters._
-import scala.meta.pc.MethodInformation
-import scala.meta.pc.ParameterInformation
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.pc.SymbolDocumentation
 
-class MetalsMethodInformation(
+class MetalsSymbolDocumentation(
     val symbol: String,
     val name: String,
     val docstring: String,
-    val typeParameters: util.List[ParameterInformation],
-    val parameters: util.List[ParameterInformation]
-) extends MethodInformation {
+    val defaultValue: String = "",
+    val typeParameters: util.List[SymbolDocumentation] = Nil.asJava,
+    val parameters: util.List[SymbolDocumentation] = Nil.asJava
+) extends SymbolDocumentation {
   override def toString: String = {
     val tparamsFormat =
       if (typeParameters.isEmpty) ""
@@ -29,66 +31,75 @@ class MetalsMethodInformation(
   }
 }
 
-object MetalsMethodInformation {
-  def fromMethod(symbol: String, method: JavaMethod): MethodInformation = {
-    new MetalsMethodInformation(
+object MetalsSymbolDocumentation {
+  def fromMethod(symbol: String, method: JavaMethod): SymbolDocumentation = {
+    new MetalsSymbolDocumentation(
       symbol,
       method.getName,
       method.getComment,
-      typeParameters(method, method.getTypeParameters),
-      parameters(method, method.getParameters)
+      "",
+      typeParameters(symbol, method, method.getTypeParameters),
+      parameters(symbol, method, method.getParameters)
     )
   }
   def fromConstructor(
       symbol: String,
       method: JavaConstructor
-  ): MethodInformation = {
-    new MetalsMethodInformation(
+  ): SymbolDocumentation = {
+    new MetalsSymbolDocumentation(
       symbol,
       method.getName,
       method.getComment,
-      typeParameters(method, method.getTypeParameters),
-      parameters(method, method.getParameters)
+      "",
+      typeParameters(symbol, method, method.getTypeParameters),
+      parameters(symbol, method, method.getParameters)
     )
   }
-  def param(name: String, docstring: String): ParameterInformation =
-    new MetalsParameterInformation(
+  def param(
+      symbol: String,
+      name: String,
+      docstring: String
+  ): SymbolDocumentation =
+    new MetalsSymbolDocumentation(
+      symbol,
       name,
       if (docstring == null) "" else docstring,
       ""
     )
   def typeParameters[D <: JavaGenericDeclaration](
+      owner: String,
       method: JavaAnnotatedElement,
       tparams: util.List[JavaTypeVariable[D]]
-  ): util.List[ParameterInformation] = {
+  ): util.List[SymbolDocumentation] = {
     tparams.asScala.map { tparam =>
       val tparamName = s"<${tparam.getName}>"
       val docstring = method.getTagsByName("param").asScala.collectFirst {
         case tag if tag.getValue.startsWith(tparamName) =>
           tag.getValue
       }
-      this.param(tparam.getName, docstring.getOrElse(""))
+      this.param(
+        Symbols.Global(owner, Descriptor.TypeParameter(tparam.getName)),
+        tparam.getName,
+        docstring.getOrElse("")
+      )
     }.asJava
   }
   def parameters(
+      owner: String,
       method: JavaAnnotatedElement,
       params: util.List[JavaParameter]
-  ): util.List[ParameterInformation] = {
+  ): util.List[SymbolDocumentation] = {
     params.asScala.map { param =>
       val docstring = method.getTagsByName("param").asScala.collectFirst {
         case tag if tag.getValue.startsWith(param.getName) =>
           tag.getValue
       }
-      this.param(param.getName, docstring.getOrElse(""))
+      this.param(
+        Symbols.Global(owner, Descriptor.Parameter(param.getName)),
+        param.getName,
+        docstring.getOrElse("")
+      )
     }.asJava
   }
 
-}
-
-class MetalsParameterInformation(
-    val name: String,
-    val docstring: String,
-    val defaultValue: String
-) extends ParameterInformation {
-  override def toString: String = name
 }

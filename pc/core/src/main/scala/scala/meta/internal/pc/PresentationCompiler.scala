@@ -6,7 +6,7 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc
-import scala.meta.pc.MethodInformation
+import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolVisitor
@@ -74,13 +74,13 @@ class PresentationCompiler(
   def methodInfoSymbol(symbol: Symbol): Symbol =
     if (!symbol.isJava && symbol.isPrimaryConstructor) symbol.owner
     else symbol
-  def rawMethodInfo(symbol: Symbol): Option[MethodInformation] = {
+  def rawMethodInfo(symbol: Symbol): Option[SymbolDocumentation] = {
     for {
       info <- methodInfos.get(semanticdbSymbol(methodInfoSymbol(symbol)))
       if info != null
     } yield info
   }
-  def methodInfo(symbol: Symbol): Option[MethodInformation] = {
+  def methodInfo(symbol: Symbol): Option[SymbolDocumentation] = {
     val sym = compiler.semanticdbSymbol(methodInfoSymbol(symbol))
     methodInfos.get(sym) match {
       case Some(null) => None
@@ -99,7 +99,7 @@ class PresentationCompiler(
     indexer.visit(
       symbol,
       new SymbolVisitor {
-        override def visitMethod(method: MethodInformation): Unit = {
+        override def visitMethod(method: SymbolDocumentation): Unit = {
           methodInfos(method.symbol()) = method
         }
       }
@@ -160,7 +160,7 @@ class PresentationCompiler(
 //    sb.toString()
 //  }
 
-  val methodInfos = TrieMap.empty[String, MethodInformation]
+  val methodInfos = TrieMap.empty[String, SymbolDocumentation]
 
   // Only needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
@@ -241,7 +241,7 @@ class PresentationCompiler(
     private val info =
       if (includeDocs) methodInfo(method)
       else rawMethodInfo(method)
-    private val infoParamsA: Seq[pc.ParameterInformation] = info match {
+    private val infoParamsA: Seq[pc.SymbolDocumentation] = info match {
       case Some(value) =>
         value.typeParameters().asScala ++
           value.parameters().asScala

@@ -8,10 +8,12 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.trees.Origin
-import scala.meta.pc.ParameterInformation
+import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolVisitor
 import scala.meta.tokens.Token
@@ -59,9 +61,14 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
                     .getOrElse("")
                 }
                 lazy val markdown = toMarkdown(docstring)
-                def param(name: String, default: String): ParameterInformation =
-                  new MetalsParameterInformation(name, doc(name), default)
-                def mparam(member: Member): ParameterInformation = {
+                def param(name: String, default: String): SymbolDocumentation =
+                  new MetalsSymbolDocumentation(
+                    Symbols.Global(owner, Descriptor.Parameter(name)),
+                    name,
+                    doc(name),
+                    default
+                  )
+                def mparam(member: Member): SymbolDocumentation = {
                   val default = member match {
                     case Term.Param(_, _, _, Some(term)) => term.syntax
                     case _ =>
@@ -72,34 +79,46 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
                 val info = currentTree match {
                   case t: Defn.Def =>
                     Some(
-                      new MetalsMethodInformation(
+                      new MetalsSymbolDocumentation(
                         occ.symbol,
                         t.name.value,
                         markdown,
+                        "",
                         t.tparams.map(mparam).asJava,
                         t.paramss.flatten.map(mparam).asJava
                       )
                     )
                   case t: Decl.Def =>
                     Some(
-                      new MetalsMethodInformation(
+                      new MetalsSymbolDocumentation(
                         occ.symbol,
                         t.name.value,
                         markdown,
+                        "",
                         t.tparams.map(mparam).asJava,
                         t.paramss.flatten.map(mparam).asJava
                       )
                     )
                   case t: Defn.Class =>
                     Some(
-                      new MetalsMethodInformation(
+                      new MetalsSymbolDocumentation(
                         occ.symbol,
                         t.name.value,
                         markdown,
+                        "",
                         // Type parameters are intentionally excluded because constructors
-                        // cannot have type parameters: t.tparams.map(mparam).asJava
+                        // cannot have type parameters.
                         Nil.asJava,
                         t.ctor.paramss.flatten.map(mparam).asJava
+                      )
+                    )
+                  case t: Member =>
+                    Some(
+                      new MetalsSymbolDocumentation(
+                        occ.symbol,
+                        t.name.value,
+                        markdown,
+                        ""
                       )
                     )
                   case _ =>

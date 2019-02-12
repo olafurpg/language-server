@@ -1,8 +1,6 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.Gson
-import com.google.gson.JsonElement
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -32,7 +30,6 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.Properties
-import scala.util.control.NonFatal
 import scala.{meta => m}
 
 /**
