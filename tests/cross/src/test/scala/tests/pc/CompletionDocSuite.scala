@@ -161,7 +161,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|> Companion object to the Vector class
-       |Vector: collection.immutable.Vector.type
+       |Vector: Vector.type
        |""".stripMargin,
     includeDocs = true
   )

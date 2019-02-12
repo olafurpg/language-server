@@ -35,7 +35,7 @@ class CompletionProvider(
       case m: MethodSymbol =>
         new SignaturePrinter(m, shortenedNames, info, includeDocs = false).defaultMethodSignature
       case _ =>
-        sym.infoString(info)
+        sym.infoString(shortType(info, history))
     }
     def detailString(r: Member): String = {
       qual match {
@@ -50,7 +50,7 @@ class CompletionProvider(
             " " + r.sym.owner.fullName
           } else {
             if (r.sym.hasRawInfo) {
-              infoString(r.sym, shortType(r.sym.rawInfo, history))
+              infoString(r.sym, r.sym.rawInfo)
             } else {
               "<_>"
             }

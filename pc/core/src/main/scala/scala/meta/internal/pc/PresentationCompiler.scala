@@ -145,6 +145,8 @@ class PresentationCompiler(
         ExistentialType(quantified, loop(underlying, None))
       case PolyType(tparams, resultType) =>
         PolyType(tparams, resultType.map(t => loop(t, None)))
+      case NullaryMethodType(resultType) =>
+        loop(resultType, None)
       case t => t
     }
     loop(longType, None)
