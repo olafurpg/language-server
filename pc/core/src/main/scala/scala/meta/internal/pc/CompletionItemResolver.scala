@@ -2,17 +2,17 @@ package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
 import scala.collection.JavaConverters._
-import scala.util.Try
 
 class CompletionItemResolver(
     val compiler: PresentationCompiler
 ) {
+  import compiler._
   def resolve(item: CompletionItem, msym: String): CompletionItem = {
-    val gsym = compiler.inverseSemanticdbSymbol(msym)
-    if (gsym != compiler.NoSymbol) {
-      compiler.methodInfo(gsym) match {
+    val gsym = inverseSemanticdbSymbol(msym)
+    if (gsym != NoSymbol) {
+      methodInfo(gsym) match {
         case Some(info) if item.getDetail != null =>
-          if (compiler.isJavaSymbol(gsym)) {
+          if (isJavaSymbol(gsym)) {
             val newDetail = info
               .parameters()
               .asScala
@@ -42,7 +42,7 @@ class CompletionItemResolver(
           }
           val docstring =
             if (info.docstring().isEmpty) {
-              compiler.methodInfo(gsym.companion).fold("")(_.docstring())
+              methodInfo(alternativeDocstring(gsym)).fold("")(_.docstring())
             } else {
               info.docstring()
             }
@@ -53,5 +53,17 @@ class CompletionItemResolver(
     } else {
       item
     }
+  }
+
+  def alternativeDocstring(gsym: Symbol): Symbol = {
+    if (gsym.isAliasType) gsym.info.dealias.typeSymbol
+    else if (gsym.isMethod) {
+      gsym.info.finalResultType match {
+        case SingleType(_, sym) =>
+          sym
+        case _ =>
+          NoSymbol
+      }
+    } else gsym.companion
   }
 }

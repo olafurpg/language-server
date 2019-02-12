@@ -141,6 +141,30 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
+  check(
+    "scala7",
+    """
+      |object A {
+      |  scala.collection.mutable.StringBuilder@@
+      |}
+    """.stripMargin,
+    """|> A builder for mutable sequence of characters.
+       |StringBuilder
+       |""".stripMargin,
+    includeDocs = true
+  )
+  check(
+    "scala8",
+    """
+      |object A {
+      |  scala.Vector@@
+      |}
+    """.stripMargin,
+    """|> Companion object to the Vector class
+       |Vector: collection.immutable.Vector.type
+       |""".stripMargin,
+    includeDocs = true
+  )
 
   check(
     "local",
