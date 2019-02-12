@@ -7,7 +7,6 @@ sealed abstract class SymbolSearchCandidate {
   final def nameLength(query: String): Int = Fuzzy.nameLength(nameString)
   final def innerClassDepth: Int =
     SymbolSearchCandidate.characterCount(nameString, termCharacter)
-  def names: Seq[String]
   def termCharacter: Char
   def nameString: String
   def packageString: String
@@ -15,32 +14,12 @@ sealed abstract class SymbolSearchCandidate {
 object SymbolSearchCandidate {
   final case class Classfile(pkg: String, filename: String)
       extends SymbolSearchCandidate {
-    override def names: Seq[String] =
-      filename
-        .stripSuffix(".class")
-        .split('$')
-        .iterator
-        .filterNot(_.isEmpty)
-        .toList
     def nameString: String = filename
     override def packageString: String = pkg
     override def termCharacter: Char = '$'
   }
   final case class Workspace(symbol: String) extends SymbolSearchCandidate {
     def nameString: String = symbol
-    override def names: Seq[String] = {
-      val buf = List.newBuilder[String]
-      def loop(s: String): Unit = {
-        if (s.isNone || s.isPackage) ()
-        else {
-          val (desc, owner) = DescriptorParser(s)
-          loop(owner)
-          buf += desc.value
-        }
-      }
-      loop(symbol)
-      buf.result()
-    }
     override def packageString: String = {
       def loop(s: String): String = {
         if (s.isNone) s

@@ -37,7 +37,6 @@ class CompletionProvider(
       case _ =>
         sym.infoString(info)
     }
-    Predef.println()
     def detailString(r: Member): String = {
       qual match {
         case Some(tpe) if !r.sym.hasPackageFlag =>
@@ -347,27 +346,40 @@ class CompletionProvider(
   private def loadSymbolFromClassfile(
       classfile: SymbolSearchCandidate
   ): List[Symbol] = {
+    def isAccessible(sym: Symbol): Boolean = {
+      sym != NoSymbol && {
+        sym.info // needed to fill complete symbol
+        sym.isPublic
+      }
+    }
     try {
-      val pkgName = classfile.packageString.stripSuffix("/").replace('/', '.')
-      val pkg = rootMirror.staticPackage(pkgName)
-      def isAccessible(sym: Symbol): Boolean = {
-        sym != NoSymbol && {
-          sym.info // needed to fill complete symbol
-          sym.isPublic
-        }
-      }
-      val members = classfile.names.foldLeft(List[Symbol](pkg)) {
-        case (accum, name) =>
-          accum.flatMap { sym =>
-            if (!isAccessible(sym) || !sym.isModuleOrModuleClass) Nil
-            else {
-              sym.info.member(TermName(name)) ::
-                sym.info.member(TypeName(name)) ::
-                Nil
-            }
+      classfile match {
+        case SymbolSearchCandidate.Classfile(pkgString, filename) =>
+          val pkgName = pkgString.stripSuffix("/").replace('/', '.')
+          val pkg = rootMirror.staticPackage(pkgName)
+          val names = filename
+            .stripSuffix(".class")
+            .split('$')
+            .iterator
+            .filterNot(_.isEmpty)
+            .toList
+          val members = names.foldLeft(List[Symbol](pkg)) {
+            case (accum, name) =>
+              accum.flatMap { sym =>
+                if (!isAccessible(sym) || !sym.isModuleOrModuleClass) Nil
+                else {
+                  sym.info.member(TermName(name)) ::
+                    sym.info.member(TypeName(name)) ::
+                    Nil
+                }
+              }
           }
+          members.filter(sym => isAccessible(sym))
+        case SymbolSearchCandidate.Workspace(symbol) =>
+          val gsym = inverseSemanticdbSymbol(symbol)
+          if (isAccessible(gsym)) gsym :: Nil
+          else Nil
       }
-      members.filter(sym => isAccessible(sym))
     } catch {
       case NonFatal(_) =>
         scribe.error(s"no such symbol: $classfile")

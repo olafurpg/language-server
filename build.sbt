@@ -124,6 +124,7 @@ lazy val pc = project
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.lihaoyi" %% "pprint" % "0.5.3",
+      "com.outr" %% "scribe" % "2.6.0",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
     )
