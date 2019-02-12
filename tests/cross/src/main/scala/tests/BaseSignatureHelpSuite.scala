@@ -39,27 +39,16 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
                         |  signature.label: ${signature.getLabel}
                         |""".stripMargin)
               }
-              val documentation = doc(param.getDocumentation)
-              val typeSignature =
-                if (documentation.startsWith("```scala")) {
-                  documentation
-                    .stripPrefix("```scala\n")
-                    .lines
-                    .take(1)
-                    .mkString(" ", "", "")
-                } else {
-                  ""
-                }
               val indent = " " * column
               out
                 .append(indent)
                 .append("^" * param.getLabel.length)
-                .append(typeSignature)
                 .append("\n")
               signature.getParameters.asScala.foreach { param =>
-                val pdoc = doc(param.getDocumentation).trim
+                val pdoc = doc(param.getDocumentation)
                   .stripPrefix("```scala\n")
                   .stripSuffix("\n```")
+                  .replaceAllLiterally("\n```\n", " ")
                 if (includeDocs && pdoc.nonEmpty) {
                   out
                     .append("  @param ")

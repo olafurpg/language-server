@@ -10,10 +10,12 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  Option(1).fold("")(_ => @@)
       |}
     """.stripMargin,
-    """|
+    """|Returns the result of applying $f to this $option's
+       | value if the $option is nonempty.
        |fold[B](ifEmpty: => B)(f: Int => B): B
        |                       ^^^^^^^^^^^
-       |  @param f Int => ???
+       |  @param ifEmpty `.
+       |  @param f Int => ???  to this $option's
        |""".stripMargin
   )
 
@@ -24,10 +26,12 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  Option(1).fold("@@")
       |}
     """.stripMargin,
-    """|
+    """|Returns the result of applying $f to this $option's
+       | value if the $option is nonempty.
        |fold[B](ifEmpty: => B)(f: Int => B): B
        |        ^^^^^^^^^^^^^
-       |  @param ifEmpty String
+       |  @param ifEmpty String `.
+       |  @param f to this $option's
        |""".stripMargin
   )
   checkDoc(
@@ -78,9 +82,14 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  Option(1, 2, @@2)
       |}
     """.stripMargin,
-    """|apply[A](x: A): Option[A]
+    // FIXME: https://github.com/scalameta/metals/issues/518
+    // The expected output is broken here.
+    """|An Option factory which creates Some(x) if the argument is not null,
+       | and None if it is null.
+       |apply[A](x: A): Option[A]
        |         ^^^^
-       |  @param x (Int, Int, Int)
+       |  @param A n Option factory which creates Some(x) if the argument is not null,
+       |  @param x (Int, Int, Int) ) if the argument is not null,
        |""".stripMargin
   )
   checkDoc(
@@ -105,7 +114,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  new scala.util.control.Exception.Catch(@@)
       |}
     """.stripMargin,
-    """|
+    """|A container class for catch/finally logic.
        |<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = None, rethrow: Throwable => Boolean = shouldRethrow): Exception.Catch[T]
        |       ^^^^^^^^^^^^^^^^^^^^^^^^
        |  @param pf Partial function used when applying catch logic to determine result value
@@ -182,7 +191,8 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  new Some(10@@)
       |}
     """.stripMargin,
-    """|
+    """|Class `Some[A]` represents existing values of type
+       | `A`.
        |<init>(value: Int): Some[Int]
        |       ^^^^^^^^^^
        |  @param value s of type

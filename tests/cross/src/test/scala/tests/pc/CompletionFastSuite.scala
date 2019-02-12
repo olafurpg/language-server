@@ -24,7 +24,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  Lis@@
       |}""".stripMargin,
-    """|List: collection.immutable.List.type
+    """|List: List.type
        |java.awt.List java.awt
        |java.util.List java.util
        |scala.collection.immutable.List scala.collection.immutable
