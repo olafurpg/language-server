@@ -357,7 +357,12 @@ class SignatureHelpProvider(
     def arg(i: Int, j: Int): Option[Tree] =
       t.call.all.lift(i).flatMap(_.lift(j))
     var k = 0
-    val printer = new SignaturePrinter(method, shortenedNames, methodType)
+    val printer = new SignaturePrinter(
+      method,
+      shortenedNames,
+      methodType,
+      includeDocs = true
+    )
     val paramLabels = mparamss.zipWithIndex.map {
       case (params, i) =>
         val byName: Map[Name, Int] =

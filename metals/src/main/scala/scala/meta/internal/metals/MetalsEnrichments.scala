@@ -59,23 +59,6 @@ object MetalsEnrichments
     with DecorateAsScala
     with PCEnrichments {
 
-  private def decodeJson[T](obj: AnyRef, cls: Class[T]): Option[T] =
-    for {
-      data <- Option(obj)
-      value <- try {
-        Some(
-          new Gson().fromJson[T](
-            data.asInstanceOf[JsonElement],
-            cls
-          )
-        )
-      } catch {
-        case NonFatal(e) =>
-          scribe.error(s"decode error: $cls", e)
-          None
-      }
-    } yield value
-
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])

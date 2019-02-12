@@ -174,12 +174,61 @@ class PresentationCompiler(
       }
   }
 
+  def inverseSemanticdbSymbol(symbol: String): Symbol = {
+    import scala.meta.internal.semanticdb.Scala._
+    def loop(s: String): Symbol = {
+      if (s.isNone || s.isRootPackage) rootMirror.RootPackage
+      else if (s.isEmptyPackage) rootMirror.EmptyPackage
+      else {
+        val (desc, parent) = DescriptorParser(s)
+        val owner = loop(parent)
+        pprint.log(owner)
+        owner match {
+          case NoSymbol =>
+            NoSymbol
+          case owner =>
+            desc match {
+              case Descriptor.None =>
+                owner
+              case Descriptor.Type(value) =>
+                owner.info.member(TypeName(value))
+              case Descriptor.Term(value) =>
+                owner.info.member(TermName(value))
+              case Descriptor.Package(value) =>
+                owner.info.member(TermName(value))
+              case Descriptor.Parameter(value) =>
+                owner.paramss.flatten
+                  .find(_.name.containsName(value))
+                  .getOrElse(NoSymbol)
+              case Descriptor.TypeParameter(value) =>
+                owner.typeParams
+                  .find(_.name.containsName(value))
+                  .getOrElse(NoSymbol)
+              case Descriptor.Method(value, _) =>
+                owner.info
+                  .member(TermName(value))
+                  .alternatives
+                  .iterator
+                  .filter(sym => semanticdbSymbol(sym) == s)
+                  .toList
+                  .headOption
+                  .getOrElse(NoSymbol)
+            }
+        }
+      }
+    }
+    loop(symbol)
+  }
+
   class SignaturePrinter(
-      method: MethodSymbol,
+      method: Symbol,
       shortenedNames: ShortenedNames,
-      methodType: Type
+      methodType: Type,
+      includeDocs: Boolean
   ) {
-    private val info = methodInfo(method)
+    private val info =
+      if (includeDocs) methodInfo(method)
+      else None
     private val infoParamsA: Seq[pc.ParameterInformation] = info match {
       case Some(value) =>
         value.typeParameters().asScala ++
@@ -206,6 +255,22 @@ class PresentationCompiler(
         case Nil => methodType.paramss
         case tparams => tparams :: methodType.paramss
       }
+    def defaultMethodSignature: String = {
+      var i = 0
+      val paramss = methodType.typeParams match {
+        case Nil => methodType.paramss
+        case tparams => tparams :: methodType.paramss
+      }
+      val params = paramss.iterator.map { params =>
+        val labels = params.iterator.map { param =>
+          val result = paramLabel(param, i)
+          i += 1
+          result
+        }
+        labels
+      }
+      methodSignature(params, name = "")
+    }
 
     def methodSignature(
         paramLabels: Iterator[Iterator[String]],

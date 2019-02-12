@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.io.File
 import java.nio.file.Path
 import java.util
+import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.meta.pc.CompletionItems
@@ -120,6 +121,13 @@ class ScalaPC(
   override def complete(params: OffsetParams): CompletionItems =
     access.withCompiler(emptyCompletion) { global =>
       new CompletionProvider(global, params).completions()
+    }
+  override def completionItemResolve(
+      item: CompletionItem,
+      symbol: String
+  ): CompletionItem =
+    access.withCompiler(item) { global =>
+      new CompletionItemResolver(global).resolve(item, symbol)
     }
 
   override def hover(params: OffsetParams): Hover =

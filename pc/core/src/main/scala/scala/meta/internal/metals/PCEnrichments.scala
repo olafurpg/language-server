@@ -1,11 +1,40 @@
 package scala.meta.internal.metals
 
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import org.eclipse.lsp4j.CompletionItem
 import scala.meta.internal.{semanticdb => s}
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
+import scala.util.control.NonFatal
 
 object PCEnrichments extends PCEnrichments
+
 trait PCEnrichments {
+
+  protected def decodeJson[T](obj: AnyRef, cls: Class[T]): Option[T] =
+    for {
+      data <- Option(obj)
+      value <- try {
+        Some(
+          new Gson().fromJson[T](
+            data.asInstanceOf[JsonElement],
+            cls
+          )
+        )
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(s"decode error: $cls", e)
+          None
+      }
+    } yield value
+
+  implicit class XtensionCompletionItemData(item: CompletionItem) {
+    def data: Option[CompletionItemData] =
+      decodeJson(item.getData, classOf[CompletionItemData])
+  }
   implicit class XtensionRangeBuildProtocol(range: s.Range) {
     def toLocation(uri: String): l.Location = {
       new l.Location(uri, range.toLSP)

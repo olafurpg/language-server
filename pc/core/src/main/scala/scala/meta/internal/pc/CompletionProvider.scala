@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
@@ -28,25 +30,9 @@ class CompletionProvider(
     val position = unit.position(params.offset)
     val shortenedNames = new ShortenedNames()
     val (qual, kind, i) = safeCompletionsAt(position)
-    def methodString(method: MethodSymbol, info: Type): String = {
-      val printer = new SignaturePrinter(method, shortenedNames, info)
-      var i = 0
-      val paramss = info.typeParams match {
-        case Nil => info.paramss
-        case tparams => tparams :: info.paramss
-      }
-      val params = paramss.iterator.map { params =>
-        val labels = params.iterator.map { param =>
-          val result = printer.paramLabel(param, i)
-          i += 1
-          result
-        }
-        labels
-      }
-      printer.methodSignature(params, name = "")
-    }
     def infoString(sym: Symbol, info: Type): String = sym match {
-      case m: MethodSymbol => methodString(m, info)
+      case m: MethodSymbol =>
+        new SignaturePrinter(m, shortenedNames, info, includeDocs = false).defaultMethodSignature
       case _ => sym.infoString(info)
     }
     def detailString(r: Member): String = {
@@ -92,6 +78,9 @@ class CompletionProvider(
           case _ =>
         }
         item.setDetail(detail)
+        item.setData(
+          CompletionItemData(semanticdbSymbol(r.sym), buildTargetIdentifier)
+        )
         item.setKind(completionItemKind(r))
         item.setSortText(f"${idx}%05d")
         val commitCharacter =

@@ -1,5 +1,6 @@
 package scala.meta.pc;
 
+import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.SignatureHelp;
 
@@ -12,6 +13,7 @@ public abstract class  PC {
     public abstract SignatureHelp signatureHelp(OffsetParams params);
     public abstract Hover hover(OffsetParams params);
     public abstract CompletionItems complete(OffsetParams params);
+    public abstract CompletionItem completionItemResolve(CompletionItem item, String symbol);
     public abstract List<String> diagnostics();
     public abstract PC withIndexer(SymbolIndexer indexer);
     public abstract PC withSearch(SymbolSearch search);

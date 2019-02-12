@@ -327,7 +327,7 @@ class MetalsLanguageServer(
         new SignatureHelpOptions(List("(", "[").asJava)
       )
       capabilities.setCompletionProvider(
-        new CompletionOptions(false, List(".").asJava)
+        new CompletionOptions(true, List(".").asJava)
       )
       capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
@@ -793,11 +793,18 @@ class MetalsLanguageServer(
   }
   def referencesResult(params: ReferenceParams): ReferencesResult =
     referencesProvider.references(params)
-
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CompletableFutures.computeAsync { token =>
       compilers.completions(params, token).orNull
+    }
+
+  @JsonRequest("completionItem/resolve")
+  def completionItemResolve(
+      item: CompletionItem
+  ): CompletableFuture[CompletionItem] =
+    CompletableFutures.computeAsync { token =>
+      compilers.completionItemResolve(item, token).getOrElse(item)
     }
 
   @JsonRequest("textDocument/signatureHelp")

@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Hover
@@ -30,6 +31,15 @@ class Compilers(
     cache.remove(id).foreach(_.cancel())
   }
 
+  def completionItemResolve(
+      item: CompletionItem,
+      token: CancelChecker
+  ): Option[CompletionItem] = {
+    for {
+      data <- item.data
+      compiler <- cache.get(new BuildTargetIdentifier(data.target))
+    } yield compiler.pc.completionItemResolve(item, data.symbol)
+  }
   def completions(
       params: CompletionParams,
       token: CancelChecker
