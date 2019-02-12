@@ -99,7 +99,7 @@ class PresentationCompiler(
     indexer.visit(
       symbol,
       new SymbolVisitor {
-        override def visitMethod(method: SymbolDocumentation): Unit = {
+        override def visitSymbol(method: SymbolDocumentation): Unit = {
           methodInfos(method.symbol()) = method
         }
       }

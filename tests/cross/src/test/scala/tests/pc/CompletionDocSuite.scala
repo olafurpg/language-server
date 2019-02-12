@@ -134,9 +134,17 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |  scala.collection.Iterator@@
       |}
     """.stripMargin,
-    """|AbstractIterator
+    """|> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
+       |AbstractIterator
+       |> Buffered iterators are iterators which provide a method `head`
+       | that inspects the next element without discarding it.
        |BufferedIterator
-       |> The `Iterator` object provides various functions for creating specialized iterators.
+       |> ### class Iterator
+       |Iterators are data structures that allow to iterate over a sequence
+       | of elements.
+       |
+       |### object Iterator
+       |The `Iterator` object provides various functions for creating specialized iterators.
        |Iterator
        |""".stripMargin,
     includeDocs = true
@@ -185,7 +193,11 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |  scala.Vector@@
       |}
     """.stripMargin,
-    """|> Companion object to the Vector class
+    """|> ### class Vector
+       |Vector is a general-purpose, immutable data structure.
+       |
+       |### object Vector
+       |Companion object to the Vector class
        |Vector: Vector.type
        |""".stripMargin,
     includeDocs = true

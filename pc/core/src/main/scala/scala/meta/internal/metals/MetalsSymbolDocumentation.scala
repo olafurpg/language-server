@@ -13,24 +13,14 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.pc.SymbolDocumentation
 
-class MetalsSymbolDocumentation(
-    val symbol: String,
-    val name: String,
-    val docstring: String,
-    val defaultValue: String = "",
-    val typeParameters: util.List[SymbolDocumentation] = Nil.asJava,
-    val parameters: util.List[SymbolDocumentation] = Nil.asJava
-) extends SymbolDocumentation {
-  override def toString: String = {
-    val tparamsFormat =
-      if (typeParameters.isEmpty) ""
-      else typeParameters.asScala.mkString("[", ", ", "]")
-    val paramsFormat =
-      if (parameters.isEmpty) ""
-      else parameters.asScala.mkString(", ")
-    s"$name$tparamsFormat($paramsFormat)"
-  }
-}
+case class MetalsSymbolDocumentation(
+    symbol: String,
+    name: String,
+    docstring: String,
+    defaultValue: String = "",
+    typeParameters: util.List[SymbolDocumentation] = Nil.asJava,
+    parameters: util.List[SymbolDocumentation] = Nil.asJava
+) extends SymbolDocumentation
 
 object MetalsSymbolDocumentation {
   def fromMethod(symbol: String, method: JavaMethod): SymbolDocumentation = {

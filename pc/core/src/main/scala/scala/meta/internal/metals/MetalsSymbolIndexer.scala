@@ -135,7 +135,7 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
                   case _ =>
                     None
                 }
-                info.foreach(visitor.visitMethod)
+                info.foreach(visitor.visitSymbol)
               }
             }
             try mtags.indexRoot()

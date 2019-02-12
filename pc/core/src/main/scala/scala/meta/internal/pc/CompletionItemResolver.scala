@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
 import scala.collection.JavaConverters._
-import scala.meta.pc.SymbolDocumentation
 
 class CompletionItemResolver(
     val compiler: PresentationCompiler

@@ -21,11 +21,9 @@ class JavaSymbolIndexer(input: Input.VirtualFile) extends SymbolIndexer {
           kind: SymbolInformation.Kind,
           properties: Int
       ): Unit = {
-        visitor.visitMethod(
-          MetalsSymbolDocumentation.fromClass(
-            symbol(Descriptor.Type(name)),
-            cls
-          )
+        super.visitClass(cls, name, pos, kind, properties)
+        visitor.visitSymbol(
+          MetalsSymbolDocumentation.fromClass(currentOwner, cls)
         )
       }
       override def visitConstructor(
@@ -34,7 +32,7 @@ class JavaSymbolIndexer(input: Input.VirtualFile) extends SymbolIndexer {
           pos: Position,
           properties: Int
       ): Unit = {
-        visitor.visitMethod(
+        visitor.visitSymbol(
           MetalsSymbolDocumentation.fromConstructor(
             symbol(Descriptor.Method("<init>", disambiguator)),
             ctor
@@ -48,7 +46,7 @@ class JavaSymbolIndexer(input: Input.VirtualFile) extends SymbolIndexer {
           pos: Position,
           properties: Int
       ): Unit = {
-        visitor.visitMethod(
+        visitor.visitSymbol(
           MetalsSymbolDocumentation.fromMethod(
             symbol(Descriptor.Method(name, disambiguator)),
             method
