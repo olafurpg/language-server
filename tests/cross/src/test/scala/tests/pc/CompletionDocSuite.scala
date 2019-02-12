@@ -52,6 +52,31 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
   check(
+    "java5",
+    """
+      |object A {
+      |  java.util.OptionalInt@@
+      |}
+    """.stripMargin,
+    """|> A container object which may or may not contain a {@code int} value.
+       |If a value is present, {@code isPresent()} will return {@code true} and
+       |{@code getAsInt()} will return the value.
+       |
+       |<p>Additional methods that depend on the presence or absence of a contained
+       |value are provided, such as {@link #orElse(int) orElse()}
+       |(return a default value if value not present) and
+       |{@link #ifPresent(java.util.function.IntConsumer) ifPresent()} (execute a block
+       |of code if the value is present).
+       |
+       |<p>This is a <a href="../lang/doc-files/ValueBased.html">value-based</a>
+       |class; use of identity-sensitive operations (including reference equality
+       |({@code ==}), identity hash code, or synchronization) on instances of
+       |{@code OptionalInt} may have unpredictable results and should be avoided.
+       |OptionalInt
+       |""".stripMargin,
+    includeDocs = true
+  )
+  check(
     "scala",
     """
       |object A {

@@ -82,11 +82,27 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
     if (classes == null) ()
     else classes.asScala.foreach(visitClass)
 
+  def visitClass(
+      cls: JavaClass,
+      name: String,
+      pos: Position,
+      kind: Kind,
+      properties: Int
+  ): Unit = {
+    tpe(
+      cls.getName,
+      pos,
+      kind,
+      if (cls.isEnum) Property.ENUM.value else 0
+    )
+  }
+
   def visitClass(cls: JavaClass): Unit =
     withOwner(owner) {
       val kind = if (cls.isInterface) Kind.INTERFACE else Kind.CLASS
       val pos = toRangePosition(cls.lineNumber, cls.getName)
-      tpe(
+      visitClass(
+        cls,
         cls.getName,
         pos,
         kind,

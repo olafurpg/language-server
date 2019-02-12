@@ -1,7 +1,5 @@
 package myexample
 
-import java.nio.file.Files
-
 object A {
-    new StringBuilder()
+    // new scala.util.control.Exception.Catch()
 }

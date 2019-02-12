@@ -1,7 +1,9 @@
 package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.MarkupContent
 import scala.collection.JavaConverters._
+import scala.meta.pc.SymbolDocumentation
 
 class CompletionItemResolver(
     val compiler: PresentationCompiler
@@ -40,13 +42,11 @@ class CompletionItemResolver(
             matcher.appendTail(out)
             item.setDetail(out.toString)
           }
-          val docstring =
-            if (info.docstring().isEmpty) {
-              methodInfo(alternativeDocstring(gsym)).fold("")(_.docstring())
-            } else {
-              info.docstring()
-            }
-          item.setDocumentation(docstring)
+          val docstring = fullDocstring(gsym)
+          val content = new MarkupContent()
+          content.setKind("markdown")
+          content.setValue(docstring)
+          item.setDocumentation(content)
         case _ =>
       }
       item
@@ -55,15 +55,44 @@ class CompletionItemResolver(
     }
   }
 
-  def alternativeDocstring(gsym: Symbol): Symbol = {
-    if (gsym.isAliasType) gsym.info.dealias.typeSymbol
-    else if (gsym.isMethod) {
-      gsym.info.finalResultType match {
-        case SingleType(_, sym) =>
-          sym
-        case _ =>
-          NoSymbol
+  def fullDocstring(gsym: Symbol): String = {
+    def docs(gsym: Symbol): String =
+      methodInfo(gsym).fold("")(_.docstring())
+    val gsymDoc = docs(gsym)
+    def keyword(gsym: Symbol): String =
+      if (gsym.isClass) "class"
+      else if (gsym.isTrait) "trait"
+      else if (gsym.isJavaInterface) "interface"
+      else if (gsym.isModule) "object"
+      else ""
+    val companion = gsym.companion
+    if (companion == NoSymbol || isJavaSymbol(gsym)) {
+      if (gsymDoc.isEmpty) {
+        if (gsym.isAliasType) {
+          fullDocstring(gsym.info.dealias.typeSymbol)
+        } else if (gsym.isMethod) {
+          gsym.info.finalResultType match {
+            case SingleType(_, sym) =>
+              fullDocstring(sym)
+            case _ =>
+              ""
+          }
+        } else ""
+      } else {
+        gsymDoc
       }
-    } else gsym.companion
+    } else {
+      val companionDoc = docs(companion)
+      if (companionDoc.isEmpty) gsymDoc
+      else if (gsymDoc.isEmpty) companionDoc
+      else {
+        s"""|### ${keyword(companion)} ${companion.name}
+            |$companionDoc
+            |
+            |### ${keyword(gsym)} ${gsym.name}
+            |${gsymDoc}
+            |""".stripMargin
+      }
+    }
   }
 }

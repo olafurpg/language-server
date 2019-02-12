@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import com.thoughtworks.qdox.model.JavaAnnotatedElement
+import com.thoughtworks.qdox.model.JavaClass
 import com.thoughtworks.qdox.model.JavaConstructor
 import com.thoughtworks.qdox.model.JavaGenericDeclaration
 import com.thoughtworks.qdox.model.JavaMethod
@@ -40,6 +41,19 @@ object MetalsSymbolDocumentation {
       "",
       typeParameters(symbol, method, method.getTypeParameters),
       parameters(symbol, method, method.getParameters)
+    )
+  }
+  def fromClass(
+      symbol: String,
+      method: JavaClass
+  ): SymbolDocumentation = {
+    new MetalsSymbolDocumentation(
+      symbol,
+      method.getName,
+      method.getComment,
+      "",
+      typeParameters(symbol, method, method.getTypeParameters),
+      Nil.asJava
     )
   }
   def fromConstructor(

@@ -1,17 +1,33 @@
 package scala.meta.internal.metals
 
+import com.thoughtworks.qdox.model.JavaClass
 import com.thoughtworks.qdox.model.JavaConstructor
 import com.thoughtworks.qdox.model.JavaMethod
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolVisitor
 
 class JavaSymbolIndexer(input: Input.VirtualFile) extends SymbolIndexer {
   override def visit(symbol: String, visitor: SymbolVisitor): Unit = {
     val mtags = new JavaMtags(input) {
+      override def visitClass(
+          cls: JavaClass,
+          name: String,
+          pos: Position,
+          kind: SymbolInformation.Kind,
+          properties: Int
+      ): Unit = {
+        visitor.visitMethod(
+          MetalsSymbolDocumentation.fromClass(
+            symbol(Descriptor.Type(name)),
+            cls
+          )
+        )
+      }
       override def visitConstructor(
           ctor: JavaConstructor,
           disambiguator: String,
