@@ -190,6 +190,18 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
+  check(
+    "scala9",
+    """
+      |object A {
+      |  new Catch@@
+      |}
+    """.stripMargin,
+    """|> A container class for catch/finally logic.
+       |scala.util.control.Exception.Catch scala.util.control.Exception
+       |""".stripMargin,
+    includeDocs = true
+  )
 
   check(
     "local",

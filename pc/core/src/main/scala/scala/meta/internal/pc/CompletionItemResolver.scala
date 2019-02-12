@@ -12,7 +12,7 @@ class CompletionItemResolver(
   def resolve(item: CompletionItem, msym: String): CompletionItem = {
     val gsym = inverseSemanticdbSymbol(msym)
     if (gsym != NoSymbol) {
-      methodInfo(gsym) match {
+      methodInfo(gsym).orElse(methodInfo(gsym.companion)) match {
         case Some(info) if item.getDetail != null =>
           if (isJavaSymbol(gsym)) {
             val newDetail = info
