@@ -119,7 +119,7 @@ class ScalaPC(
   def emptyCompletion = new CompletionItems(LookupKind.None, Nil.asJava)
   override def complete(params: OffsetParams): CompletionItems =
     access.withCompiler(emptyCompletion) { global =>
-      new CompletionProvider(global).completions(params)
+      new CompletionProvider(global, params).completions()
     }
 
   override def hover(params: OffsetParams): Hover =

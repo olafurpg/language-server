@@ -11,12 +11,15 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
 
-class CompletionProvider(val compiler: PresentationCompiler) {
+class CompletionProvider(
+    val compiler: PresentationCompiler,
+    params: OffsetParams
+) {
   import compiler._
 
   val maxWorkspaceSymbolResults = 10
 
-  def completions(params: OffsetParams): CompletionItems = {
+  def completions(): CompletionItems = {
     val unit = addCompilationUnit(
       code = params.text,
       filename = params.filename,
@@ -78,6 +81,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     })
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
+        params.checkCanceled()
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
         // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
@@ -255,6 +259,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
     }
     try {
       val completions = completionsAt(position)
+      params.checkCanceled()
       val matchingResults = completions.matchingResults { entered => name =>
         Fuzzy.matches(entered, name)
       }
@@ -272,6 +277,7 @@ class CompletionProvider(val compiler: PresentationCompiler) {
         completions.name.toString,
         position
       )
+      params.checkCanceled()
       val qual = completions match {
         case t: CompletionResult.TypeMembers =>
           Option(t.qualifier.tpe)
