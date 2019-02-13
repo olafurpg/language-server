@@ -27,7 +27,6 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|List scala.collection.immutable
        |java.awt.List java.awt
        |java.util.List java.util
-       |scala.collection.immutable.List scala.collection.immutable
        |scala.collection.immutable.ListMap scala.collection.immutable
        |scala.collection.mutable.ListMap scala.collection.mutable
        |scala.collection.immutable.ListSet scala.collection.immutable
@@ -35,6 +34,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |org.w3c.dom.NameList org.w3c.dom
        |org.w3c.dom.NodeList org.w3c.dom
        |java.util.ArrayList java.util
+       |org.w3c.dom.stylesheets.MediaList org.w3c.dom.stylesheets
        |""".stripMargin
   )
 

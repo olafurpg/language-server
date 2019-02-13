@@ -35,10 +35,9 @@ class CompletionProvider(
         new SignaturePrinter(m, shortenedNames, info, includeDocs = false).defaultMethodSignature
       case _ =>
         def fullName(s: Symbol): String = " " + s.owner.fullName
-        info match {
-          case SingleType(_, dealised)
-              if sym.isValue && !semanticdbSymbol(sym).isLocal =>
-            fullName(dealised)
+        dealiasedValForwarder(sym) match {
+          case dealiased :: _ =>
+            fullName(dealiased)
           case _ =>
             if (sym.isModuleOrModuleClass || sym.hasPackageFlag || sym.isClass) {
               fullName(sym)
@@ -122,6 +121,19 @@ class CompletionProvider(
     def isIncomplete: Boolean = searchResult == SymbolSearch.Result.INCOMPLETE
   }
 
+  def dealiasedValForwarder(sym: Symbol): List[Symbol] = {
+    if (sym.isValue && sym.hasRawInfo && !semanticdbSymbol(sym).isLocal) {
+      sym.rawInfo match {
+        case SingleType(_, dealias) if dealias.isModule =>
+          dealias :: dealias.companion :: Nil
+        case _ =>
+          Nil
+      }
+    } else {
+      Nil
+    }
+  }
+
   private def filterInteresting(
       completions: List[Member],
       kind: LookupKind,
@@ -156,6 +168,7 @@ class CompletionProvider(
       )
     ).flatMap(_.alternatives)
     val isSeen = mutable.Set.empty[String]
+    val isIgnored = mutable.Set.empty[Symbol]
     val buf = List.newBuilder[Member]
     def visit(head: Member): Boolean = {
       val id =
@@ -164,9 +177,15 @@ class CompletionProvider(
         } else {
           semanticdbSymbol(head.sym)
         }
-      if (!isSeen(id) && !isUninterestingSymbol(head.sym)) {
+      def isIgnoredWorkspace: Boolean =
+        head.isInstanceOf[WorkspaceMember] &&
+          (isIgnored(head.sym) || isIgnored(head.sym.companion))
+      if (!isSeen(id) &&
+        !isUninterestingSymbol(head.sym) &&
+        !isIgnoredWorkspace) {
         isSeen += id
         buf += head
+        isIgnored ++= dealiasedValForwarder(head.sym)
         true
       } else {
         false
