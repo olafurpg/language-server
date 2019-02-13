@@ -271,8 +271,15 @@ lazy val mtest = project
       "com.geirsson" %% "coursier-small" % "1.3.3",
       "org.scalameta" %% "testkit" % V.scalameta,
       "com.lihaoyi" %% "utest" % "0.6.0"
+    ),
+    buildInfoPackage := "tests",
+    buildInfoObject := "BuildInfoVersions",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "scala211" -> V.scala211,
+      "scala212" -> V.scala212
     )
   )
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val cross = project
   .in(file("tests/cross"))

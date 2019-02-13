@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import scala.tools.nsc.doc.base.comment._
 import scala.collection.JavaConverters._
 import scala.meta._
 import scala.meta.internal.mtags.Symbol
@@ -19,6 +18,7 @@ import scala.meta.pc.SymbolVisitor
 import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 import scala.util.control.NonFatal
+import scala.meta.internal.docstrings._
 
 class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
   override def visit(symbol: String, visitor: SymbolVisitor): Unit = {

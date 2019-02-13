@@ -11,7 +11,8 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       name: String,
       original: String,
       expected: String,
-      includeDocs: Boolean = false
+      includeDocs: Boolean = false,
+      compat: Map[String, String] = Map.empty
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
@@ -61,7 +62,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
             }
         }
       }
-      assertNoDiff(out.toString(), expected)
+      assertNoDiff(out.toString(), getExpected(expected, compat))
     }
   }
 }

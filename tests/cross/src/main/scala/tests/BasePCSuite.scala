@@ -52,7 +52,7 @@ abstract class BasePCSuite extends BaseSuite {
             new Dependency(
               "org.scala-lang",
               "scala-library",
-              Properties.versionNumberString
+              BuildInfoVersions.scala212
             )
           )
         )
@@ -86,4 +86,14 @@ abstract class BasePCSuite extends BaseSuite {
       " " + e.getRight.getValue
     }
   }.trim
+  private def scalaVersion: String =
+    Properties.versionNumberString
+  private def scalaBinary: String =
+    scalaVersion.split("\\.").take(2).mkString(".")
+  def getExpected[T](default: T, compat: Map[String, T]): T = {
+    compat
+      .get(scalaBinary)
+      .orElse(compat.get(scalaVersion))
+      .getOrElse(default)
+  }
 }

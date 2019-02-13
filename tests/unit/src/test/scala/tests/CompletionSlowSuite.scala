@@ -1,6 +1,7 @@
 package tests
 
 import scala.concurrent.Future
+import scala.meta.internal.metals.{BuildInfo => V}
 
 object CompletionSlowSuite extends BaseSlowSuite("completion") {
 
@@ -15,26 +16,33 @@ object CompletionSlowSuite extends BaseSlowSuite("completion") {
     }
   }
 
-  testAsync("basic") {
+  testAsync("basic-212") {
+    basicTest(V.scala212)
+  }
+  testAsync("basic-211") {
+    basicTest(V.scala211)
+  }
+  def basicTest(scalaVersion: String): Future[Unit] = {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
-        """/metals.json
-          |{
-          |  "a": {}
-          |}
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |object A {
-          |  val x = "".substrin
-          |  Stream
-          |  TrieMap
-          |  locally {
-          |    val myLocalVariable = Array("")
-          |    myLocalVariable
-          |    val source = ""
-          |  }
-          |}
-          |""".stripMargin
+        s"""/metals.json
+           |{
+           |  "a": { "scalaVersion": "${scalaVersion}" }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |object A {
+           |  val x = "".substrin
+           |  Stream
+           |  TrieMap
+           |  locally {
+           |    val myLocalVariable = Array("")
+           |    myLocalVariable
+           |    val source = ""
+           |  }
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNotEmpty(client.workspaceDiagnostics)

@@ -43,7 +43,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       includeDocs: Boolean = false,
       includeCommitCharacter: Boolean = false,
       compat: Map[String, String] = Map.empty
-  ): Unit = {
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val (code, offset) = params(original)
       val result =
@@ -70,14 +70,4 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     }
   }
 
-  private def scalaVersion: String =
-    Properties.versionNumberString
-  private def scalaBinary: String =
-    scalaVersion.split("\\.").take(2).mkString(".")
-  private def getExpected[T](default: T, compat: Map[String, T]): T = {
-    compat
-      .get(scalaBinary)
-      .orElse(compat.get(scalaVersion))
-      .getOrElse(default)
-  }
 }

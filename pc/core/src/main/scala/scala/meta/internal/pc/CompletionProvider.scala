@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
@@ -340,6 +341,18 @@ class CompletionProvider(
 
   class WorkspaceMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
+  val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
+  def packageSymbolFromString(symbol: String): Option[Symbol] = {
+    packageSymbols.getOrElseUpdate(symbol, {
+      val fqn = symbol.replace('/', '.').stripSuffix(".")
+      try {
+        Some(rootMirror.staticPackage(fqn))
+      } catch {
+        case NonFatal(_) =>
+          None
+      }
+    })
+  }
 
   private def workspaceSymbolListMembers(
       query: String,
@@ -351,7 +364,7 @@ class CompletionProvider(
       val context = doLocateContext(pos)
       val visitor = new CompilerSearchVisitor(
         query,
-        compiler.metalsContainsPackage,
+        pkg => packageSymbolFromString(pkg).isDefined,
         top => {
           var added = 0
           for {
@@ -381,8 +394,9 @@ class CompletionProvider(
     try {
       classfile match {
         case SymbolSearchCandidate.Classfile(pkgString, filename) =>
-          val pkgName = pkgString.stripSuffix("/").replace('/', '.')
-          val pkg = rootMirror.staticPackage(pkgName)
+          val pkg = packageSymbolFromString(pkgString).getOrElse(
+            throw new NoSuchElementException(pkgString)
+          )
           val names = filename
             .stripSuffix(".class")
             .split('$')

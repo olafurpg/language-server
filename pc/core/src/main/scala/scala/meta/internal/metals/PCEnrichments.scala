@@ -13,7 +13,7 @@ object PCEnrichments extends PCEnrichments
 
 trait PCEnrichments {
 
-  protected def decodeJson[T](obj: AnyRef, cls: Class[T]): Option[T] =
+  protected def decodeJson[T](obj: AnyRef, cls: java.lang.Class[T]): Option[T] =
     for {
       data <- Option(obj)
       value <- try {

@@ -83,7 +83,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|<init>(value: Int): Some[Int]
        |       ^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|<init>(x: Int): Some[Int]
+           |       ^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -198,7 +204,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|empty[K, V]: Map[K,V]
        |      ^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|empty[A, B]: Map[A,B]
+           |      ^
+           |""".stripMargin
+    )
   )
   check(
     "tparam5",
@@ -248,7 +260,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|applyOrElse[K1 <: Int, V1 >: String](x: K1, default: K1 => V1): V1
        |                                     ^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|applyOrElse[A1 <: Int, B1 >: String](x: A1, default: A1 => B1): B1
+           |                                     ^^^^^
+           |""".stripMargin
+    )
   )
 
   check(

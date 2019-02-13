@@ -159,7 +159,12 @@ object CompletionDocSuite extends BaseCompletionSuite {
     """|> The implicit global `ExecutionContext`.
        |global: ExecutionContext
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
+    compat = Map(
+      "2.11" -> """|> The implicit global `ExecutionContext`.
+                   |global: ExecutionContextExecutor
+                   |""".stripMargin
+    )
   )
   check(
     "scala6",

@@ -13,7 +13,6 @@ import scala.meta.pc.SymbolVisitor
 import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
-import scala.tools.nsc.metals.ClassPathProxy
 import scala.tools.nsc.reporters.Reporter
 
 class PresentationCompiler(
@@ -22,8 +21,7 @@ class PresentationCompiler(
     val indexer: SymbolIndexer,
     val search: SymbolSearch,
     val buildTargetIdentifier: String
-) extends Global(settings, reporter)
-    with ClassPathProxy { compiler =>
+) extends Global(settings, reporter) { compiler =>
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
   def isJavaSymbol(sym: Symbol): Boolean =

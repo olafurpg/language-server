@@ -348,7 +348,10 @@ object CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|empty[K, V]: Map[K,V] (commit: '.')
        |""".stripMargin,
-    includeCommitCharacter = true
+    includeCommitCharacter = true,
+    compat = Map(
+      "2.11" -> "empty[A, B]: Map[A,B] (commit: '.')"
+    )
   )
 
   check(
@@ -397,7 +400,10 @@ object CompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|toCharArray(): Array[Char]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" -> "" // SAM was introduced in Scala 2.12
+    )
   )
 
   check(
