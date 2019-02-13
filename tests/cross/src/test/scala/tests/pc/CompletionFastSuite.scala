@@ -408,5 +408,16 @@ object CompletionFastSuite extends BaseCompletionSuite {
     """|concat[T](xss: Array[T]*)(implicit evidence$8: ClassTag[T]): Array[T]
        |""".stripMargin
   )
+  check(
+    "bounds",
+    """
+      |object A {
+      |  java.nio.file.Files.readAttributes@@
+      |}
+    """.stripMargin,
+    """|readAttributes(x$1: Path, x$2: String, x$3: LinkOption*): Map[String,Object]
+       |readAttributes[A <: BasicFileAttributes](x$1: Path, x$2: Class[A], x$3: LinkOption*): A
+       |""".stripMargin
+  )
 
 }

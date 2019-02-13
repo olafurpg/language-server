@@ -147,6 +147,8 @@ class PresentationCompiler(
         PolyType(tparams, resultType.map(t => loop(t, None)))
       case NullaryMethodType(resultType) =>
         loop(resultType, None)
+      case TypeBounds(lo, hi) =>
+        TypeBounds(loop(lo, None), loop(hi, None))
       case t => t
     }
     loop(longType, None)
