@@ -77,7 +77,6 @@ final class BuildTargets() {
   def buildTargetTransitiveSources(
       id: BuildTargetIdentifier
   ): Iterator[AbsolutePath] = {
-    pprint.log(buildTargetSources)
     for {
       dependency <- buildTargetTransitiveDependencies(id).iterator
       sources <- buildTargetSources.get(dependency).iterator
@@ -95,7 +94,6 @@ final class BuildTargets() {
       val next = toVisit.pop()
       if (!isVisited(next)) {
         isVisited.add(next)
-        pprint.log(next)
         for {
           info <- info(next).iterator
           dependency <- info.getDependencies.asScala.iterator

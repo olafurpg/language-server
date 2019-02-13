@@ -806,6 +806,8 @@ class MetalsLanguageServer(
     CompletableFutures.computeAsync { token =>
       compilers.completionItemResolve(item, token).getOrElse(item)
     }
+  def completionItemResolveSync(item: CompletionItem): CompletionItem =
+    compilers.completionItemResolve(item, EmptyCancelChecker).getOrElse(item)
 
   @JsonRequest("textDocument/signatureHelp")
   def signatureHelp(
