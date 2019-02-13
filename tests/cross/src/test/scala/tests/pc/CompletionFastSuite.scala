@@ -3,7 +3,9 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 object CompletionFastSuite extends BaseCompletionSuite {
-  override def beforeAll(): Unit = ()
+  override def beforeAll(): Unit = {
+    indexJDK()
+  }
 
   //  The following method tests too many results so we only assert the total number of results
   // to catch at least regressions. It's OK to update the expected number, but at least double check
@@ -143,7 +145,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |ensuring(cond: Boolean, msg: => Any): A
        |formatted(fmtstr: String): String
        |asInstanceOf[T0]: T0
-       |equals(x$1: Any): Boolean
+       |equals(obj: Any): Boolean
        |getClass(): Class[_]
        |hashCode(): Int
        |isInstanceOf[T0]: Boolean
@@ -415,9 +417,33 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |  java.nio.file.Files.readAttributes@@
       |}
     """.stripMargin,
-    """|readAttributes(x$1: Path, x$2: String, x$3: LinkOption*): Map[String,Object]
-       |readAttributes[A <: BasicFileAttributes](x$1: Path, x$2: Class[A], x$3: LinkOption*): A
+    """|readAttributes(path: Path, attributes: String, options: LinkOption*): Map[String,Object]
+       |readAttributes[A <: BasicFileAttributes](path: Path, type: Class[A], options: LinkOption*): A
        |""".stripMargin
   )
 
+  check(
+    "local",
+    """
+      |object A {
+      |  locally {
+      |    val thisIsLocal = 1
+      |    thisIsLoc@@
+      |  }
+      |}
+    """.stripMargin,
+    """|thisIsLocal: Int
+       |""".stripMargin
+  )
+  check(
+    "singleton",
+    """
+      |class A {
+      |  def incrementThisType(): this.type = x
+      |  incrementThisType@@
+      |}
+    """.stripMargin,
+    """|incrementThisType(): A.this.type (with underlying type A)
+       |""".stripMargin
+  )
 }

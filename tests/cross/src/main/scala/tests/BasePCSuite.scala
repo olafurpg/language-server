@@ -40,8 +40,10 @@ abstract class BasePCSuite extends BaseSuite {
     .withSearch(search)
     .newInstance("", myclasspath.asJava, Nil.asJava)
 
-  override def beforeAll(): Unit = {
+  def indexJDK(): Unit = {
     index.addSourceJar(JdkSources().get)
+  }
+  def indexScalaLibrary(): Unit = {
     val sources = CoursierSmall.fetch(
       new Settings()
         .withClassifiers(List("sources"))
@@ -55,10 +57,14 @@ abstract class BasePCSuite extends BaseSuite {
           )
         )
     )
-    index.addSourceJar(JdkSources().get)
     sources.foreach { jar =>
       index.addSourceJar(AbsolutePath(jar))
     }
+  }
+
+  override def beforeAll(): Unit = {
+    indexJDK()
+    indexScalaLibrary()
   }
   override def afterAll(): Unit = {
     pc.shutdown()

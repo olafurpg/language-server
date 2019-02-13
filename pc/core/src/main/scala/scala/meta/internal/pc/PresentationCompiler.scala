@@ -151,7 +151,10 @@ class PresentationCompiler(
         TypeBounds(loop(lo, None), loop(hi, None))
       case t => t
     }
-    loop(longType, None)
+    longType match {
+      case ThisType(_) => longType
+      case _ => loop(longType, None)
+    }
   }
 
   def metalsToLongString(tpe: Type, history: ShortenedNames): String = {
@@ -237,14 +240,17 @@ class PresentationCompiler(
   }
 
   class SignaturePrinter(
-      method: Symbol,
+      gsym: Symbol,
       shortenedNames: ShortenedNames,
-      methodType: Type,
+      gtpe: Type,
       includeDocs: Boolean
   ) {
     private val info =
-      if (includeDocs) methodInfo(method)
-      else rawMethodInfo(method)
+      if (includeDocs || (gsym.isMethod && isJavaSymbol(gsym))) {
+        methodInfo(gsym)
+      } else {
+        rawMethodInfo(gsym)
+      }
     private val infoParamsA: Seq[pc.SymbolDocumentation] = info match {
       case Some(value) =>
         value.typeParameters().asScala ++
@@ -255,27 +261,27 @@ class PresentationCompiler(
     private val infoParams =
       infoParamsA.lift
     private val returnType =
-      metalsToLongString(methodType.finalResultType, shortenedNames)
+      metalsToLongString(gtpe.finalResultType, shortenedNames)
 
     def methodDocstring: String = {
       if (isDocs) info.fold("")(_.docstring())
       else ""
     }
-    def isTypeParameters: Boolean = methodType.typeParams.nonEmpty
-    def isImplicit: Boolean = methodType.paramss.lastOption match {
+    def isTypeParameters: Boolean = gtpe.typeParams.nonEmpty
+    def isImplicit: Boolean = gtpe.paramss.lastOption match {
       case Some(head :: _) => head.isImplicit
       case _ => false
     }
     def mparamss: List[List[Symbol]] =
-      methodType.typeParams match {
-        case Nil => methodType.paramss
-        case tparams => tparams :: methodType.paramss
+      gtpe.typeParams match {
+        case Nil => gtpe.paramss
+        case tparams => tparams :: gtpe.paramss
       }
     def defaultMethodSignature: String = {
       var i = 0
-      val paramss = methodType.typeParams match {
-        case Nil => methodType.paramss
-        case tparams => tparams :: methodType.paramss
+      val paramss = gtpe.typeParams match {
+        case Nil => gtpe.paramss
+        case tparams => tparams :: gtpe.paramss
       }
       val params = paramss.iterator.map { params =>
         val labels = params.iterator.map { param =>
@@ -290,7 +296,7 @@ class PresentationCompiler(
 
     def methodSignature(
         paramLabels: Iterator[Iterator[String]],
-        name: String = method.nameString
+        name: String = gsym.nameString
     ): String = {
       paramLabels
         .zip(mparamss.iterator)
