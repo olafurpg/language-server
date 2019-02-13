@@ -24,7 +24,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |object A {
       |  Lis@@
       |}""".stripMargin,
-    """|List: List.type
+    """|List scala.collection.immutable
        |java.awt.List java.awt
        |java.util.List java.util
        |scala.collection.immutable.List scala.collection.immutable
@@ -118,7 +118,7 @@ object CompletionFastSuite extends BaseCompletionSuite {
        |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
        |empty[A]: List[A]
        |newBuilder[A]: Builder[A,List[A]]
-       |GenericCanBuildFrom[A <: <?>] extends CanBuildFrom[List[_],A,List[A]]
+       |GenericCanBuildFrom scala.collection.generic.GenTraversableFactory
        |ReusableCBF: List.GenericCanBuildFrom[Nothing]
        |concat[A](xss: Traversable[A]*): List[A]
        |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
@@ -359,31 +359,31 @@ object CompletionFastSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     // assert that we don't sort lexicographically: Function1, Function11, ..., Function2, ...
-    """|Function
-       |Function0
-       |Function1
-       |Function2
-       |Function3
-       |Function4
-       |Function5
-       |Function6
-       |Function7
-       |Function8
-       |Function9
-       |Function10
-       |Function11
-       |Function12
-       |Function13
-       |Function14
-       |Function15
-       |Function16
-       |Function17
-       |Function18
-       |Function19
-       |Function20
-       |Function21
-       |Function22
-       |PartialFunction
+    """|Function scala
+       |Function0 scala
+       |Function1 scala
+       |Function2 scala
+       |Function3 scala
+       |Function4 scala
+       |Function5 scala
+       |Function6 scala
+       |Function7 scala
+       |Function8 scala
+       |Function9 scala
+       |Function10 scala
+       |Function11 scala
+       |Function12 scala
+       |Function13 scala
+       |Function14 scala
+       |Function15 scala
+       |Function16 scala
+       |Function17 scala
+       |Function18 scala
+       |Function19 scala
+       |Function20 scala
+       |Function21 scala
+       |Function22 scala
+       |PartialFunction scala
        |""".stripMargin
   )
 

@@ -10,6 +10,7 @@ import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
+import scala.meta.internal.semanticdb.Scala._
 
 class CompletionProvider(
     val compiler: PresentationCompiler,
@@ -33,7 +34,19 @@ class CompletionProvider(
       case m: MethodSymbol =>
         new SignaturePrinter(m, shortenedNames, info, includeDocs = false).defaultMethodSignature
       case _ =>
-        sym.infoString(shortType(info, history))
+        def fullName(s: Symbol): String = " " + s.owner.fullName
+        info match {
+          case SingleType(_, dealised)
+              if sym.isValue && !semanticdbSymbol(sym).isLocal =>
+            fullName(dealised)
+          case _ =>
+            if (sym.isModuleOrModuleClass || sym.hasPackageFlag || sym.isClass) {
+              fullName(sym)
+            } else {
+              val short = shortType(info, history)
+              sym.infoString(short)
+            }
+        }
     }
     def detailString(r: Member): String = {
       qual match {
@@ -44,14 +57,10 @@ class CompletionProvider(
           // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
           infoString(r.sym, tpe.memberType(r.sym))
         case _ =>
-          if (r.sym.isClass || r.sym.isModuleOrModuleClass || r.sym.hasPackageFlag) {
-            " " + r.sym.owner.fullName
+          if (r.sym.hasRawInfo) {
+            infoString(r.sym, r.sym.rawInfo)
           } else {
-            if (r.sym.hasRawInfo) {
-              infoString(r.sym, r.sym.rawInfo)
-            } else {
-              "<_>"
-            }
+            "<_>"
           }
       }
     }

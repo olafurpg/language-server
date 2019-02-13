@@ -72,7 +72,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |class; use of identity-sensitive operations (including reference equality
        |({@code ==}), identity hash code, or synchronization) on instances of
        |{@code OptionalInt} may have unpredictable results and should be avoided.
-       |OptionalInt
+       |OptionalInt java.util
        |""".stripMargin,
     includeDocs = true
   )
@@ -135,17 +135,17 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
-       |AbstractIterator
+       |AbstractIterator scala.collection
        |> Buffered iterators are iterators which provide a method `head`
        | that inspects the next element without discarding it.
-       |BufferedIterator
+       |BufferedIterator scala.collection
        |> ### class Iterator
        |Iterators are data structures that allow to iterate over a sequence
        | of elements.
        |
        |### object Iterator
        |The `Iterator` object provides various functions for creating specialized iterators.
-       |Iterator
+       |Iterator scala.collection
        |""".stripMargin,
     includeDocs = true
   )
@@ -170,7 +170,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|> The `Try` type represents a computation that may either result in an exception, or return a
        |successfully computed value.
-       |Try
+       |Try scala.util
        |""".stripMargin,
     includeDocs = true
   )
@@ -182,7 +182,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|> A builder for mutable sequence of characters.
-       |StringBuilder
+       |StringBuilder scala.collection.mutable
        |""".stripMargin,
     includeDocs = true
   )
@@ -198,7 +198,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |
        |### object Vector
        |Companion object to the Vector class
-       |Vector: Vector.type
+       |Vector scala.collection.immutable
        |""".stripMargin,
     includeDocs = true
   )
@@ -211,6 +211,32 @@ object CompletionDocSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|> A container class for catch/finally logic.
        |scala.util.control.Exception.Catch scala.util.control.Exception
+       |""".stripMargin,
+    includeDocs = true
+  )
+
+  check(
+    "scala10",
+    """
+      |object A {
+      |  scala.util.Failure@@
+      |}
+    """.stripMargin,
+    """|Failure scala.util
+       |""".stripMargin,
+    includeDocs = true
+  )
+  check(
+    "scala11",
+    """
+      |object A {
+      |  new scala.util.DynamicVariable@@
+      |}
+    """.stripMargin,
+    """|> `DynamicVariables` provide a binding mechanism where the current
+       | value is found through dynamic scope, but where access to the
+       | variable itself is resolved through static scope.
+       |DynamicVariable scala.util
        |""".stripMargin,
     includeDocs = true
   )
