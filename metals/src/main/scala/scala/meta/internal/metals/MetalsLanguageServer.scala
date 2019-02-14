@@ -141,7 +141,8 @@ class MetalsLanguageServer(
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = client
-    statusBar = new StatusBar(() => languageClient, time, progressTicks)
+    statusBar =
+      new StatusBar(() => languageClient, time, progressTicks, config.icons)
     embedded = register(new Embedded(config.icons, statusBar, () => userConfig))
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
@@ -283,7 +284,9 @@ class MetalsLanguageServer(
         buildTargets,
         buffers,
         symbolIndexer,
-        workspaceSymbols
+        workspaceSymbols,
+        embedded,
+        statusBar
       )
     )
     doctor = new Doctor(

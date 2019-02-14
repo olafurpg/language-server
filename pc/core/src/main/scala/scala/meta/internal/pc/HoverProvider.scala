@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.MarkedString
 import scala.collection.JavaConverters._
 import scala.meta.pc.OffsetParams
 
-class HoverProvider(compiler: PresentationCompiler) {
+class HoverProvider(compiler: MetalsGlobal) {
   import compiler._
   def hover(params: OffsetParams): Option[Hover] = {
     val unit = addCompilationUnit(

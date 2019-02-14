@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -9,9 +10,10 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.Promise
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.pc.PC
+import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 
@@ -19,7 +21,9 @@ class Compilers(
     buildTargets: BuildTargets,
     buffers: Buffers,
     indexer: SymbolIndexer,
-    search: SymbolSearch
+    search: SymbolSearch,
+    embedded: Embedded,
+    statusBar: StatusBar
 ) extends Cancelable {
 
   private val cache = TrieMap.empty[BuildTargetIdentifier, BuildTargetCompiler]
@@ -70,22 +74,45 @@ class Compilers(
 
   private def withPC[T](
       params: TextDocumentPositionParams
-  )(fn: (PC, Position) => T): Option[T] = {
+  )(fn: (PresentationCompiler, Position) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     for {
       target <- buildTargets.inverseSources(path)
       info <- buildTargets.info(target)
       scala <- info.asScalaBuildTarget
+      isSupported = ScalaVersions.isSupportedScalaVersion(scala.getScalaVersion)
+      _ = {
+        if (!isSupported) {
+          scribe.warn(s"unsupported Scala ${scala.getScalaVersion}")
+        }
+      }
+      if isSupported
       scalac <- buildTargets.scalacOptions(target)
     } yield {
-      val compiler = cache.getOrElseUpdate(
-        target,
-        BuildTargetCompiler.fromClasspath(scalac, scala, indexer, search)
-      )
-      val input = path.toInputFromBuffers(buffers)
-      val pos = params.getPosition.toMeta(input)
-      val result = fn(compiler.pc, pos)
-      result
+      val promise = Promise[Unit]()
+      try {
+        val compiler = cache.getOrElseUpdate(
+          target, {
+            statusBar.trackFuture(
+              s"${statusBar.icons.sync}Loading presentation compiler",
+              promise.future
+            )
+            BuildTargetCompiler.fromClasspath(
+              scalac,
+              scala,
+              indexer,
+              search,
+              embedded
+            )
+          }
+        )
+        val input = path.toInputFromBuffers(buffers)
+        val pos = params.getPosition.toMeta(input)
+        val result = fn(compiler.pc, pos)
+        result
+      } finally {
+        promise.trySuccess(())
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.util.logging.Logger
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -15,12 +16,13 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.Reporter
 
-class PresentationCompiler(
+class MetalsGlobal(
     settings: Settings,
     reporter: Reporter,
     val indexer: SymbolIndexer,
     val search: SymbolSearch,
-    val buildTargetIdentifier: String
+    val buildTargetIdentifier: String,
+    val logger: Logger
 ) extends Global(settings, reporter) { compiler =>
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"

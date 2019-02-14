@@ -7,7 +7,7 @@ import org.eclipse.lsp4j.SignatureHelp;
 import java.nio.file.Path;
 import java.util.List;
 
-public abstract class  PC {
+public abstract class PresentationCompiler {
     public abstract void shutdown();
     public abstract String symbol(OffsetParams params);
     public abstract SignatureHelp signatureHelp(OffsetParams params);
@@ -15,7 +15,7 @@ public abstract class  PC {
     public abstract CompletionItems complete(OffsetParams params);
     public abstract CompletionItem completionItemResolve(CompletionItem item, String symbol);
     public abstract List<String> diagnostics();
-    public abstract PC withIndexer(SymbolIndexer indexer);
-    public abstract PC withSearch(SymbolSearch search);
-    public abstract PC newInstance(String buildTargetIdentifier,  List<Path> classpath, List<String> options);
+    public abstract PresentationCompiler withIndexer(SymbolIndexer indexer);
+    public abstract PresentationCompiler withSearch(SymbolSearch search);
+    public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath, List<String> options);
 }

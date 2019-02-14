@@ -3,13 +3,13 @@ package scala.meta.internal.metals
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.pc.ScalaPC
-import scala.meta.pc.PC
+import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.util.Properties
 
-case class BuildTargetCompiler(pc: PC, search: SymbolSearch)
+case class BuildTargetCompiler(pc: PresentationCompiler, search: SymbolSearch)
     extends Cancelable {
   override def cancel(): Unit = pc.shutdown()
 }
@@ -19,17 +19,25 @@ object BuildTargetCompiler {
       scalac: ScalacOptionsItem,
       info: ScalaBuildTarget,
       indexer: SymbolIndexer,
-      search: SymbolSearch
+      search: SymbolSearch,
+      embedded: Embedded
   ): BuildTargetCompiler = {
-    if (info.getScalaVersion != Properties.versionNumberString) {
-      throw new IllegalArgumentException(info.toString)
-    }
     val classpath = scalac.classpath.map(_.toNIO).toSeq
-    // TODO(olafur) match exact scala version
-    val pc = new ScalaPC()
-      .withIndexer(indexer)
-      .withSearch(search)
-      .newInstance(scalac.getTarget.getUri, classpath.asJava, scalac.getOptions)
-    BuildTargetCompiler(pc, search)
+    val pc: PresentationCompiler =
+      if (info.getScalaVersion == Properties.versionNumberString) {
+        new ScalaPresentationCompiler()
+      } else {
+        embedded.presentationCompiler(info, scalac)
+      }
+    BuildTargetCompiler(
+      pc.withIndexer(indexer)
+        .withSearch(search)
+        .newInstance(
+          scalac.getTarget.getUri,
+          classpath.asJava,
+          scalac.getOptions
+        ),
+      search
+    )
   }
 }

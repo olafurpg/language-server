@@ -5,7 +5,7 @@ import org.eclipse.lsp4j.MarkupContent
 import scala.collection.JavaConverters._
 
 class CompletionItemResolver(
-    val compiler: PresentationCompiler
+    val compiler: MetalsGlobal
 ) {
   import compiler._
   def resolve(item: CompletionItem, msym: String): CompletionItem = {

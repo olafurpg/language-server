@@ -4,10 +4,10 @@ import java.nio.charset.StandardCharsets
 import scala.meta.internal.io.InputStreamIO
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.pc.CompletionItems
-import scala.meta.pc.PC
+import scala.meta.pc.PresentationCompiler
 
 case class SourceCompletion(filename: String, code: String, offset: Int) {
-  def complete(pc: PC): CompletionItems =
+  def complete(pc: PresentationCompiler): CompletionItems =
     pc.complete(CompilerOffsetParams(filename, code, offset))
 }
 

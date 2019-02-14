@@ -9,7 +9,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolIndexer
 
 class SignatureHelpProvider(
-    val compiler: PresentationCompiler,
+    val compiler: MetalsGlobal,
     indexer: SymbolIndexer
 ) {
   import compiler._

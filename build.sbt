@@ -1,8 +1,9 @@
 def localSnapshotVersion = "0.5.0-SNAPSHOT"
+def isCI = System.getProperty("CI") != null
 inThisBuild(
   List(
     version ~= { dynVer =>
-      if (sys.env.contains("CI")) dynVer
+      if (isCI) dynVer
       else localSnapshotVersion // only for local publishng
     },
     scalaVersion := V.scala212,
@@ -122,11 +123,13 @@ lazy val pc = project
     moduleName := "pc",
     crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
+    libraryDependencies ++= {
+      if (isCI) Nil
+      else List("com.lihaoyi" %% "pprint" % "0.5.3")
+    },
     libraryDependencies ++= List(
-      "com.lihaoyi" %% "pprint" % "0.5.3",
-      "com.outr" %% "scribe" % "2.6.0",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
-      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
+      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     )
   )
   .dependsOn(interfaces, mtags)

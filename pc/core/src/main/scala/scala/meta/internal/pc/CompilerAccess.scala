@@ -1,9 +1,11 @@
 package scala.meta.internal.pc
 
+import java.util.logging.Level
+import java.util.logging.Logger
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 
-class CompilerAccess(newCompiler: () => PresentationCompiler) {
+class CompilerAccess(logger: Logger, newCompiler: () => MetalsGlobal) {
   def isEmpty: Boolean = _compiler == null
   def isDefined: Boolean = !isEmpty
   def reporter: StoreReporter =
@@ -15,21 +17,21 @@ class CompilerAccess(newCompiler: () => PresentationCompiler) {
       _compiler = null
     }
   }
-  def withCompiler[T](default: T)(thunk: PresentationCompiler => T): T = {
+  def withCompiler[T](default: T)(thunk: MetalsGlobal => T): T = {
     lock.synchronized {
       try thunk(loadCompiler())
       catch {
         case NonFatal(e) =>
           CompilerThrowable.trimStackTrace(e)
-          scribe.error(e.getMessage, e)
+          logger.log(Level.SEVERE, e.getMessage, e)
           shutdown()
           default
       }
     }
   }
-  private var _compiler: PresentationCompiler = _
+  private var _compiler: MetalsGlobal = _
   private val lock = new Object
-  private def loadCompiler(): PresentationCompiler = {
+  private def loadCompiler(): MetalsGlobal = {
     if (_compiler == null) {
       _compiler = newCompiler()
     }

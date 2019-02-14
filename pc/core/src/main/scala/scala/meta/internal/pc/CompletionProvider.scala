@@ -14,7 +14,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.semanticdb.Scala._
 
 class CompletionProvider(
-    val compiler: PresentationCompiler,
+    val compiler: MetalsGlobal,
     params: OffsetParams
 ) {
   import compiler._
@@ -91,7 +91,7 @@ class CompletionProvider(
         }
         item.setDetail(detail)
         item.setData(
-          CompletionItemData(semanticdbSymbol(r.sym), buildTargetIdentifier)
+          CompletionItemData(semanticdbSymbol(r.sym), buildTargetIdentifier).toJson
         )
         item.setKind(completionItemKind(r))
         item.setSortText(f"${idx}%05d")
@@ -271,7 +271,7 @@ class CompletionProvider(
       position: Position
   ): (Option[Type], LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
-      scribe.info(e.getMessage)
+      logger.warning(e.getMessage)
       (
         None,
         LookupKind.None,
@@ -422,7 +422,7 @@ class CompletionProvider(
       }
     } catch {
       case NonFatal(_) =>
-        scribe.error(s"no such symbol: $classfile")
+        logger.warning(s"no such symbol: $classfile")
         Nil
     }
   }

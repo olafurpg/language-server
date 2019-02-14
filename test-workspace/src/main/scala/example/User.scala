@@ -1,5 +1,5 @@
 package myexample
 
 object A {
-  // Iterator
+  Iterator.empty.map(e => e)
 }

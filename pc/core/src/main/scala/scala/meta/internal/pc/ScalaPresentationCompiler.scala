@@ -3,67 +3,36 @@ package scala.meta.internal.pc
 import java.io.File
 import java.nio.file.Path
 import java.util
+import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
-import scala.meta.pc.CompletionItems
-import scala.meta.pc.PC
-import scala.reflect.io.VirtualDirectory
-import scala.tools.nsc.Settings
 import scala.collection.JavaConverters._
+import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
-import scala.tools.nsc.interactive.Response
+import scala.reflect.io.VirtualDirectory
+import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 
-class ScalaPC(
-    classpath: Seq[Path],
-    options: Seq[String],
-    indexer: SymbolIndexer,
-    search: SymbolSearch,
-    access: CompilerAccess,
-    buildTargetIdentifier: String
-) extends PC {
-  override def withIndexer(indexer: SymbolIndexer): PC =
-    new ScalaPC(
-      classpath,
-      options,
-      indexer,
-      search,
-      access,
-      buildTargetIdentifier
-    )
-  override def withSearch(search: SymbolSearch): PC =
-    new ScalaPC(
-      classpath,
-      options,
-      indexer,
-      search,
-      access,
-      buildTargetIdentifier
-    )
-  def this() =
-    this(
-      Nil,
-      Nil,
-      new EmptySymbolIndexer,
-      EmptySymbolSearch,
-      new CompilerAccess(
-        () => {
-          ScalaPC.newCompiler(
-            Nil,
-            Nil,
-            new EmptySymbolIndexer,
-            EmptySymbolSearch,
-            ""
-          )
-        }
-      ),
-      ""
-    )
+case class ScalaPresentationCompiler(
+    buildTargetIdentifier: String = "",
+    classpath: Seq[Path] = Nil,
+    options: Seq[String] = Nil,
+    indexer: SymbolIndexer = EmptySymbolIndexer,
+    search: SymbolSearch = EmptySymbolSearch
+) extends PresentationCompiler {
+  val logger = Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
+  override def withIndexer(indexer: SymbolIndexer): PresentationCompiler =
+    copy(indexer = indexer)
+  override def withSearch(search: SymbolSearch): PresentationCompiler =
+    copy(search = search)
+  def this() = this(buildTargetIdentifier = "")
 
+  val access = new CompilerAccess(logger, () => newCompiler())
   override def shutdown(): Unit = {
     access.shutdown()
   }
@@ -72,24 +41,11 @@ class ScalaPC(
       buildTargetIdentifier: String,
       classpath: util.List[Path],
       options: util.List[String]
-  ): PC = {
-    new ScalaPC(
-      classpath.asScala,
-      options.asScala,
-      indexer,
-      search,
-      new CompilerAccess(
-        () => {
-          ScalaPC.newCompiler(
-            classpath.asScala,
-            options.asScala,
-            indexer,
-            search,
-            buildTargetIdentifier
-          )
-        }
-      ),
-      buildTargetIdentifier
+  ): PresentationCompiler = {
+    copy(
+      buildTargetIdentifier = buildTargetIdentifier,
+      classpath = classpath.asScala,
+      options = options.asScala
     )
   }
 
@@ -151,18 +107,9 @@ class ScalaPC(
       global.typedTreeAt(pos).symbol.fullName
     }
   }
-}
-object ScalaPC {
-
-  def newCompiler(
-      classpaths: Seq[Path],
-      scalacOptions: Seq[String],
-      indexer: SymbolIndexer,
-      search: SymbolSearch,
-      buildTargetIdentifier: String
-  ): PresentationCompiler = {
-    val classpath = classpaths.mkString(File.pathSeparator)
-    val options = scalacOptions.iterator.filterNot { o =>
+  def newCompiler(): MetalsGlobal = {
+    val classpath = this.classpath.mkString(File.pathSeparator)
+    val options = this.options.iterator.filterNot { o =>
       o.contains("semanticdb") ||
       o.contains("scalajs")
     }.toList
@@ -171,7 +118,7 @@ object ScalaPC {
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
-//    settings.YcachePluginClassLoader.value = "last-modified"
+    //    settings.YcachePluginClassLoader.value = "last-modified"
     if (classpath.isEmpty) {
       settings.usejavacp.value = true
     }
@@ -179,19 +126,13 @@ object ScalaPC {
       settings.processArguments(options, processAll = true)
     require(isSuccess, unprocessed)
     require(unprocessed.isEmpty, unprocessed)
-    new PresentationCompiler(
+    new MetalsGlobal(
       settings,
       new StoreReporter,
       indexer,
       search,
-      buildTargetIdentifier
+      buildTargetIdentifier,
+      logger
     )
   }
-
-  def ask[A](f: Response[A] => Unit): Response[A] = {
-    val r = new Response[A]
-    f(r)
-    r
-  }
-
 }

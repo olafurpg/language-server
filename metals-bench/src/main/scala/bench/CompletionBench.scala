@@ -13,22 +13,22 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.pc.ScalaPC
+import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItems
-import scala.meta.pc.PC
+import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import tests.Library
 import tests.SimpleJavaSymbolIndexer
 
 @State(Scope.Benchmark)
-abstract class BaseCompletionBench {
+abstract class CompletionBench {
   var libraries: List[Library] = Nil
   var completions: Map[String, SourceCompletion] = Map.empty
 
   def runSetup(): Unit
 
-  def presentationCompiler(): PC
+  def presentationCompiler(): PresentationCompiler
 
   @Setup
   def setup(): Unit = {
@@ -82,37 +82,38 @@ abstract class BaseCompletionBench {
   def newPC(
       search: SymbolSearch = newSearch(),
       indexer: SimpleJavaSymbolIndexer = newIndexer()
-  ): PC = {
-    new ScalaPC()
+  ): PresentationCompiler = {
+    new ScalaPresentationCompiler()
       .withIndexer(indexer)
       .withSearch(search)
       .newInstance("", classpath.asJava, Nil.asJava)
   }
 
-  def scopeComplete(pc: PC): CompletionItems = {
+  def scopeComplete(pc: PresentationCompiler): CompletionItems = {
     val code = "import Java\n"
     pc.complete(CompilerOffsetParams("A.scala", code, code.length - 2))
   }
 }
 
-class OnDemandCompletionBench extends BaseCompletionBench {
+class OnDemandCompletionBench extends CompletionBench {
   override def runSetup(): Unit = downloadLibraries()
-  override def presentationCompiler(): PC = newPC(newSearch(), newIndexer())
+  override def presentationCompiler(): PresentationCompiler =
+    newPC(newSearch(), newIndexer())
 }
 
-class CachedSearchAndCompilerCompletionBench extends BaseCompletionBench {
-  var pc: PC = _
+class CachedSearchAndCompilerCompletionBench extends CompletionBench {
+  var pc: PresentationCompiler = _
 
   override def runSetup(): Unit = {
     downloadLibraries()
     pc = newPC()
   }
 
-  override def presentationCompiler(): PC = pc
+  override def presentationCompiler(): PresentationCompiler = pc
 }
 
-class CachedSearchCompletionBench extends BaseCompletionBench {
-  var pc: PC = _
+class CachedSearchCompletionBench extends CompletionBench {
+  var pc: PresentationCompiler = _
   var cachedSearch: SymbolSearch = _
 
   override def runSetup(): Unit = {
@@ -120,6 +121,7 @@ class CachedSearchCompletionBench extends BaseCompletionBench {
     cachedSearch = newSearch()
   }
 
-  override def presentationCompiler(): PC = newPC(cachedSearch)
+  override def presentationCompiler(): PresentationCompiler =
+    newPC(cachedSearch)
 
 }

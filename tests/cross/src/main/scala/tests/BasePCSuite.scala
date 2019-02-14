@@ -6,6 +6,7 @@ import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.logging.Logger
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import scala.collection.JavaConverters._
@@ -13,7 +14,8 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsSymbolIndexer
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.pc.ScalaPC
+import scala.meta.internal.pc.ConsoleLogger
+import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.util.Properties
 
@@ -23,10 +25,8 @@ abstract class BasePCSuite extends BaseSuite {
       .asInstanceOf[URLClassLoader]
       .getURLs
       .iterator
+      .filter(_.getPath.contains("scala-library"))
       .map(url => Paths.get(url.toURI))
-      .filter { p =>
-        p.getFileName.toString.contains("scala-library")
-      }
       .toSeq
   def extraClasspath: List[Path] = Nil
   val myclasspath: List[Path] = extraClasspath ++ scalaLibrary.toList
@@ -35,7 +35,7 @@ abstract class BasePCSuite extends BaseSuite {
   val search = new SimpleSymbolSearch(
     ClasspathSearch.fromClasspath(myclasspath, _ => 0)
   )
-  val pc = new ScalaPC()
+  val pc = new ScalaPresentationCompiler()
     .withIndexer(indexer)
     .withSearch(search)
     .newInstance("", myclasspath.asJava, Nil.asJava)

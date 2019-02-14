@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.util.logging.Level
+import java.util.logging.Logger
 import scala.collection.JavaConverters._
 import scala.meta._
 import scala.meta.internal.mtags.Symbol
@@ -21,6 +23,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.docstrings._
 
 class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
+  private val logger = Logger.getLogger(classOf[MetalsSymbolIndexer].getName)
   override def visit(symbol: String, visitor: SymbolVisitor): Unit = {
     index.definition(Symbol(symbol)) match {
       case Some(defn) =>
@@ -141,7 +144,7 @@ class MetalsSymbolIndexer(index: OnDemandSymbolIndex) extends SymbolIndexer {
             try mtags.indexRoot()
             catch {
               case NonFatal(e) =>
-                scribe.error(defn.path.toURI.toString, e)
+                logger.log(Level.SEVERE, defn.path.toURI.toString, e)
             }
           case _ =>
         }

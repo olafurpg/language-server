@@ -4,7 +4,6 @@ import scala.collection.JavaConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.pc.CompletionItems
 import scala.meta.internal.metals.PCEnrichments._
-import scala.util.Properties
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 

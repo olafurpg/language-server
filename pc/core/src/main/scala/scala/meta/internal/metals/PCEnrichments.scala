@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement
+import java.util.logging.Level
+import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
 import scala.meta.internal.{semanticdb => s}
 import org.eclipse.{lsp4j => l}
@@ -13,7 +15,12 @@ object PCEnrichments extends PCEnrichments
 
 trait PCEnrichments {
 
-  protected def decodeJson[T](obj: AnyRef, cls: java.lang.Class[T]): Option[T] =
+  private def logger: Logger = Logger.getLogger(classOf[PCEnrichments].getName)
+
+  protected def decodeJson[T](
+      obj: AnyRef,
+      cls: java.lang.Class[T]
+  ): Option[T] =
     for {
       data <- Option(obj)
       value <- try {
@@ -25,7 +32,7 @@ trait PCEnrichments {
         )
       } catch {
         case NonFatal(e) =>
-          scribe.error(s"decode error: $cls", e)
+          logger.log(Level.SEVERE, s"decode error: $cls", e)
           None
       }
     } yield value

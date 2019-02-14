@@ -4,11 +4,13 @@ import java.nio.file.Path
 import java.util
 import java.util.Comparator
 import java.util.PriorityQueue
+import java.util.logging.Logger
 import scala.collection.concurrent.TrieMap
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.ConsoleLogger
 
 class ClasspathSearch(
     map: collection.Map[String, CompressedPackageIndex],
@@ -101,7 +103,8 @@ class ClasspathSearch(
 }
 
 object ClasspathSearch {
-  def empty: ClasspathSearch = new ClasspathSearch(Map.empty, _ => 0)
+  def empty: ClasspathSearch =
+    new ClasspathSearch(Map.empty, _ => 0)
   def fromPackages(
       packages: PackageIndex,
       packagePriority: String => Int
@@ -114,7 +117,7 @@ object ClasspathSearch {
       classpath: Seq[Path],
       packagePriority: String => Int
   ): ClasspathSearch = {
-    val packages = new PackageIndex
+    val packages = new PackageIndex()
     packages.visitBootClasspath()
     classpath.foreach { path =>
       packages.visit(AbsolutePath(path))
