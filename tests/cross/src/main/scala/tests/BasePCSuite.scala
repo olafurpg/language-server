@@ -6,7 +6,6 @@ import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.logging.Logger
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import scala.collection.JavaConverters._
@@ -14,7 +13,6 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsSymbolIndexer
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.pc.ConsoleLogger
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.util.Properties

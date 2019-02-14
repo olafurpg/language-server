@@ -8,7 +8,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.jar.JarFile
 import java.util.logging.Level
-import java.util.logging.LogManager
 import java.util.logging.Logger
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.MtagsEnrichments._

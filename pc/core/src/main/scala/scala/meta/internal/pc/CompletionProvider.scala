@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
-import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems

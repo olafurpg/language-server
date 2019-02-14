@@ -4,13 +4,11 @@ import java.nio.file.Path
 import java.util
 import java.util.Comparator
 import java.util.PriorityQueue
-import java.util.logging.Logger
 import scala.collection.concurrent.TrieMap
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.pc.ConsoleLogger
 
 class ClasspathSearch(
     map: collection.Map[String, CompressedPackageIndex],

@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams

@@ -11,7 +11,6 @@ import java.nio.file.Paths
 import java.util.ServiceLoader
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
