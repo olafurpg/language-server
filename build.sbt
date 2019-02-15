@@ -282,6 +282,7 @@ lazy val mtest = project
       "scala212" -> V.scala212
     )
   )
+  .dependsOn(pc)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val cross = project
