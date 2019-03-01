@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.meta.pc.CancelToken
 import scala.meta.pc.CompletionItems
-import scala.meta.pc.CompletionItems.LookupKind
+import scala.meta.pc.CompletionItems.Kind
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -84,7 +84,7 @@ case class ScalaPresentationCompiler(
   }
 
   def emptyCompletion: CompletionItems = {
-    val items = new CompletionItems(LookupKind.None, Nil.asJava)
+    val items = new CompletionItems(Kind.None, Nil.asJava)
     items.setIsIncomplete(true)
     items
   }

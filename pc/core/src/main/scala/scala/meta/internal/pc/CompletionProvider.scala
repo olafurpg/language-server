@@ -7,7 +7,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.CompletionItems
-import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
@@ -86,7 +85,7 @@ class CompletionProvider(
 
   private def filterInteresting(
       completions: List[Member],
-      kind: LookupKind,
+      kind: CompletionItems.Kind,
       query: String,
       pos: Position,
       completion: CompletionPosition
@@ -146,7 +145,7 @@ class CompletionProvider(
     completions.foreach(visit)
     completion.contribute.foreach(visit)
     val searchResults =
-      if (kind == LookupKind.Scope) {
+      if (kind == CompletionItems.Kind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
       } else {
         SymbolSearch.Result.COMPLETE
@@ -182,14 +181,23 @@ class CompletionProvider(
 
   private def safeCompletionsAt(
       position: Position
-  ): (LookupKind, InterestingMembers, CompletionPosition) = {
+  ): (CompletionItems.Kind, InterestingMembers, CompletionPosition) = {
     def expected(e: Throwable) = {
-      logger.warning(e.getMessage)
-      (
-        LookupKind.None,
-        InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
-        CompletionPosition.None
-      )
+      completionPosition match {
+        case o: CompletionPosition.Override =>
+          (
+            CompletionItems.Kind.Override,
+            InterestingMembers(o.contribute, SymbolSearch.Result.COMPLETE),
+            o
+          )
+        case _ =>
+          logger.warning(e.getMessage)
+          (
+            CompletionItems.Kind.None,
+            InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
+            CompletionPosition.None
+          )
+      }
     }
     try {
       val completions = completionsAt(position) match {
@@ -203,11 +211,11 @@ class CompletionProvider(
       }
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
-          LookupKind.Scope
+          CompletionItems.Kind.Scope
         case _: CompletionResult.TypeMembers =>
-          LookupKind.Type
+          CompletionItems.Kind.Type
         case _ =>
-          LookupKind.None
+          CompletionItems.Kind.None
       }
       val completion = completionPosition
       val items = filterInteresting(

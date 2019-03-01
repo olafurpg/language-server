@@ -7,17 +7,18 @@ import java.util.List;
 
 public class CompletionItems extends CompletionList {
 
-    public LookupKind lookupKind;
+    public Kind kind;
 
-    public CompletionItems(LookupKind lookupKind, List<CompletionItem> items) {
+    public CompletionItems(Kind kind, List<CompletionItem> items) {
         super();
-        this.lookupKind = lookupKind;
+        this.kind = kind;
         super.setItems(items);
     }
 
-    public enum LookupKind {
+    public enum Kind {
         None,
         Scope,
-        Type
+        Type,
+        Override
     }
 }

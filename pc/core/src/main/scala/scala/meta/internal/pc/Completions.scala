@@ -18,6 +18,9 @@ trait Completions { this: MetalsGlobal =>
   class NamedArgMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 
+  class OverrideMember(prefix: String, sym: Symbol)
+      extends ScopeMember(sym, NoType, true, EmptyTree)
+
   val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
   def packageSymbolFromString(symbol: String): Option[Symbol] = {
     packageSymbols.getOrElseUpdate(symbol, {
@@ -238,20 +241,21 @@ trait Completions { this: MetalsGlobal =>
     /**
      * Returns false if this member should be excluded from completion items.
      */
-    def isCandidate(member: Member): Boolean
+    def isCandidate(member: Member): Boolean = true
 
     /**
      * Returns true if this member should be sorted at the top of completion items.
      */
-    def isPrioritized(member: Member): Boolean
+    def isPrioritized(member: Member): Boolean = true
 
     /**
      * Returns true if this member should be sorted at the top of completion items.
      */
-    def contribute: List[Member]
+    def contribute: List[Member] = Nil
 
   }
   def completionPosition: CompletionPosition = {
+//    pprint.log(lastEnclosing.take(3))
     lastEnclosing match {
       case (name: Ident) :: (a: Apply) :: _ =>
         CompletionPosition.Arg(name, a)
@@ -261,15 +265,31 @@ trait Completions { this: MetalsGlobal =>
         CompletionPosition.Case(isTyped = false, c, m)
       case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
         CompletionPosition.Case(isTyped = true, c, m)
+      case (_: Ident) ::
+            Select(Ident(TermName("scala")), TypeName("Unit")) ::
+            DefDef(_, name, _, _, _, _) ::
+            (t: Template) :: _ if name.endsWith(CURSOR) =>
+        CompletionPosition.Override(name, t)
       case _ =>
         CompletionPosition.None
     }
   }
   object CompletionPosition {
-    case object None extends CompletionPosition {
-      override def isCandidate(member: Member): Boolean = true
-      override def isPrioritized(member: Member): Boolean = true
-      override def contribute: List[Member] = Nil
+    case object None extends CompletionPosition
+    case class Override(name: Name, t: Template) extends CompletionPosition {
+      val prefix = name.toString.stripSuffix(CURSOR)
+      val typed = typedTreeAt(t.pos)
+      val isDecl = typed.tpe.decls.toSet
+      override def contribute: List[Member] = {
+        typed.tpe.members.iterator
+          .filter { sym =>
+            sym.name.startsWith(prefix) &&
+            !sym.name.endsWith(CURSOR) &&
+            !isDecl(sym)
+          }
+          .map(sym => new OverrideMember(prefix, sym))
+          .toList
+      }
     }
     case class Arg(ident: Ident, apply: Apply) extends CompletionPosition {
       val method = typedTreeAt(apply.fun.pos).symbol

@@ -937,4 +937,20 @@ object CompletionSuite extends BaseCompletionSuite {
     ""
   )
 
+  check(
+    "def",
+    s"""|
+        |trait API {
+        |  def foo(a: Int): Unit = ()
+        |  def foo(a: String): Unit = ()
+        |}
+        |class Main extends API {
+        |  override def foo(a: Int): Unit = ()
+        |  def foo@@
+        |}
+        |""".stripMargin,
+    // assert that `evidence$1` is excluded.
+    ""
+  )
+
 }
