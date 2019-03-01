@@ -7,7 +7,7 @@ object JavaBinary {
   /**
    * Returns absolute path to the `java` binary of the configured Java Home directory.
    */
-  def apply(javaHome: Option[String]): String = {
+  def apply(javaHome: Option[String] = None): String = {
     javaHome
       .orElse(JdkSources.defaultJavaHome)
       .map(AbsolutePath(_).resolve("bin").resolve("java").toString())

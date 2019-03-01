@@ -24,6 +24,7 @@ import utest.ufansi.Str
 class BaseSuite extends TestSuite {
   System.setProperty("metals.testing", "true")
   def isAppveyor: Boolean = "True" == System.getenv("APPVEYOR")
+  def isTravis: Boolean = "true" == System.getenv("TRAVIS")
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
@@ -139,8 +140,9 @@ class BaseSuite extends TestSuite {
   override def tests: Tests = {
     val ts = myTests.result()
     val names = Tree("", ts.map(x => Tree(x.name)): _*)
+    lazy val beforeAll = this.beforeAll()
     val thunks = new TestCallTree({
-      this.beforeAll()
+      beforeAll
       Right(ts.map(x => new TestCallTree(Left(x.thunk()))))
     })
     Tests(names, thunks)
