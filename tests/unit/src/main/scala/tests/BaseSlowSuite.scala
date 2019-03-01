@@ -35,21 +35,12 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   var server: TestingServer = _
   var client: TestingClient = _
   var workspace: AbsolutePath = _
-  override def beforeAll(): Unit = {
-    if (isTravis) {
-      BloopLauncher.start()
-    }
-    super.beforeAll()
-  }
   override def afterAll(): Unit = {
     if (server != null) {
       server.server.cancelAll()
     }
     ex.shutdownNow()
     sh.shutdownNow()
-    if (isTravis) {
-      BloopLauncher.stop()
-    }
   }
 
   def assertConnectedToBuildServer(
@@ -58,7 +49,18 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     val obtained = server.server.buildServer.get.name
     assertNoDiff(obtained, expectedName)
   }
+
+  override def utestAfterEach(path: Seq[String]): Unit = {
+    if (isTravis) {
+      BloopLauncher.stop()
+    }
+    super.utestAfterEach(path)
+  }
+
   override def utestBeforeEach(path: Seq[String]): Unit = {
+    if (isTravis) {
+      BloopLauncher.start()
+    }
     if (server != null) {
       server.server.cancel()
     }
