@@ -50,6 +50,11 @@ trait PCEnrichments {
       }
   }
   implicit class XtensionStringDoc(doc: String) {
+    def endsWithAt(other: String, offset: Int): Boolean = {
+      doc.length > other.length &&
+      offset - other.length > 0 &&
+      doc.startsWith(other, offset - other.length)
+    }
     def toMarkupContent: l.MarkupContent = {
       val content = new MarkupContent
       content.setKind("markdown")

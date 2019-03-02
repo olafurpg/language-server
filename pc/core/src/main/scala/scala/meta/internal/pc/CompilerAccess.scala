@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.lang
+import java.nio.file.SimpleFileVisitor
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -11,6 +12,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext
 import scala.meta.pc.CancelToken
+import scala.tools.nsc.io.Path
 
 class CompilerAccess(
     sh: Option[ScheduledExecutorService],

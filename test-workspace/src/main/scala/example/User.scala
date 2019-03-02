@@ -1,10 +1,8 @@
 package example
 
-case class User(
-    name: String,
-    age: Int = 42,
-    address: String = "",
-    followers: Int = 0
-)
-
-object User {}
+object User {
+  import java.nio.file.Path
+  import java.nio.file.attribute.BasicFileAttributes
+  import java.nio.file.FileVisitResult
+  scala.collection.immutable.ListMap.empty[Int, String]
+}

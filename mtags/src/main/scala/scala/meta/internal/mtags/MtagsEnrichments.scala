@@ -1,7 +1,9 @@
 package scala.meta.internal.mtags
 
 import com.thoughtworks.qdox.model.JavaModel
+import java.nio.channels.ClosedChannelException
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util
@@ -75,10 +77,17 @@ object MtagsEnrichments {
       file.toNIO.toLanguage
     }
     def toInput: Input.VirtualFile = {
-      val text = FileIO.slurp(file, StandardCharsets.UTF_8)
-      val path = file.toString()
-      val input = Input.VirtualFile(path, text)
-      input
+      try {
+        val text = FileIO.slurp(file, StandardCharsets.UTF_8)
+        val path = file.toString()
+        val input = Input.VirtualFile(path, text)
+        input
+      } catch {
+        case e: ClosedChannelException =>
+          val path = Paths.get(file.toURI.getPath)
+          Files.newByteChannel(???)
+          throw new ClosedZipException(file, e)
+      }
     }
   }
 

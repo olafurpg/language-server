@@ -1,5 +1,6 @@
 package tests
 
+import org.eclipse.lsp4j.InsertTextFormat
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
@@ -48,7 +49,13 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       }
       items.foreach { item =>
         val label =
-          if (item.getInsertText == null) item.getLabel else item.getInsertText
+          if (item.getInsertText == null) item.getLabel
+          else if (item.getInsertTextFormat == InsertTextFormat.Snippet) {
+            item.getInsertText
+              .replaceAllLiterally("${0:???}", "???")
+          } else {
+            item.getInsertText
+          }
         val commitCharacter =
           if (includeCommitCharacter)
             item.getCommitCharacters.asScala.mkString(" (commit: '", " ", "')")

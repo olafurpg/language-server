@@ -57,7 +57,7 @@ trait Signatures { this: MetalsGlobal =>
     def implicitParams: Option[List[Symbol]] =
       gtpe.paramss.lastOption.filter(_.headOption.exists(_.isImplicit))
     val implicitEvidencesByTypeParam
-        : collection.Map[Symbol, ListBuffer[String]] = {
+      : collection.Map[Symbol, ListBuffer[String]] = {
       val result = mutable.Map.empty[Symbol, ListBuffer[String]]
       for {
         param <- implicitParams.getOrElse(Nil).iterator
@@ -79,7 +79,7 @@ trait Signatures { this: MetalsGlobal =>
         case Nil => gtpe.paramss
         case tparams => tparams :: gtpe.paramss
       }
-    def defaultMethodSignature: String = {
+    def defaultMethodSignature(name: String = ""): String = {
       var i = 0
       val paramss = gtpe.typeParams match {
         case Nil => gtpe.paramss
@@ -98,7 +98,7 @@ trait Signatures { this: MetalsGlobal =>
         if (labels.isEmpty && params.nonEmpty) Nil
         else labels.iterator :: Nil
       }
-      methodSignature(params, name = "")
+      methodSignature(params, name)
     }
 
     def methodSignature(

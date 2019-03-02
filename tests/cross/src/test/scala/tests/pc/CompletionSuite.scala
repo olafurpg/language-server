@@ -950,7 +950,44 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     // assert that `evidence$1` is excluded.
-    ""
+    """|(a: String): Unit = ???
+       |""".stripMargin
+  )
+
+  check(
+    "def1",
+    s"""|
+        |class Main extends Traversable[Int] {
+        |  def for@@
+        |}
+        |""".stripMargin,
+    """|foreach[U](f: Int => U): Unit = ???
+       |forall(p: Int => Boolean): Boolean = ???
+       |""".stripMargin
+  )
+
+  check(
+    "def2",
+    s"""|
+        |class Main extends Iterator[Int] {
+        |  def takeWhile@@
+        |}
+        |""".stripMargin,
+    """|foreach[U](f: Int => U): Unit = ???
+       |forall(p: Int => Boolean): Boolean = ???
+       |""".stripMargin
+  )
+
+  check(
+    "def3",
+    s"""|
+        |class Main {
+        |  new BufferedIterator[Int] {
+        |    def hasNext@@
+        |}
+        |""".stripMargin,
+    """|hasNext: Boolean = ???
+       |""".stripMargin
   )
 
 }

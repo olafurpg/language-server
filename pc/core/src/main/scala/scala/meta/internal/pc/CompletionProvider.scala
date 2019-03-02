@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.nio.file.Path
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.InsertTextFormat
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
@@ -12,6 +13,7 @@ import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
 import scala.meta.pc.SymbolSearchVisitor
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.PCEnrichments._
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
@@ -31,12 +33,27 @@ class CompletionProvider(
     val (kind, i, completion) = safeCompletionsAt(pos)
     val history = new ShortenedNames()
     val sorted = i.results.sorted(memberOrdering(history, completion))
+    lazy val insertOverride: java.util.List[l.TextEdit] = {
+      val start = params.text().lastIndexOf(" def ", params.offset())
+      if (!params.text().endsWithAt("override", start)) {
+        val line = unit.source.offsetToLine(start)
+        val col = start - unit.source.lineToOffset(line)
+        val pos = new l.Position(line, col)
+        val range = new l.Range(pos, pos)
+        val edit = new l.TextEdit(range, " override")
+        List(edit).asJava
+      } else {
+        Nil.asJava
+      }
+    }
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
         params.checkCanceled()
         val label = r match {
           case _: NamedArgMember =>
             s"${r.symNameDropLocal.decoded} = "
+          case o: OverrideMember =>
+            o.label
           case _ =>
             r.symNameDropLocal.decoded
         }
@@ -45,9 +62,32 @@ class CompletionProvider(
         r match {
           case w: WorkspaceMember =>
             item.setInsertText(w.sym.fullName)
+          case w: OverrideMember =>
+            item.setInsertTextFormat(InsertTextFormat.Snippet)
+            item.setInsertText(w.insertText)
+            if (!w.sym.isAbstract) {
+              item.setAdditionalTextEdits(insertOverride)
+            }
+          case t: TypeMember
+              if t.sym.isMethod &&
+                !t.sym.info.isInstanceOf[NullaryMethodType] =>
+            t.sym.paramss match {
+              case Nil =>
+              case Nil :: Nil =>
+                item.setInsertText(label + "()")
+              case _ =>
+                item.setInsertText(label + "($0)")
+                item.setInsertTextFormat(InsertTextFormat.Snippet)
+            }
           case _ =>
         }
-        item.setDetail(detail)
+
+        r match {
+          case _: OverrideMember =>
+            item.setDetail("")
+          case _ =>
+            item.setDetail(detail)
+        }
         item.setData(
           CompletionItemData(semanticdbSymbol(r.sym), buildTargetIdentifier).toJson
         )

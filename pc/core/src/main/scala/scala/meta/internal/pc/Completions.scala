@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import org.eclipse.lsp4j.TextEdit
 import scala.meta.internal.semanticdb.Scala._
 import scala.collection.mutable
 import scala.util.control.NonFatal
@@ -18,8 +19,11 @@ trait Completions { this: MetalsGlobal =>
   class NamedArgMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 
-  class OverrideMember(prefix: String, sym: Symbol)
-      extends ScopeMember(sym, NoType, true, EmptyTree)
+  class OverrideMember(val label: String, prefix: String, sym: Symbol)
+      extends ScopeMember(sym, NoType, true, EmptyTree) {
+    def insertText: String = label + " = ${0:???}"
+    def additionalTextEdit: List[TextEdit] = Nil
+  }
 
   val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
   def packageSymbolFromString(symbol: String): Option[Symbol] = {
@@ -50,6 +54,9 @@ trait Completions { this: MetalsGlobal =>
         isInherited,
         history
       )
+    case w: OverrideMember =>
+      if (w.sym.isAbstract) 0
+      else 1
     case w: WorkspaceMember =>
       MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
     case ScopeMember(sym, _, true, _) =>
@@ -149,7 +156,8 @@ trait Completions { this: MetalsGlobal =>
   def infoString(sym: Symbol, info: Type, history: ShortenedNames): String =
     sym match {
       case m: MethodSymbol =>
-        new SignaturePrinter(m, history, info, includeDocs = false).defaultMethodSignature
+        new SignaturePrinter(m, history, info, includeDocs = false)
+          .defaultMethodSignature()
       case _ =>
         def fullName(s: Symbol): String = " " + s.owner.fullName
         dealiasedValForwarder(sym) match {
@@ -255,7 +263,6 @@ trait Completions { this: MetalsGlobal =>
 
   }
   def completionPosition: CompletionPosition = {
-//    pprint.log(lastEnclosing.take(3))
     lastEnclosing match {
       case (name: Ident) :: (a: Apply) :: _ =>
         CompletionPosition.Arg(name, a)
@@ -287,7 +294,14 @@ trait Completions { this: MetalsGlobal =>
             !sym.name.endsWith(CURSOR) &&
             !isDecl(sym)
           }
-          .map(sym => new OverrideMember(prefix, sym))
+          .map { sym =>
+            val history = new ShortenedNames()
+            val info = typed.tpe.memberType(sym)
+            val printer =
+              new SignaturePrinter(sym, history, info, includeDocs = false)
+            val label = printer.defaultMethodSignature(sym.name.toString)
+            new OverrideMember(label, prefix, sym)
+          }
           .toList
       }
     }
