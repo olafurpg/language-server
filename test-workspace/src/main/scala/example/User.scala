@@ -7,4 +7,6 @@ case class User(
     followers: Int = 0
 )
 
-object User {}
+object User {
+  // val x
+}

@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.nio.file.Path
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.InsertTextFormat
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
@@ -43,10 +44,31 @@ class CompletionProvider(
         }
         val item = new CompletionItem(label)
         val detail = detailString(r, history)
+        val typeSuffix =
+          if (r.sym.isType) "[$0]"
+          else ""
+        pprint.log(r.sym)
+        pprint.log(r.sym.isType)
+        pprint.log(r.sym.name.isTypeName)
         r match {
           case w: WorkspaceMember =>
-            item.setInsertText(w.sym.fullName)
+            item.setInsertTextFormat(InsertTextFormat.Snippet)
+            item.setInsertText(w.sym.fullName + typeSuffix)
           case _ =>
+            if (r.sym.isMethod &&
+              !r.sym.info.isInstanceOf[NullaryMethodType]) {
+              item.setInsertTextFormat(InsertTextFormat.Snippet)
+              r.sym.paramss match {
+                case Nil =>
+                case Nil :: Nil =>
+                  item.setInsertText(label + "()")
+                case _ =>
+                  item.setInsertText(label + "($0)")
+              }
+            } else if (!typeSuffix.isEmpty) {
+              item.setInsertTextFormat(InsertTextFormat.Snippet)
+              item.setInsertText(label + typeSuffix)
+            }
         }
         item.setDetail(detail)
         item.setData(

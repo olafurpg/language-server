@@ -184,6 +184,8 @@ trait Completions { this: MetalsGlobal =>
         case _ =>
           Nil
       }
+    } else if (sym.isAliasType) {
+      sym.info.dealias.typeSymbol :: Nil
     } else {
       Nil
     }
