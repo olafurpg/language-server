@@ -149,4 +149,48 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
        |Iterable[$0]
        |""".stripMargin
   )
+
+  checkSnippet(
+    "string",
+    s"""|object Main {
+        |  val myName = ""
+        |  def message = "Hello $$myNam@@, you are welcome"
+        |}
+        |""".stripMargin,
+    """|$myName
+       |""".stripMargin
+  )
+
+  checkSnippet(
+    "string1",
+    s"""|object Main {
+        |  val myName = ""
+        |  def message = "$$myNam@@"
+        |}
+        |""".stripMargin,
+    """|$myName
+       |""".stripMargin
+  )
+
+  checkSnippet(
+    "string2",
+    s"""|object Main {
+        |  val myName = ""
+        |  def message = "This $$myNa@@me"
+        |}
+        |""".stripMargin,
+    """|$myName
+       |""".stripMargin
+  )
+
+  checkSnippet(
+    "interpolator",
+    s"""|object Main {
+        |  val myName = ""
+        |  def message = s"Hello $$myNam@@, you are welcome"
+        |}
+        |""".stripMargin,
+    """|myName: String
+       |""".stripMargin
+  )
 }

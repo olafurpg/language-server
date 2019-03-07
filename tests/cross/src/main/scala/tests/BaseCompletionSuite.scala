@@ -39,6 +39,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val items = getItems(original)
+      pprint.log(items)
       val obtained = items
         .map(item => Option(item.getInsertText).getOrElse(item.getLabel))
         .mkString("\n")
