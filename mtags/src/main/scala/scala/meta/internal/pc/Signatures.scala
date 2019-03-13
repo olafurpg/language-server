@@ -8,7 +8,9 @@ import scala.meta.pc.SymbolDocumentation
 
 trait Signatures { this: MetalsGlobal =>
 
-  class ShortenedNames(history: mutable.Map[Name, Symbol] = mutable.Map.empty) {
+  class ShortenedNames(
+      val history: mutable.Map[Name, Symbol] = mutable.Map.empty
+  ) {
     def tryShortenName(name: Option[Name], sym: Symbol): Boolean =
       name match {
         case Some(n) =>
@@ -79,7 +81,7 @@ trait Signatures { this: MetalsGlobal =>
         case Nil => gtpe.paramss
         case tparams => tparams :: gtpe.paramss
       }
-    def defaultMethodSignature: String = {
+    def defaultMethodSignature(name: String = ""): String = {
       var i = 0
       val paramss = gtpe.typeParams match {
         case Nil => gtpe.paramss
@@ -98,7 +100,7 @@ trait Signatures { this: MetalsGlobal =>
         if (labels.isEmpty && params.nonEmpty) Nil
         else labels.iterator :: Nil
       }
-      methodSignature(params, name = "")
+      methodSignature(params, name)
     }
 
     def methodSignature(

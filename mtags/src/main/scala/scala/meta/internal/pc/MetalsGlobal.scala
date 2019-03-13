@@ -183,6 +183,8 @@ class MetalsGlobal(
         TypeBounds(loop(lo, None), loop(hi, None))
       case MethodType(params, resultType) =>
         MethodType(params, loop(resultType, None))
+      case ErrorType =>
+        definitions.AnyTpe
       case t => t
     }
     longType match {

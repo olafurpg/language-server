@@ -4,6 +4,7 @@ import java.lang.StringBuilder
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.semanticdb.Scala._
 import scala.collection.mutable
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.util.control.NonFatal
 
 /**
@@ -24,6 +25,14 @@ trait Completions { this: MetalsGlobal =>
       val filterText: String,
       val edit: l.TextEdit,
       sym: Symbol
+  ) extends ScopeMember(sym, NoType, true, EmptyTree)
+
+  class OverrideDefMember(
+      val label: String,
+      val edit: l.TextEdit,
+      val filterText: String,
+      sym: Symbol,
+      val autoImports: List[l.TextEdit]
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
   val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
@@ -57,6 +66,15 @@ trait Completions { this: MetalsGlobal =>
       )
     case w: WorkspaceMember =>
       MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
+    case w: OverrideDefMember =>
+      var penalty = computeRelevancePenalty(
+        w.sym,
+        m.implicitlyAdded,
+        isInherited = false,
+        history
+      ) >>> 15
+      if (!w.sym.isAbstract) penalty |= MemberOrdering.IsNotAbstract
+      penalty
     case ScopeMember(sym, _, true, _) =>
       computeRelevancePenalty(
         sym,
@@ -106,8 +124,17 @@ trait Completions { this: MetalsGlobal =>
     // synthetic symbols are less relevant (e.g. `copy` on case classes)
     if (sym.isSynthetic) relevance |= IsSynthetic
     if (sym.isDeprecated) relevance |= IsDeprecated
+    if (isEvilMethod(sym.name)) relevance |= IsEvilMethod
     relevance
   }
+
+  lazy val isEvilMethod = Set[Name](
+    termNames.notifyAll_,
+    termNames.notify_,
+    termNames.wait_,
+    termNames.clone_,
+    termNames.finalize_
+  )
 
   def memberOrdering(
       history: ShortenedNames,
@@ -154,7 +181,8 @@ trait Completions { this: MetalsGlobal =>
   def infoString(sym: Symbol, info: Type, history: ShortenedNames): String =
     sym match {
       case m: MethodSymbol =>
-        new SignaturePrinter(m, history, info, includeDocs = false).defaultMethodSignature
+        new SignaturePrinter(m, history, info, includeDocs = false)
+          .defaultMethodSignature()
       case _ =>
         def fullName(s: Symbol): String = " " + s.owner.fullName
         dealiasedValForwarder(sym) match {
@@ -284,6 +312,11 @@ trait Completions { this: MetalsGlobal =>
             isPossibleInterpolatorMember(lit, head, text, pos)
               .getOrElse(CompletionPosition.None)
         }
+      case (_: Ident) ::
+            Select(Ident(TermName("scala")), TypeName("Unit")) ::
+            (defdef @ DefDef(_, name, _, _, _, _)) ::
+            (t: Template) :: _ if name.endsWith(CURSOR) =>
+        CompletionPosition.Override(name, t, pos, text, defdef)
       case _ =>
         inferCompletionPosition(pos, lastEnclosing)
     }
@@ -338,14 +371,13 @@ trait Completions { this: MetalsGlobal =>
       query <- interpolatorMemberSelect(lit)
       if text.charAt(lit.pos.point - 1) != '}'
       arg <- interpolatorMemberArg(parent, lit)
-    } yield
-      CompletionPosition.InterpolatorType(
-        query,
-        arg,
-        lit,
-        cursor,
-        text
-      )
+    } yield CompletionPosition.InterpolatorType(
+      query,
+      arg,
+      lit,
+      cursor,
+      text
+    )
   }
 
   case class InterpolationSplice(
@@ -593,6 +625,119 @@ trait Completions { this: MetalsGlobal =>
           .toList
       }
     }
+
+    case class Override(
+        name: Name,
+        t: Template,
+        pos: Position,
+        text: String,
+        defn: DefDef
+    ) extends CompletionPosition {
+      val prefix = name.toString.stripSuffix(CURSOR)
+      val typed = typedTreeAt(t.pos)
+      val isDecl = typed.tpe.decls.toSet
+      val OVERRIDE = " override"
+      val start: Int = {
+        val fromDef = text.lastIndexOf(" def ", pos.point)
+        if (fromDef > 0 && text.endsWithAt(OVERRIDE, fromDef)) {
+          fromDef - OVERRIDE.length()
+        } else {
+          fromDef
+        }
+      }
+      def isExplicitOverride = text.startsWith(OVERRIDE, start)
+      val editStart = start + 1
+      val range = pos.withStart(editStart).withEnd(pos.point).toLSP
+      val lineStart = pos.source.lineToOffset(pos.line - 1)
+      def inferIndent: Int = {
+        var i = 0
+        while (lineStart + i < text.length && text.charAt(lineStart + i) == ' ') {
+          i += 1
+        }
+        i
+      }
+
+      override def contribute: List[Member] = {
+        if (start < 0) Nil
+        else {
+          val context = doLocateContext(pos)
+          typed.tpe.members.iterator
+            .filter { sym =>
+              sym.isMethod &&
+              sym.name.startsWith(prefix) &&
+              !sym.name.endsWith(CURSOR) &&
+              !isDecl(sym) &&
+              !sym.isConstructor &&
+              !isNotOverridableName(sym.name)
+            }
+            .map { sym =>
+              val info = typed.tpe.memberType(sym)
+              val history = new ShortenedNames()
+              val printer =
+                new SignaturePrinter(sym, history, info, includeDocs = false)
+              val label = printer.defaultMethodSignature(Identifier(sym.name))
+              val isIgnored = Set[Symbol](
+                rootMirror.RootClass,
+                rootMirror.RootPackage
+              )
+              val toImport = mutable.Map.empty[Symbol, List[Name]]
+              for {
+                (name, owner) <- history.history.iterator
+                if !isIgnored(owner)
+                if !context.lookupSymbol(name, _ => true).isSuccess
+              } {
+                toImport(owner) = name :: toImport.getOrElse(owner, Nil)
+              }
+              val overrideKeyword =
+                if (!sym.isAbstract || isExplicitOverride) "override "
+                // Don't insert `override` keyword if the supermethod is abstract and the
+                // user did not explicitly type "override". See:
+                // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
+                else ""
+              val edit = new l.TextEdit(
+                range,
+                s"${overrideKeyword}def $label = $${0:???}"
+              )
+              val autoImports =
+                if (toImport.nonEmpty) {
+                  val indent = " " * inferIndent
+                  val formatted = toImport.toSeq
+                    .sortBy {
+                      case (owner, _) => owner.fullName
+                    }
+                    .map {
+                      case (owner, names) =>
+                        val name =
+                          names.map(Identifier.backtickWrap(_)) match {
+                            case single :: Nil => single
+                            case multiple =>
+                              multiple.sorted.mkString("{", ", ", "}")
+                          }
+                        s"${indent}import ${owner.fullName}.${name}"
+                    }
+                    .mkString("", "\n", "\n")
+                  val startPos = pos.withPoint(lineStart).focus
+                  new l.TextEdit(startPos.toLSP, formatted) :: Nil
+                } else {
+                  Nil
+                }
+              val filter = text.substring(editStart, pos.point)
+              val prefix =
+                if (sym.isAbstract) "def "
+                else "override def "
+              new OverrideDefMember(
+                prefix + label,
+                edit,
+                filter,
+                sym,
+                autoImports
+              )
+            }
+            .toList
+        }
+      }
+    }
+
     case class Case(
         isTyped: Boolean,
         c: CaseDef,
@@ -677,4 +822,63 @@ trait Completions { this: MetalsGlobal =>
       }
     }
   }
+
+  lazy val isNotOverridableName: Set[Name] =
+    Iterator(
+      definitions.syntheticCoreMethods.iterator.map(_.name),
+      Iterator(
+        termNames.notify_,
+        termNames.notifyAll_,
+        termNames.wait_,
+        termNames.MIXIN_CONSTRUCTOR,
+        termNames.CONSTRUCTOR
+      )
+    ).flatten.toSet -- Set[Name](
+      termNames.hashCode_,
+      termNames.toString_,
+      termNames.equals_
+    )
+//    Set[Name](
+//    termNames.HASHkw,
+//    termNames.HASHHASH,
+//    termNames.MIXIN_CONSTRUCTOR,
+//    termNames.CONSTRUCTOR,
+//    termNames.eq,
+//    termNames.ne,
+//    termNames.synchronized_,
+//    termNames.EQ,
+//    termNames.NE,
+//    termNames.asInstanceOf_,
+//    termNames.isInstanceOf_
+//  )
+  lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
+    // the methods == != ## are arguably "interesting" but they're here becuase
+    // - they're short so completing them doesn't save you keystrokes
+    // - they're available on everything so you
+    definitions.Any_==,
+    definitions.Any_!=,
+    definitions.Any_##,
+    definitions.Object_==,
+    definitions.Object_!=,
+    definitions.Object_##,
+    definitions.Object_eq,
+    definitions.Object_ne,
+    definitions.RepeatedParamClass,
+    definitions.ByNameParamClass,
+    definitions.JavaRepeatedParamClass,
+    definitions.Object_notify,
+    definitions.Object_notifyAll,
+    definitions.Object_notify,
+    definitions.getMemberMethod(definitions.ObjectClass, termNames.wait_),
+    definitions.getMemberMethod(
+      definitions.getMemberClass(
+        definitions.PredefModule,
+        TypeName("ArrowAssoc")
+      ),
+      TermName("→").encode
+    ),
+    // NOTE(olafur) IntelliJ does not complete the root package and without this filter
+    // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`
+    rootMirror.RootPackage
+  ).flatMap(_.alternatives)
 }
