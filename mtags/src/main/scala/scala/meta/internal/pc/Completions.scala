@@ -672,7 +672,7 @@ trait Completions { this: MetalsGlobal =>
             }
             .map { sym =>
               val info = typed.tpe.memberType(sym)
-              val history = new ShortenedNames(context)
+              val history = new ShortenedNames(context, renameConfig)
               val printer =
                 new SignaturePrinter(sym, history, info, includeDocs = false)
               val label = printer.defaultMethodSignature(Identifier(sym.name))
@@ -680,13 +680,14 @@ trait Completions { this: MetalsGlobal =>
                 rootMirror.RootClass,
                 rootMirror.RootPackage
               )
-              val toImport = mutable.Map.empty[Symbol, List[Name]]
+              val toImport = mutable.Map.empty[Symbol, List[ShortName]]
               for {
-                (name, owner) <- history.history.iterator
+                (name, sym) <- history.history.iterator
+                owner = sym.owner
                 if !isIgnored(owner)
                 if !context.lookupSymbol(name, _ => true).isSuccess
               } {
-                toImport(owner) = name :: toImport.getOrElse(owner, Nil)
+                toImport(owner) = sym :: toImport.getOrElse(owner, Nil)
               }
               val overrideKeyword =
                 if (!sym.isAbstract || isExplicitOverride) "override "
@@ -707,12 +708,13 @@ trait Completions { this: MetalsGlobal =>
                     }
                     .map {
                       case (owner, names) =>
+                        val isGroup =
+                          names.lengthCompare(1) > 0 ||
+                            names.exists(_.isRename)
+                        val importNames = names.map(_.asImport)
                         val name =
-                          names.map(Identifier.backtickWrap(_)) match {
-                            case single :: Nil => single
-                            case multiple =>
-                              multiple.sorted.mkString("{", ", ", "}")
-                          }
+                          if (isGroup) importNames.mkString("{", ", ", "}")
+                          else importNames.mkString
                         s"${indent}import ${owner.fullName}.${name}"
                     }
                     .mkString("", "\n", "\n")
@@ -881,4 +883,9 @@ trait Completions { this: MetalsGlobal =>
     // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`
     rootMirror.RootPackage
   ).flatMap(_.alternatives)
+
+  lazy val renameConfig = Map[Symbol, Name](
+    inverseSemanticdbSymbol("scala/collection/mutable/") -> TermName("mutable"),
+    inverseSemanticdbSymbol("java/util/") -> TermName("ju")
+  ).filterKeys(_ != NoSymbol)
 }

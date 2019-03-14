@@ -8,49 +8,65 @@ import scala.meta.pc.SymbolDocumentation
 
 trait Signatures { this: MetalsGlobal =>
 
-  class ShortenedNames(
-      val history: mutable.Map[Name, Symbol] = mutable.Map.empty,
-      lookupSymbol: Name => NameLookup = _ => LookupNotFound
+  case class ShortName(
+      name: Name,
+      symbol: Symbol
   ) {
-    def this(context: Context) =
+    def isRename: Boolean = symbol.name != name
+    def asImport: String = {
+      val ident = Identifier(name)
+      if (isRename) s"${Identifier(symbol.name)} => ${ident}"
+      else ident
+    }
+    def owner: Symbol = symbol.owner
+  }
+  object ShortName {
+    def apply(sym: Symbol): ShortName =
+      ShortName(sym.name, sym)
+  }
+
+  class ShortenedNames(
+      val history: mutable.Map[Name, ShortName] = mutable.Map.empty,
+      lookupSymbol: Name => NameLookup = _ => LookupNotFound,
+      val config: Map[Symbol, Name] = Map.empty
+  ) {
+    def this(context: Context, config: Map[Symbol, Name]) =
       this(lookupSymbol = { name =>
         context.lookupSymbol(name, _ => true)
-      })
+      }, config = config)
     def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean = {
       lookupSymbol(name) match {
         case LookupNotFound => true
-        case l =>
-          if (sym.hasPackageFlag) {
-            // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
-            l.symbol.fullName == sym.fullName
+        case l => sym.isKindaTheSameAs(l.symbol)
+      }
+    }
+    def tryShortenName(short: ShortName): Boolean = {
+      val ShortName(name, sym) = short
+      history.get(name) match {
+        case Some(ShortName(_, other)) =>
+          if (other.isKindaTheSameAs(sym)) true
+          else false
+        case _ =>
+          val isOk = lookupSymbol(name) match {
+            case LookupSucceeded(_, symbol) =>
+              symbol.isKindaTheSameAs(sym)
+            case LookupNotFound =>
+              true
+            case _ =>
+              false
+          }
+          if (isOk) {
+            history(name) = short
+            true
           } else {
-            l.symbol == sym
+            false // conflict, do not shorten name.
           }
       }
     }
-    def tryShortenName(name: Option[Name], sym: Symbol): Boolean =
+    def tryShortenName(name: Option[ShortName]): Boolean =
       name match {
-        case Some(n) =>
-          history.get(n) match {
-            case Some(other) =>
-              if (other == sym) true
-              else false
-            case _ =>
-              val isOk = lookupSymbol(n) match {
-                case LookupSucceeded(_, symbol) =>
-                  symbol == sym
-                case LookupNotFound =>
-                  true
-                case _ =>
-                  false
-              }
-              if (isOk) {
-                history(n) = sym
-                true
-              } else {
-                false // conflict, do not shorten name.
-              }
-          }
+        case Some(short) =>
+          tryShortenName(short)
         case _ =>
           false
       }

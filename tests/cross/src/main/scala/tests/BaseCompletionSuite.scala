@@ -43,6 +43,22 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     }
   }
 
+  def checkEditLine(
+      name: String,
+      template: String,
+      original: String,
+      expected: String,
+      filterText: String = "",
+      assertSingleItem: Boolean = true
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+    checkEdit(
+      name,
+      template.replaceAllLiterally("___", original),
+      template.replaceAllLiterally("___", expected),
+      filterText,
+      assertSingleItem
+    )
+  }
   def checkEdit(
       name: String,
       original: String,

@@ -1,11 +1,9 @@
 package example
 
-class Foo {
-  def foo: Option[Foo] = Some(this)
+abstract class Abstract {
+  def foo: java.lang.StringBuilder
 }
-
-object Main {
-  class Foo
-  val example = 42
-  new _root_.example.Foo {}
+class Main extends Abstract {
+  val java = 1
+  def foo: _root_.java.lang.StringBuilder = ???
 }

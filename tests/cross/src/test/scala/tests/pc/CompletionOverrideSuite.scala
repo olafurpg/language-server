@@ -217,7 +217,8 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     topLines = Some(2)
   )
 
-  def conflict(query: String): String =
+  checkEditLine(
+    "conflict",
     s"""package a.b
        |abstract class Conflict {
        |  def self: Conflict
@@ -225,14 +226,12 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |object Main {
        |  class Conflict
        |  new a.b.Conflict {
-       |    $query
+       |    ___
        |  }
        |}
-       |""".stripMargin
-  checkEdit(
-    "conflict",
-    conflict("def self@@"),
-    conflict("def self: a.b.Conflict = ${0:???}")
+       |""".stripMargin,
+    "def self@@",
+    "def self: a.b.Conflict = ${0:???}"
   )
 
   check(
@@ -256,5 +255,81 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |def selfArg: Option[_root_.a.b.Conflict]: Option[Conflict]
        |def selfPath: _root_.a.b.Conflict#Inner: Conflict#Inner
        |""".stripMargin
+  )
+
+  checkEditLine(
+    "mutable",
+    s"""|abstract class Mutable {
+        |  def foo: scala.collection.mutable.Set[Int]
+        |}
+        |object Main {
+        |  new Mutable {
+        |___
+        |  }
+        |}
+        |""".stripMargin,
+    "    def foo@@",
+    """    import scala.collection.mutable
+      |    def foo: mutable.Set[Int] = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "jutil",
+    s"""|abstract class JUtil {
+        |  def foo: java.util.List[Int]
+        |}
+        |class Main extends JUtil {
+        |___
+        |}
+        |""".stripMargin,
+    "  def foo@@",
+    """  import java.{util => ju}
+      |  def foo: ju.List[Int] = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "jlang",
+    s"""|abstract class Mutable {
+        |  def foo: java.lang.StringBuilder
+        |}
+        |class Main extends Mutable {
+        |  ___
+        |}
+        |""".stripMargin,
+    "  def foo@@",
+    """  def foo: java.lang.StringBuilder = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "alias",
+    s"""|
+        |abstract class Abstract {
+        |  def foo: scala.collection.immutable.List[Int]
+        |}
+        |class Main extends Abstract {
+        |  ___
+        |}
+        |
+        |""".stripMargin,
+    "  def foo@@",
+    """  def foo: List[Int] = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "alias2",
+    s"""|
+        |abstract class Abstract {
+        |  type Foobar = List[Int]
+        |  def foo: Foobar
+        |}
+        |class Main extends Abstract {
+        |  ___
+        |}
+        |
+        |""".stripMargin,
+    "  def foo@@",
+    // NOTE(olafur) I am not sure this is desirable behavior, we might want to
+    // consider not dealiasing here.
+    """  def foo: List[Int] = ${0:???}""".stripMargin
   )
 }

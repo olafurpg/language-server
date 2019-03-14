@@ -15,6 +15,7 @@ import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
+import scala.util.control.NonFatal
 
 class MetalsGlobal(
     settings: Settings,
@@ -125,6 +126,14 @@ class MetalsGlobal(
     else None
   }
 
+  class PrettyType(
+      override val prefixString: String,
+      override val safeToString: String
+  ) extends Type {
+    def this(string: String) =
+      this(string + ".", string)
+  }
+
   /**
    * Shortens fully qualified package prefixes to make type signatures easier to read.
    *
@@ -133,31 +142,43 @@ class MetalsGlobal(
    * making sure to not convert two different symbols into same short name.
    */
   def shortType(longType: Type, history: ShortenedNames): Type = {
-    def loop(tpe: Type, name: Option[Name]): Type = tpe match {
+    def loop(tpe: Type, name: Option[ShortName]): Type = tpe match {
       case TypeRef(pre, sym, args) =>
-        if (sym.isAliasType &&
-          (sym.isAbstract || sym.overrides.lastOption.exists(_.isAbstract))) {
-          // Always dealias abstract type aliases but leave concrete aliases alone.
-          // trait Generic { type Repr /* dealias */ }
-          // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
-          loop(tpe.dealias, name)
-        } else {
-          TypeRef(
-            loop(pre, Some(sym.name)),
-            sym,
-            args.map(arg => loop(arg, None))
-          )
+        val ownerSymbol = pre.termSymbol
+        history.config.get(ownerSymbol) match {
+          case Some(rename)
+              if history.tryShortenName(ShortName(rename, ownerSymbol)) =>
+            TypeRef(
+              new PrettyType(rename.toString),
+              sym,
+              args.map(arg => loop(arg, None))
+            )
+          case _ =>
+            if (sym.isAliasType &&
+              (sym.isAbstract || sym.overrides.lastOption
+                .exists(_.isAbstract))) {
+              // Always dealias abstract type aliases but leave concrete aliases alone.
+              // trait Generic { type Repr /* dealias */ }
+              // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
+              loop(tpe.dealias, name)
+            } else {
+              TypeRef(
+                loop(pre, Some(ShortName(sym))),
+                sym,
+                args.map(arg => loop(arg, None))
+              )
+            }
         }
       case SingleType(pre, sym) =>
         if (sym.hasPackageFlag) {
-          if (history.tryShortenName(name, sym)) NoPrefix
+          if (history.tryShortenName(name)) NoPrefix
           else tpe
         } else {
-          SingleType(loop(pre, Some(sym.name)), sym)
+          SingleType(loop(pre, Some(ShortName(sym))), sym)
         }
       case ThisType(sym) =>
         if (sym.hasPackageFlag) {
-          if (history.tryShortenName(name, sym)) NoPrefix
+          if (history.tryShortenName(name)) NoPrefix
           else {
             // Returns the package `a` for the symbol `_root_.a.b.c`
             def topPackage(s: Symbol): Symbol = {
@@ -166,19 +187,14 @@ class MetalsGlobal(
               else topPackage(owner)
             }
             val top = topPackage(sym)
-            if (history.nameResolvesToSymbol(top.name.toTermName, top)) {
-              tpe
+            val isOk = history.nameResolvesToSymbol(top.name.toTermName, top)
+            if (isOk) {
+              new PrettyType(sym.fullName)
             } else {
               // NOTE(olafur) The name of the toplevel package resolves to a different symbol so
               // we must prefix it with `_root_`. Creating a new `Type` subclass is a hack, a better
               // solution would be to implement a custom pretty-printer for types.
-              new Type {
-                override def prefixString: String =
-                  this.safeToString + "."
-                override def safeToString: String = {
-                  s"_root_.${sym.fullName}"
-                }
-              }
+              new PrettyType(s"_root_.${sym.fullName}")
             }
           }
         } else {
@@ -231,7 +247,14 @@ class MetalsGlobal(
     def loop(s: String): List[Symbol] = {
       if (s.isNone || s.isRootPackage) rootMirror.RootPackage :: Nil
       else if (s.isEmptyPackage) rootMirror.EmptyPackage :: Nil
-      else {
+      else if (s.isPackage) {
+        try {
+          rootMirror.staticPackage(s.stripSuffix("/").replace("/", ".")) :: Nil
+        } catch {
+          case NonFatal(_) =>
+            Nil
+        }
+      } else {
         val (desc, parent) = DescriptorParser(s)
         val parentSymbol = loop(parent)
         def tryMember(sym: Symbol): List[Symbol] =
@@ -344,6 +367,14 @@ class MetalsGlobal(
     }
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def isKindaTheSameAs(other: Symbol): Boolean = {
+      if (sym.hasPackageFlag) {
+        // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
+        other.fullName == sym.fullName
+      } else {
+        other.dealiased == sym.dealiased
+      }
+    }
     def snippetCursor: String = sym.paramss match {
       case Nil =>
         "$0"
