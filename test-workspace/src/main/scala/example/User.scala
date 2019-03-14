@@ -1,9 +1,11 @@
 package example
 
+import java.lang.{Boolean => JBoolean}
+
 abstract class Abstract {
-  def foo: java.lang.StringBuilder
+  def foo: java.lang.Boolean
 }
+
 class Main extends Abstract {
-  val java = 1
-  def foo: _root_.java.lang.StringBuilder = ???
+  def foo: JBoolean = ???
 }

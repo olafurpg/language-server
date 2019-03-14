@@ -154,19 +154,28 @@ class MetalsGlobal(
               args.map(arg => loop(arg, None))
             )
           case _ =>
-            if (sym.isAliasType &&
-              (sym.isAbstract || sym.overrides.lastOption
-                .exists(_.isAbstract))) {
-              // Always dealias abstract type aliases but leave concrete aliases alone.
-              // trait Generic { type Repr /* dealias */ }
-              // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
-              loop(tpe.dealias, name)
-            } else {
-              TypeRef(
-                loop(pre, Some(ShortName(sym))),
-                sym,
-                args.map(arg => loop(arg, None))
-              )
+            history.renames.get(sym) match {
+              case Some(rename) if history.nameResolvesToSymbol(rename, sym) =>
+                TypeRef(
+                  NoPrefix,
+                  sym.newErrorSymbol(rename),
+                  args.map(arg => loop(arg, None))
+                )
+              case _ =>
+                if (sym.isAliasType &&
+                  (sym.isAbstract || sym.overrides.lastOption
+                    .exists(_.isAbstract))) {
+                  // Always dealias abstract type aliases but leave concrete aliases alone.
+                  // trait Generic { type Repr /* dealias */ }
+                  // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
+                  loop(tpe.dealias, name)
+                } else {
+                  TypeRef(
+                    loop(pre, Some(ShortName(sym))),
+                    sym,
+                    args.map(arg => loop(arg, None))
+                  )
+                }
             }
         }
       case SingleType(pre, sym) =>
@@ -372,7 +381,8 @@ class MetalsGlobal(
         // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
         other.fullName == sym.fullName
       } else {
-        other.dealiased == sym.dealiased
+        other.dealiased == sym.dealiased ||
+        other.companion == sym.dealiased
       }
     }
     def snippetCursor: String = sym.paramss match {

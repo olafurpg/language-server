@@ -656,11 +656,30 @@ trait Completions { this: MetalsGlobal =>
         }
         i
       }
+      def renames(context: Context): collection.Map[Symbol, Name] = {
+        val result = mutable.Map.empty[Symbol, Name]
+        context.imports.foreach { imp =>
+          lazy val pre = imp.qual.tpe
+          imp.tree.selectors.foreach { sel =>
+            if (sel.rename != null) {
+              val member = pre.member(sel.name)
+              result(member) = sel.rename
+              member.companion match {
+                case NoSymbol =>
+                case companion =>
+                  result(companion) = sel.rename
+              }
+            }
+          }
+        }
+        result
+      }
 
       override def contribute: List[Member] = {
         if (start < 0) Nil
         else {
           val context = doLocateContext(pos)
+          val re = renames(context)
           typed.tpe.members.iterator
             .filter { sym =>
               sym.isMethod &&
@@ -672,7 +691,9 @@ trait Completions { this: MetalsGlobal =>
             }
             .map { sym =>
               val info = typed.tpe.memberType(sym)
-              val history = new ShortenedNames(context, renameConfig)
+              val history = new ShortenedNames(lookupSymbol = { name =>
+                context.lookupSymbol(name, _ => true)
+              }, config = renameConfig, renames = re)
               val printer =
                 new SignaturePrinter(sym, history, info, includeDocs = false)
               val label = printer.defaultMethodSignature(Identifier(sym.name))

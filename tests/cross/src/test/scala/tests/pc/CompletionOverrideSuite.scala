@@ -332,4 +332,21 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     // consider not dealiasing here.
     """  def foo: List[Int] = ${0:???}""".stripMargin
   )
+
+  checkEditLine(
+    "rename",
+    s"""|import java.lang.{Boolean => JBoolean}
+        |abstract class Abstract {
+        |  def foo: JBoolean
+        |}
+        |class Main extends Abstract {
+        |___
+        |}
+        |
+        |""".stripMargin,
+    "  def foo@@",
+    // NOTE(olafur) I am not sure this is desirable behavior, we might want to
+    // try and detect that we should use m here.
+    """  def foo: JBoolean = ${0:???}""".stripMargin
+  )
 }

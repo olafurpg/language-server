@@ -28,12 +28,10 @@ trait Signatures { this: MetalsGlobal =>
   class ShortenedNames(
       val history: mutable.Map[Name, ShortName] = mutable.Map.empty,
       lookupSymbol: Name => NameLookup = _ => LookupNotFound,
-      val config: Map[Symbol, Name] = Map.empty
+      val config: Map[Symbol, Name] = Map.empty,
+      val renames: collection.Map[Symbol, Name] = Map.empty
   ) {
-    def this(context: Context, config: Map[Symbol, Name]) =
-      this(lookupSymbol = { name =>
-        context.lookupSymbol(name, _ => true)
-      }, config = config)
+
     def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean = {
       lookupSymbol(name) match {
         case LookupNotFound => true
