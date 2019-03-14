@@ -9,8 +9,25 @@ import scala.meta.pc.SymbolDocumentation
 trait Signatures { this: MetalsGlobal =>
 
   class ShortenedNames(
-      val history: mutable.Map[Name, Symbol] = mutable.Map.empty
+      val history: mutable.Map[Name, Symbol] = mutable.Map.empty,
+      lookupSymbol: Name => NameLookup = _ => LookupNotFound
   ) {
+    def this(context: Context) =
+      this(lookupSymbol = { name =>
+        context.lookupSymbol(name, _ => true)
+      })
+    def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean = {
+      lookupSymbol(name) match {
+        case LookupNotFound => true
+        case l =>
+          if (sym.hasPackageFlag) {
+            // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
+            l.symbol.fullName == sym.fullName
+          } else {
+            l.symbol == sym
+          }
+      }
+    }
     def tryShortenName(name: Option[Name], sym: Symbol): Boolean =
       name match {
         case Some(n) =>
@@ -19,8 +36,20 @@ trait Signatures { this: MetalsGlobal =>
               if (other == sym) true
               else false
             case _ =>
-              history(n) = sym
-              true
+              val isOk = lookupSymbol(n) match {
+                case LookupSucceeded(_, symbol) =>
+                  symbol == sym
+                case LookupNotFound =>
+                  true
+                case _ =>
+                  false
+              }
+              if (isOk) {
+                history(n) = sym
+                true
+              } else {
+                false // conflict, do not shorten name.
+              }
           }
         case _ =>
           false

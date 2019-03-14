@@ -217,4 +217,44 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     topLines = Some(2)
   )
 
+  def conflict(query: String): String =
+    s"""package a.b
+       |abstract class Conflict {
+       |  def self: Conflict
+       |}
+       |object Main {
+       |  class Conflict
+       |  new a.b.Conflict {
+       |    $query
+       |  }
+       |}
+       |""".stripMargin
+  checkEdit(
+    "conflict",
+    conflict("def self@@"),
+    conflict("def self: a.b.Conflict = ${0:???}")
+  )
+
+  check(
+    "conflict2",
+    s"""package a.b
+       |abstract class Conflict {
+       |  type Inner
+       |  def self: Conflict
+       |  def selfArg: Option[Conflict]
+       |  def selfPath: Conflict#Inner
+       |}
+       |object Main {
+       |  class Conflict
+       |  val a = 2
+       |  new _root_.a.b.Conflict {
+       |    def self@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|def self: _root_.a.b.Conflict: Conflict
+       |def selfArg: Option[_root_.a.b.Conflict]: Option[Conflict]
+       |def selfPath: _root_.a.b.Conflict#Inner: Conflict#Inner
+       |""".stripMargin
+  )
 }

@@ -9,7 +9,7 @@ object CompilerThrowable {
    * Removes stacktraces that are unrelated to the
    * @param e
    */
-  def trimStackTrace(e: Throwable): Unit = {
+  def trimStackTrace(e: Throwable): e.type = {
     val isVisited = Collections.newSetFromMap(
       new java.util.IdentityHashMap[Throwable, java.lang.Boolean]
     )
@@ -24,5 +24,6 @@ object CompilerThrowable {
       }
     }
     loop(e)
+    e
   }
 }

@@ -1,8 +1,11 @@
 package example
 
+class Foo {
+  def foo: Option[Foo] = Some(this)
+}
 
-class Foo extends Seq[Int] {
-    def apply(idx: Int): Int = ???
-    def iterator: Iterator[Int] = ???
-    def length: Int = ???
+object Main {
+  class Foo
+  val example = 42
+  new _root_.example.Foo {}
 }

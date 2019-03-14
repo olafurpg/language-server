@@ -158,7 +158,29 @@ class MetalsGlobal(
       case ThisType(sym) =>
         if (sym.hasPackageFlag) {
           if (history.tryShortenName(name, sym)) NoPrefix
-          else tpe
+          else {
+            // Returns the package `a` for the symbol `_root_.a.b.c`
+            def topPackage(s: Symbol): Symbol = {
+              val owner = s.owner
+              if (owner.isEffectiveRoot || owner.isEmptyPackageClass) s
+              else topPackage(owner)
+            }
+            val top = topPackage(sym)
+            if (history.nameResolvesToSymbol(top.name.toTermName, top)) {
+              tpe
+            } else {
+              // NOTE(olafur) The name of the toplevel package resolves to a different symbol so
+              // we must prefix it with `_root_`. Creating a new `Type` subclass is a hack, a better
+              // solution would be to implement a custom pretty-printer for types.
+              new Type {
+                override def prefixString: String =
+                  this.safeToString + "."
+                override def safeToString: String = {
+                  s"_root_.${sym.fullName}"
+                }
+              }
+            }
+          }
         } else {
           TypeRef(NoPrefix, sym, Nil)
         }

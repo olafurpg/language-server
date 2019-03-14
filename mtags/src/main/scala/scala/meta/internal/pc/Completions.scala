@@ -672,7 +672,7 @@ trait Completions { this: MetalsGlobal =>
             }
             .map { sym =>
               val info = typed.tpe.memberType(sym)
-              val history = new ShortenedNames()
+              val history = new ShortenedNames(context)
               val printer =
                 new SignaturePrinter(sym, history, info, includeDocs = false)
               val label = printer.defaultMethodSignature(Identifier(sym.name))
