@@ -657,16 +657,21 @@ trait Completions { this: MetalsGlobal =>
         i
       }
       def owners(context: Context): collection.Set[Symbol] = {
-        val result = mutable.Set.empty[Symbol]
+        val isVisited = mutable.Set.empty[Symbol]
         var cx = context
-        while (cx != NoContext && !cx.owner.hasPackageFlag) {
-          result.add(cx.owner)
-          cx.owner.parentSymbols.foreach { parent =>
-            result.add(parent)
+        def expandParent(parent: Symbol): Unit = {
+          if (!isVisited(parent)) {
+            isVisited.add(parent)
+            parent.parentSymbols.foreach { parent =>
+              expandParent(parent)
+            }
           }
+        }
+        while (cx != NoContext && !cx.owner.hasPackageFlag) {
+          expandParent(cx.owner)
           cx = cx.outer
         }
-        result
+        isVisited
       }
       def renames(context: Context): collection.Map[Symbol, Name] = {
         val result = mutable.Map.empty[Symbol, Name]

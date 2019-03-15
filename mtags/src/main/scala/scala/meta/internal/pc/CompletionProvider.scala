@@ -46,7 +46,11 @@ class CompletionProvider(
             ident
         }
         val item = new CompletionItem(label)
-        item.setDetail(detailString(r, history))
+        val detail = r match {
+          case o: OverrideDefMember => o.label
+          case _ => detailString(r, history)
+        }
+        item.setDetail(detail)
         val templateSuffix =
           if (completion.isNew &&
             r.sym.dealiased.requiresTemplateCurlyBraces) " {}"

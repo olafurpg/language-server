@@ -144,14 +144,15 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     // assert that `isInstanceOf` and friends are not included
-    """|override def aaa: Int: Int
-       |override def bbb: Int: Int
-       |override def equals(obj: Any): Boolean(obj: Any): Boolean
-       |override def hashCode(): Int(): Int
-       |override def toString(): String(): String
-       |override def clone(): Object(): Object
-       |override def finalize(): Unit(): Unit
-       |""".stripMargin
+    """|override def aaa: Int
+       |override def bbb: Int
+       |override def equals(obj: Any): Boolean
+       |override def hashCode(): Int
+       |override def toString(): String
+       |override def clone(): Object
+       |override def finalize(): Unit
+       |""".stripMargin,
+    includeDetail = false
   )
 
   def implement(completion: String): String =
@@ -212,10 +213,11 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     // assert that `isInstanceOf` and friends are not included
-    """|def b: Int: Int
-       |override def a: Int: Int
+    """|def b: Int
+       |override def a: Int
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    includeDetail = false
   )
 
   checkEditLine(
@@ -252,10 +254,11 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|def self: _root_.a.c.Conflict: Conflict
-       |def selfArg: Option[_root_.a.c.Conflict]: Option[Conflict]
-       |def selfPath: Inner: Conflict#Inner
-       |""".stripMargin
+    """|def self: _root_.a.c.Conflict
+       |def selfArg: Option[_root_.a.c.Conflict]
+       |def selfPath: Inner
+       |""".stripMargin,
+    includeDetail = false
   )
 
   checkEditLine(
@@ -413,8 +416,9 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |  def hello@@
        |}
        |""".stripMargin,
-    """override def hello1: Int: Int
-      |""".stripMargin
+    """override def hello1: Int
+      |""".stripMargin,
+    includeDetail = false
   )
 
   check(
@@ -428,8 +432,9 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |  def hello@@
        |}
        |""".stripMargin,
-    """def hello1: Int: Int
-      |""".stripMargin
+    """def hello1: Int
+      |""".stripMargin,
+    includeDetail = false
   )
 
   checkEditLine(
@@ -468,6 +473,23 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |  def Apply(tree: Tree): Tree = ???
        |}
        |class Global extends Trees  {
+       |  ___
+       |}
+       |""".stripMargin,
+    "def Apply@@",
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "cake2",
+    """|package i2
+       |trait Trees { this: Global =>
+       |  case class Tree()
+       |  def Apply(tree: Tree): Tree = ???
+       |}
+       |class Global extends Trees  {
+       |}
+       |class MyGlobal extends Global  {
        |  ___
        |}
        |""".stripMargin,
