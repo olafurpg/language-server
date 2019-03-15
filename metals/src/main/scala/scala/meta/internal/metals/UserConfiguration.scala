@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.collection.JavaConverters._
 import scala.meta.RelativePath
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
@@ -17,7 +18,8 @@ case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
-      UserConfiguration.default.scalafmtConfigPath
+      UserConfiguration.default.scalafmtConfigPath,
+    symbolPrefixes: Map[String, String] = Map.empty
 )
 object UserConfiguration {
   def CascadeCompile = "cascade"
@@ -87,15 +89,31 @@ object UserConfiguration {
 
     def getStringKey(key: String): Option[String] =
       getKey(
-        key,
-        value =>
+        key, { value =>
           Try(value.getAsString)
             .fold(_ => {
               errors += s"json error: key '$key' should have value of type string but obtained $value"
               None
             }, Some(_))
             .filter(_.nonEmpty)
+        }
       )
+    def getStringMap(key: String): Map[String, String] =
+      getKey(
+        key, { value =>
+          Try {
+            for {
+              entry <- value.getAsJsonObject.entrySet().asScala.iterator
+              if entry.getValue.isJsonPrimitive &&
+                entry.getValue.getAsJsonPrimitive.isString
+            } yield entry.getKey -> entry.getValue.getAsJsonPrimitive.getAsString
+          }.fold(_ => {
+              errors += s"json error: key '$key' should have be object with string values but obtained $value"
+              None
+            }, entries => Some(entries.toMap))
+            .filter(_.nonEmpty)
+        }
+      ).getOrElse(Map.empty)
 
     val javaHome =
       getStringKey("java-home")
@@ -105,13 +123,16 @@ object UserConfiguration {
         .getOrElse(default.scalafmtConfigPath)
     val sbtScript =
       getStringKey("sbt-script")
+    val symbolPrefixes =
+      getStringMap("symbol-prefixes")
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
           sbtScript,
-          scalafmtConfigPath
+          scalafmtConfigPath,
+          symbolPrefixes
         )
       )
     } else {

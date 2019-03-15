@@ -6,6 +6,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.collection.mutable
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.util.control.NonFatal
+import scala.collection.JavaConverters._
 
 /**
  * Utility methods for completions.
@@ -962,8 +963,17 @@ trait Completions { this: MetalsGlobal =>
     rootMirror.RootPackage
   ).flatMap(_.alternatives)
 
-  lazy val renameConfig = Map[Symbol, Name](
-    inverseSemanticdbSymbol("scala/collection/mutable/") -> TermName("mutable"),
-    inverseSemanticdbSymbol("java/util/") -> TermName("ju")
-  ).filterKeys(_ != NoSymbol)
+  lazy val renameConfig: collection.Map[Symbol, Name] =
+    metalsConfig
+      .symbolPrefixes()
+      .asScala
+      .map {
+        case (sym, name) =>
+          val nme =
+            if (name.endsWith("#")) TypeName(name.stripSuffix("#"))
+            else if (name.endsWith(".")) TermName(name.stripSuffix("."))
+            else TermName(name)
+          inverseSemanticdbSymbol(sym) -> nme
+      }
+      .filterKeys(_ != NoSymbol)
 }
