@@ -30,6 +30,7 @@ class MetalsGlobal(
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
+  // override def 
 
   override lazy val analyzer = new {
     val global: compiler.type = compiler

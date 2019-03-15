@@ -236,23 +236,24 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
 
   check(
     "conflict2",
-    s"""package a.b
+    s"""package a.c
        |abstract class Conflict {
        |  type Inner
        |  def self: Conflict
        |  def selfArg: Option[Conflict]
        |  def selfPath: Conflict#Inner
        |}
-       |object Main { |  class Conflict
+       |object Main {
+       |  class Conflict
        |  val a = 2
-       |  new _root_.a.b.Conflict {
+       |  new _root_.a.c.Conflict {
        |    def self@@
        |  }
        |}
        |""".stripMargin,
-    """|def self: _root_.a.b.Conflict: Conflict
-       |def selfArg: Option[_root_.a.b.Conflict]: Option[Conflict]
-       |def selfPath: _root_.a.b.Conflict#Inner: Conflict#Inner
+    """|def self: _root_.a.c.Conflict: Conflict
+       |def selfArg: Option[_root_.a.c.Conflict]: Option[Conflict]
+       |def selfPath: _root_.a.c.Conflict#Inner: Conflict#Inner
        |""".stripMargin
   )
 
@@ -457,17 +458,18 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     "def exist@@",
     """def exist: Set[_] = ${0:???}""".stripMargin
   )
-  checkEditLine(
+
+  check(
     "existential2",
     """|package e
        |abstract class Exist {
-       |  def exist: Set[_]
+       |  class Tree
+       |  val exist: ClassTag[Tree]
        |}
        |class Main extends Exist {
        |  def exist@@
        |}
        |""".stripMargin,
-    "def exist@@",
-    """def exist: Set[_] = ${0:???}""".stripMargin
+    ""
   )
 }

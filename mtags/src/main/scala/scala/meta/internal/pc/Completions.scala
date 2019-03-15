@@ -693,14 +693,17 @@ trait Completions { this: MetalsGlobal =>
           typed.tpe.members.iterator
             .filter { sym =>
               sym.isMethod &&
+              !isDecl(sym) &&
+              !isNotOverridableName(sym.name) &&
+              sym.name.startsWith(prefix) &&
               !sym.isSynthetic &&
               !sym.isArtifact &&
               !sym.isEffectivelyFinal &&
-              sym.name.startsWith(prefix) &&
+              !sym.isVal &&
               !sym.name.endsWith(CURSOR) &&
-              !isDecl(sym) &&
               !sym.isConstructor &&
-              !isNotOverridableName(sym.name)
+              !sym.isGetter &&
+              !sym.isSetter
             }
             .map { sym =>
               val info = typed.tpe.memberType(sym)
