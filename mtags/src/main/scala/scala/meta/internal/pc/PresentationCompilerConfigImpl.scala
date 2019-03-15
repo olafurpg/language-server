@@ -1,8 +1,17 @@
 package scala.meta.internal.pc
 
+import java.util
 import java.util.Optional
 import scala.meta.pc.PresentationCompilerConfig
+import scala.collection.JavaConverters._
 
 case class PresentationCompilerConfigImpl(
-    parameterHintsCommand: Optional[String] = Optional.empty()
-) extends PresentationCompilerConfig
+    debug: Boolean = false,
+    _parameterHintsCommand: Option[String] = None,
+    _symbolPrefixes: Map[String, String] = Map.empty
+) extends PresentationCompilerConfig {
+  override def symbolPrefixes(): util.Map[String, String] =
+    _symbolPrefixes.asJava
+  override def parameterHintsCommand: Optional[String] =
+    Optional.ofNullable(_parameterHintsCommand.orNull)
+}
