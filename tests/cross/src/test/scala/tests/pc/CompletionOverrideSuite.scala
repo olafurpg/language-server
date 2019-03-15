@@ -513,7 +513,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   check(
-    "val",
+    "val-negative",
     """|package j
        |abstract class Val {
        |  val hello1: Int = 42
@@ -523,6 +523,35 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |  def hello@@
        |}
        |""".stripMargin,
+    ""
+  )
+
+  checkEditLine(
+    "val",
+    """|package j
+       |abstract class Val {
+       |  val hello1: Int = 42
+       |}
+       |class Main extends Val {
+       |  ___
+       |}
+       |""".stripMargin,
+    "val hello@@",
+    "override val hello1: Int = ${0:???}"
+  )
+
+  check(
+    "var",
+    """|package j
+       |abstract class Val {
+       |  var hello1: Int = 42
+       |}
+       |class Main extends Val {
+       |   override var hello@@
+       |}
+       |""".stripMargin,
+    // NOTE(olafur) assert completion items are empty because it's not possible to
+    // override vars.
     ""
   )
 }

@@ -314,9 +314,12 @@ trait Completions { this: MetalsGlobal =>
         }
       case (_: Ident) ::
             Select(Ident(TermName("scala")), TypeName("Unit")) ::
-            (defdef @ DefDef(_, name, _, _, _, _)) ::
+            (defdef: DefDef) ::
+            (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
+        CompletionPosition.Override(defdef.name, t, pos, text, defdef)
+      case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
             (t: Template) :: _ if name.endsWith(CURSOR) =>
-        CompletionPosition.Override(name, t, pos, text, defdef)
+        CompletionPosition.Override(name, t, pos, text, valdef)
       case _ =>
         inferCompletionPosition(pos, lastEnclosing)
     }
@@ -631,14 +634,18 @@ trait Completions { this: MetalsGlobal =>
         t: Template,
         pos: Position,
         text: String,
-        defn: DefDef
+        defn: ValOrDefDef
     ) extends CompletionPosition {
       val prefix = name.toString.stripSuffix(CURSOR)
       val typed = typedTreeAt(t.pos)
       val isDecl = typed.tpe.decls.toSet
+      val keyword = defn match {
+        case _: DefDef => "def"
+        case _ => "val"
+      }
       val OVERRIDE = " override"
       val start: Int = {
-        val fromDef = text.lastIndexOf(" def ", pos.point)
+        val fromDef = text.lastIndexOf(s" $keyword ", pos.point)
         if (fromDef > 0 && text.endsWithAt(OVERRIDE, fromDef)) {
           fromDef - OVERRIDE.length()
         } else {
@@ -710,8 +717,13 @@ trait Completions { this: MetalsGlobal =>
               !sym.isVal &&
               !sym.name.endsWith(CURSOR) &&
               !sym.isConstructor &&
-              !sym.isGetter &&
-              !sym.isSetter
+              !sym.isMutable &&
+              !sym.isSetter && {
+                defn match {
+                  case _: ValDef => sym.isGetter
+                  case _ => !sym.isGetter
+                }
+              }
             }
             .map { sym =>
               val info = typed.tpe.memberType(sym) match {
@@ -757,7 +769,7 @@ trait Completions { this: MetalsGlobal =>
                 else ""
               val edit = new l.TextEdit(
                 range,
-                s"${overrideKeyword}def $label = $${0:???}"
+                s"${overrideKeyword}${keyword} $label = $${0:???}"
               )
               val autoImports =
                 if (toImport.nonEmpty) {
