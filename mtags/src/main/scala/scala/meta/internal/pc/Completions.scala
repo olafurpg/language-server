@@ -374,13 +374,15 @@ trait Completions { this: MetalsGlobal =>
       query <- interpolatorMemberSelect(lit)
       if text.charAt(lit.pos.point - 1) != '}'
       arg <- interpolatorMemberArg(parent, lit)
-    } yield CompletionPosition.InterpolatorType(
-      query,
-      arg,
-      lit,
-      cursor,
-      text
-    )
+    } yield {
+      CompletionPosition.InterpolatorType(
+        query,
+        arg,
+        lit,
+        cursor,
+        text
+      )
+    }
   }
 
   case class InterpolationSplice(
@@ -705,6 +707,7 @@ trait Completions { this: MetalsGlobal =>
           val context = doLocateContext(pos)
           val re = renames(context)
           val owners = this.owners(context)
+          val filter = text.substring(editStart, pos.point - prefix.length)
           typed.tpe.members.iterator
             .filter { sym =>
               sym.isMethod &&
@@ -768,9 +771,12 @@ trait Completions { this: MetalsGlobal =>
                 // user did not explicitly type "override". See:
                 // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
                 else ""
+              val lzy =
+                if (sym.isLazy) "lazy "
+                else ""
               val edit = new l.TextEdit(
                 range,
-                s"${overrideKeyword}${keyword} $label = $${0:???}"
+                s"${overrideKeyword}${lzy}${keyword} $label = $${0:???}"
               )
               val autoImports =
                 if (toImport.nonEmpty) {
@@ -796,14 +802,13 @@ trait Completions { this: MetalsGlobal =>
                 } else {
                   Nil
                 }
-              val filter = text.substring(editStart, pos.point)
               val prefix =
                 if (sym.isAbstract) s"${keyword} "
                 else s"override ${keyword} "
               new OverrideDefMember(
                 prefix + label,
                 edit,
-                filter,
+                filter + sym.name.decoded,
                 sym,
                 autoImports
               )

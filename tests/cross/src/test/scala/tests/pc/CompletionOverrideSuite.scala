@@ -596,4 +596,49 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     "override def hello: Int",
     includeDetail = false
   )
+
+  check(
+    "filter",
+    """|package p
+       |abstract class Val {
+       |  def hello: Int = 2
+       |}
+       |class Main extends Val {
+       |   override def hel@@
+       |}
+       |""".stripMargin,
+    "override def hello: Int",
+    includeDetail = false,
+    filterText = "override def hello"
+  )
+
+  checkEditLine(
+    "lazy",
+    """|package q
+       |abstract class Val {
+       |  lazy val hello: Int = 2
+       |}
+       |class Main extends Val {
+       |   ___
+       |}
+       |""".stripMargin,
+    "override val hel@@",
+    "override lazy val hello: Int = ${0:???}"
+  )
+
+  checkEditLine(
+    "early-init",
+    """|package r
+       |abstract class Global {
+       |  lazy val analyzer = new {
+       |    val global: Global.this.type = Global.this
+       |  }
+       |}
+       |class Main extends Global {
+       |   ___
+       |}
+       |""".stripMargin,
+    "val analyz@@",
+    "override lazy val analyzer: Object{val global: r.Main} = ${0:???}"
+  )
 }
