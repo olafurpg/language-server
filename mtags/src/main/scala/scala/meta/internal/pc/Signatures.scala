@@ -75,7 +75,8 @@ trait Signatures { this: MetalsGlobal =>
       gsym: Symbol,
       shortenedNames: ShortenedNames,
       gtpe: Type,
-      includeDocs: Boolean
+      includeDocs: Boolean,
+      includeDefaultParam: Boolean = false
   ) {
     private val info: Option[SymbolDocumentation] =
       if (includeDocs) {
@@ -196,7 +197,7 @@ trait Signatures { this: MetalsGlobal =>
         s"$name$paramTypeString$contextBounds"
       } else {
         val default =
-          if (param.isParamWithDefault) {
+          if (includeDefaultParam && param.isParamWithDefault) {
             val defaultValue = infoParams(index).map(_.defaultValue()) match {
               case Some(value) if !value.isEmpty => value
               case _ => "{}"

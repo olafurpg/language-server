@@ -693,6 +693,9 @@ trait Completions { this: MetalsGlobal =>
           typed.tpe.members.iterator
             .filter { sym =>
               sym.isMethod &&
+              !sym.isSynthetic &&
+              !sym.isArtifact &&
+              !sym.isEffectivelyFinal &&
               sym.name.startsWith(prefix) &&
               !sym.name.endsWith(CURSOR) &&
               !isDecl(sym) &&
@@ -709,8 +712,13 @@ trait Completions { this: MetalsGlobal =>
                 renames = re,
                 owners = owners
               )
-              val printer =
-                new SignaturePrinter(sym, history, info, includeDocs = false)
+              val printer = new SignaturePrinter(
+                sym,
+                history,
+                info,
+                includeDocs = false,
+                includeDefaultParam = false
+              )
               val label = printer.defaultMethodSignature(Identifier(sym.name))
               val isIgnored = Set[Symbol](
                 rootMirror.RootClass,

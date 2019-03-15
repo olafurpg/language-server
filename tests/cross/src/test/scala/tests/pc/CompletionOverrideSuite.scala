@@ -400,4 +400,74 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     """    def conflict: Main.this.Out = ${0:???}""".stripMargin
   )
 
+  check(
+    "final",
+    """|package f
+       |abstract class Final {
+       |  def hello1: Int = 42
+       |  final def hello2: Int = 42
+       |}
+       |class Main extends Final {
+       |  def hello@@
+       |}
+       |""".stripMargin,
+    """override def hello1: Int: Int
+      |""".stripMargin
+  )
+
+  check(
+    "default",
+    """|package f
+       |abstract class Final {
+       |  def hello1: Int
+       |  final def hello2(hello2: Int = 42)
+       |}
+       |class Main extends Final {
+       |  def hello@@
+       |}
+       |""".stripMargin,
+    """def hello1: Int: Int
+      |""".stripMargin
+  )
+
+  checkEditLine(
+    "default2",
+    """|package f
+       |abstract class Final {
+       |  def hello(arg: Int = 42): Unit
+       |}
+       |class Main extends Final {
+       |  ___
+       |}
+       |""".stripMargin,
+    "def hello@@",
+    """def hello(arg: Int): Unit = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "existential",
+    """|package e
+       |abstract class Exist {
+       |  def exist: Set[_]
+       |}
+       |class Main extends Exist {
+       |  ___
+       |}
+       |""".stripMargin,
+    "def exist@@",
+    """def exist: Set[_] = ${0:???}""".stripMargin
+  )
+  checkEditLine(
+    "existential2",
+    """|package e
+       |abstract class Exist {
+       |  def exist: Set[_]
+       |}
+       |class Main extends Exist {
+       |  def exist@@
+       |}
+       |""".stripMargin,
+    "def exist@@",
+    """def exist: Set[_] = ${0:???}""".stripMargin
+  )
 }
