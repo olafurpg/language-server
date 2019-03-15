@@ -243,8 +243,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |  def selfArg: Option[Conflict]
        |  def selfPath: Conflict#Inner
        |}
-       |object Main {
-       |  class Conflict
+       |object Main { |  class Conflict
        |  val a = 2
        |  new _root_.a.b.Conflict {
        |    def self@@
@@ -317,12 +316,12 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
 
   checkEditLine(
     "alias2",
-    s"""|
-        |abstract class Abstract {
+    s"""|package alias
+        |abstract class Alias {
         |  type Foobar = List[Int]
         |  def foo: Foobar
         |}
-        |class Main extends Abstract {
+        |class Main extends Alias {
         |  ___
         |}
         |
@@ -345,8 +344,60 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    // NOTE(olafur) I am not sure this is desirable behavior, we might want to
-    // try and detect that we should use m here.
     """  def foo: JBoolean = ${0:???}""".stripMargin
   )
+
+  checkEditLine(
+    "path",
+    s"""|package path
+        |abstract class Path {
+        |  type Out
+        |  def foo: Out
+        |}
+        |class Main extends Path {
+        |___
+        |}
+        |
+        |""".stripMargin,
+    "  def foo@@",
+    """  def foo: Out = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "path-alias",
+    s"""|package paththis
+        |abstract class Path {
+        |  type Out
+        |  def foo: Out
+        |}
+        |class Main extends Path {
+        |  type Out = String
+        |___
+        |}
+        |
+        |""".stripMargin,
+    "  def foo@@",
+    """  def foo: String = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "path-this",
+    """|package paththis
+       |abstract class Path {
+       |  type Out
+       |}
+       |class Main extends Path {
+       |  trait Conflict {
+       |    def conflict: Out
+       |  }
+       |  object Conflict extends Conflict {
+       |    type Out = Int
+       |___
+       |  }
+       |}
+       |""".stripMargin,
+    "    def conflict@@",
+    """    def conflict: Main.this.Out = ${0:???}""".stripMargin
+  )
+
 }

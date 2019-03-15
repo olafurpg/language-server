@@ -656,6 +656,15 @@ trait Completions { this: MetalsGlobal =>
         }
         i
       }
+      def owners(context: Context): collection.Set[Symbol] = {
+        val result = mutable.Set.empty[Symbol]
+        var cx = context
+        while (cx != NoContext && !cx.owner.hasPackageFlag) {
+          result.add(cx.owner)
+          cx = cx.outer
+        }
+        result
+      }
       def renames(context: Context): collection.Map[Symbol, Name] = {
         val result = mutable.Map.empty[Symbol, Name]
         context.imports.foreach { imp =>
@@ -680,6 +689,7 @@ trait Completions { this: MetalsGlobal =>
         else {
           val context = doLocateContext(pos)
           val re = renames(context)
+          val owners = this.owners(context)
           typed.tpe.members.iterator
             .filter { sym =>
               sym.isMethod &&
@@ -691,9 +701,14 @@ trait Completions { this: MetalsGlobal =>
             }
             .map { sym =>
               val info = typed.tpe.memberType(sym)
-              val history = new ShortenedNames(lookupSymbol = { name =>
-                context.lookupSymbol(name, _ => true)
-              }, config = renameConfig, renames = re)
+              val history = new ShortenedNames(
+                lookupSymbol = { name =>
+                  context.lookupSymbol(name, _ => true)
+                },
+                config = renameConfig,
+                renames = re,
+                owners = owners
+              )
               val printer =
                 new SignaturePrinter(sym, history, info, includeDocs = false)
               val label = printer.defaultMethodSignature(Identifier(sym.name))

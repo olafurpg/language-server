@@ -163,12 +163,22 @@ class MetalsGlobal(
                 )
               case _ =>
                 if (sym.isAliasType &&
-                  (sym.isAbstract || sym.overrides.lastOption
-                    .exists(_.isAbstract))) {
+                  (sym.isAbstract ||
+                  sym.overrides.lastOption.exists(_.isAbstract))) {
                   // Always dealias abstract type aliases but leave concrete aliases alone.
                   // trait Generic { type Repr /* dealias */ }
                   // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
                   loop(tpe.dealias, name)
+                } else if (history.owners(pre.typeSymbol)) {
+                  if (history.nameResolvesToSymbol(sym.name, sym)) {
+                    TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+                  } else {
+                    TypeRef(
+                      ThisType(pre.typeSymbol),
+                      sym,
+                      args.map(arg => loop(arg, None))
+                    )
+                  }
                 } else {
                   TypeRef(
                     loop(pre, Some(ShortName(sym))),
