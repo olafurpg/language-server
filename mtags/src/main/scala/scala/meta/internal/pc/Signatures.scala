@@ -76,7 +76,7 @@ trait Signatures { this: MetalsGlobal =>
       shortenedNames: ShortenedNames,
       gtpe: Type,
       includeDocs: Boolean,
-      includeDefaultParam: Boolean = false
+      includeDefaultParam: Boolean = true
   ) {
     private val info: Option[SymbolDocumentation] =
       if (includeDocs) {
