@@ -165,6 +165,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |  }
        |}
     """.stripMargin
+
   checkEdit(
     "implement",
     // assert that `override` is not inserted.
@@ -194,7 +195,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |    def iterator: Iterator[Any] = ${0:???}
       |  }
       |}
-  """.stripMargin
+    """.stripMargin
   )
 
   check(
@@ -253,7 +254,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|def self: _root_.a.c.Conflict: Conflict
        |def selfArg: Option[_root_.a.c.Conflict]: Option[Conflict]
-       |def selfPath: _root_.a.c.Conflict#Inner: Conflict#Inner
+       |def selfPath: Inner: Conflict#Inner
        |""".stripMargin
   )
 
@@ -418,7 +419,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
 
   check(
     "default",
-    """|package f
+    """|package g
        |abstract class Final {
        |  def hello1: Int
        |  final def hello2(hello2: Int = 42)
@@ -433,7 +434,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
 
   checkEditLine(
     "default2",
-    """|package f
+    """|package h
        |abstract class Final {
        |  def hello(arg: Int = 42): Unit
        |}
@@ -447,7 +448,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
 
   checkEditLine(
     "existential",
-    """|package e
+    """|package i
        |abstract class Exist {
        |  def exist: Set[_]
        |}
@@ -459,15 +460,45 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     """def exist: Set[_] = ${0:???}""".stripMargin
   )
 
-  check(
-    "existential2",
-    """|package e
-       |abstract class Exist {
-       |  class Tree
-       |  val exist: ClassTag[Tree]
+  checkEditLine(
+    "cake",
+    """|package i
+       |trait Trees { this: Global =>
+       |  case class Tree()
+       |  def Apply(tree: Tree): Tree = ???
        |}
-       |class Main extends Exist {
-       |  def exist@@
+       |class Global extends Trees  {
+       |  ___
+       |}
+       |""".stripMargin,
+    "def Apply@@",
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "cake-generic",
+    """|package i
+       |trait Trees[T] { this: Global =>
+       |  case class Tree()
+       |  def Apply(tree: T): Tree = ???
+       |}
+       |class Global extends Trees[Int] {
+       |  ___
+       |}
+       |""".stripMargin,
+    "def Apply@@",
+    """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin
+  )
+
+  check(
+    "val",
+    """|package j
+       |abstract class Val {
+       |  val hello1: Int = 42
+       |  var hello2: Int = 42
+       |}
+       |class Main extends Val {
+       |  def hello@@
        |}
        |""".stripMargin,
     ""

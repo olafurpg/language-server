@@ -661,6 +661,9 @@ trait Completions { this: MetalsGlobal =>
         var cx = context
         while (cx != NoContext && !cx.owner.hasPackageFlag) {
           result.add(cx.owner)
+          cx.owner.parentSymbols.foreach { parent =>
+            result.add(parent)
+          }
           cx = cx.outer
         }
         result
@@ -706,7 +709,12 @@ trait Completions { this: MetalsGlobal =>
               !sym.isSetter
             }
             .map { sym =>
-              val info = typed.tpe.memberType(sym)
+              val info = typed.tpe.memberType(sym) match {
+                case m: MethodType => m
+                case m: NullaryMethodType => m
+                case m @ PolyType(_, _: MethodType) => m
+                case _ => sym.info
+              }
               val history = new ShortenedNames(
                 lookupSymbol = { name =>
                   context.lookupSymbol(name, _ => true)
