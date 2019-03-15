@@ -528,7 +528,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
 
   checkEditLine(
     "val",
-    """|package j
+    """|package k
        |abstract class Val {
        |  val hello1: Int = 42
        |}
@@ -542,7 +542,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
 
   check(
     "var",
-    """|package j
+    """|package l
        |abstract class Val {
        |  var hello1: Int = 42
        |}
@@ -553,5 +553,47 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     // NOTE(olafur) assert completion items are empty because it's not possible to
     // override vars.
     ""
+  )
+
+  check(
+    "val-var",
+    """|package m
+       |abstract class Val {
+       |  var hello1: Int = 42
+       |}
+       |class Main extends Val {
+       |   override val hello@@
+       |}
+       |""".stripMargin,
+    // NOTE(olafur) assert completion items are empty because it's not possible to
+    // override vars.
+    ""
+  )
+
+  check(
+    "private",
+    """|package n
+       |abstract class Val {
+       |  private def hello: Int = 2
+       |}
+       |class Main extends Val {
+       |   override val hello@@
+       |}
+       |""".stripMargin,
+    ""
+  )
+
+  check(
+    "protected",
+    """|package o
+       |abstract class Val {
+       |  protected def hello: Int = 2
+       |}
+       |class Main extends Val {
+       |   override def hello@@
+       |}
+       |""".stripMargin,
+    "override def hello: Int",
+    includeDetail = false
   )
 }

@@ -26,7 +26,8 @@ class MetalsGlobal(
 ) extends Global(settings, reporter)
     with Completions
     with Signatures
-    with GlobalProxy { compiler =>
+    with GlobalProxy {
+  compiler =>
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
@@ -205,6 +206,7 @@ class MetalsGlobal(
               if (owner.isEffectiveRoot || owner.isEmptyPackageClass) s
               else topPackage(owner)
             }
+
             val top = topPackage(sym)
             val isOk = history.nameResolvesToSymbol(top.name.toTermName, top)
             if (isOk) {
@@ -244,6 +246,7 @@ class MetalsGlobal(
         definitions.AnyTpe
       case t => t
     }
+
     longType match {
       case ThisType(_) => longType
       case _ => loop(longType, None)
@@ -263,6 +266,7 @@ class MetalsGlobal(
   def inverseSemanticdbSymbols(symbol: String): List[Symbol] = {
     import scala.meta.internal.semanticdb.Scala._
     if (!symbol.isGlobal) return Nil
+
     def loop(s: String): List[Symbol] = {
       if (s.isNone || s.isRootPackage) rootMirror.RootPackage :: Nil
       else if (s.isEmptyPackage) rootMirror.EmptyPackage :: Nil
@@ -276,6 +280,7 @@ class MetalsGlobal(
       } else {
         val (desc, parent) = DescriptorParser(s)
         val parentSymbol = loop(parent)
+
         def tryMember(sym: Symbol): List[Symbol] =
           sym match {
             case NoSymbol =>
@@ -305,9 +310,11 @@ class MetalsGlobal(
                     .toList
               }
           }
+
         parentSymbol.flatMap(tryMember)
       }
     }
+
     loop(symbol).filterNot(_ == NoSymbol)
   }
 
@@ -370,12 +377,14 @@ class MetalsGlobal(
   // Needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
+
   implicit class XtensionPositionMetals(pos: Position) {
     private def toPos(offset: Int): l.Position = {
       val line = pos.source.offsetToLine(offset)
       val column = offset - pos.source.lineToOffset(line)
       new l.Position(line, column)
     }
+
     def toLSP: l.Range = {
       if (pos.isRange) {
         new l.Range(toPos(pos.start), toPos(pos.end))
@@ -385,6 +394,7 @@ class MetalsGlobal(
       }
     }
   }
+
   implicit class XtensionSymbolMetals(sym: Symbol) {
     def isKindaTheSameAs(other: Symbol): Boolean = {
       if (sym.hasPackageFlag) {
@@ -395,6 +405,7 @@ class MetalsGlobal(
         other.companion == sym.dealiased
       }
     }
+
     def snippetCursor: String = sym.paramss match {
       case Nil =>
         "$0"
@@ -403,28 +414,35 @@ class MetalsGlobal(
       case _ =>
         "($0)"
     }
+
     def isDefined: Boolean =
       sym != null &&
         sym != NoSymbol &&
         !sym.isErroneous
+
     def isNonNullaryMethod: Boolean =
       sym.isMethod &&
         !sym.info.isInstanceOf[NullaryMethodType] &&
         !sym.paramss.isEmpty
+
     def isJavaModule: Boolean =
       sym.isJava && sym.isModule
+
     def hasTypeParams: Boolean =
       sym.typeParams.nonEmpty ||
         (sym.isJavaModule && sym.companionClass.typeParams.nonEmpty)
+
     def requiresTemplateCurlyBraces: Boolean = {
       sym.isTrait || sym.isInterface || sym.isAbstractClass
     }
+
     def isTypeSymbol: Boolean =
       sym.isType ||
         sym.isClass ||
         sym.isTrait ||
         sym.isInterface ||
         sym.isJavaModule
+
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol
       else sym

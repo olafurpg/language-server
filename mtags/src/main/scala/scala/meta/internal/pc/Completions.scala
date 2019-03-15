@@ -711,6 +711,7 @@ trait Completions { this: MetalsGlobal =>
               !isDecl(sym) &&
               !isNotOverridableName(sym.name) &&
               sym.name.startsWith(prefix) &&
+              !sym.isPrivate &&
               !sym.isSynthetic &&
               !sym.isArtifact &&
               !sym.isEffectivelyFinal &&
@@ -720,7 +721,7 @@ trait Completions { this: MetalsGlobal =>
               !sym.isMutable &&
               !sym.isSetter && {
                 defn match {
-                  case _: ValDef => sym.isGetter
+                  case _: ValDef => sym.isGetter && sym.isStable
                   case _ => !sym.isGetter
                 }
               }
@@ -797,8 +798,8 @@ trait Completions { this: MetalsGlobal =>
                 }
               val filter = text.substring(editStart, pos.point)
               val prefix =
-                if (sym.isAbstract) "def "
-                else "override def "
+                if (sym.isAbstract) s"${keyword} "
+                else s"override ${keyword} "
               new OverrideDefMember(
                 prefix + label,
                 edit,
