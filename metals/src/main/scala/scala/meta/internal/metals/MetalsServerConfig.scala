@@ -72,6 +72,7 @@ final case class MetalsServerConfig(
       s"show-message=$showMessage",
       s"show-message-request=$showMessageRequest",
       s"no-initialized=$isNoInitialized",
+      s"compilers=$compilers",
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
       s"icons=$icons",

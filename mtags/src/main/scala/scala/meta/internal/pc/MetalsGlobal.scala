@@ -127,6 +127,8 @@ class MetalsGlobal(
     else None
   }
 
+  // NOTE(olafur) Creating a new `Type` subclass is a hack, a better
+  // solution would be to implement a custom pretty-printer for types.
   class PrettyType(
       override val prefixString: String,
       override val safeToString: String
@@ -199,25 +201,7 @@ class MetalsGlobal(
       case ThisType(sym) =>
         if (sym.hasPackageFlag) {
           if (history.tryShortenName(name)) NoPrefix
-          else {
-            // Returns the package `a` for the symbol `_root_.a.b.c`
-            def topPackage(s: Symbol): Symbol = {
-              val owner = s.owner
-              if (owner.isEffectiveRoot || owner.isEmptyPackageClass) s
-              else topPackage(owner)
-            }
-
-            val top = topPackage(sym)
-            val isOk = history.nameResolvesToSymbol(top.name.toTermName, top)
-            if (isOk) {
-              new PrettyType(sym.fullName)
-            } else {
-              // NOTE(olafur) The name of the toplevel package resolves to a different symbol so
-              // we must prefix it with `_root_`. Creating a new `Type` subclass is a hack, a better
-              // solution would be to implement a custom pretty-printer for types.
-              new PrettyType(s"_root_.${sym.fullName}")
-            }
-          }
+          else new PrettyType(history.fullname(sym))
         } else {
           TypeRef(NoPrefix, sym, Nil)
         }
@@ -315,7 +299,14 @@ class MetalsGlobal(
       }
     }
 
-    loop(symbol).filterNot(_ == NoSymbol)
+    try loop(symbol).filterNot(_ == NoSymbol)
+    catch {
+      case NonFatal(e) =>
+        logger.severe(
+          s"invalid SemanticDB symbol: $symbol\n${e.getMessage}"
+        )
+        Nil
+    }
   }
 
   def inverseSemanticdbSymbol(symbol: String): Symbol = {

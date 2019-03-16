@@ -278,6 +278,22 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
+    "mutable-conflict",
+    s"""|abstract class Mutable {
+        |  def foo: scala.collection.mutable.Set[Int]
+        |}
+        |object Main {
+        |  new Mutable {
+        |    val mutable = 42
+        |___
+        |  }
+        |}
+        |""".stripMargin,
+    "    def foo@@",
+    """    def foo: scala.collection.mutable.Set[Int] = ${0:???}"""
+  )
+
+  checkEditLine(
     "jutil",
     s"""|abstract class JUtil {
         |  def foo: java.util.List[Int]
@@ -289,6 +305,39 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     "  def foo@@",
     """  import java.{util => ju}
       |  def foo: ju.List[Int] = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "jutil-conflict",
+    s"""|package jutil
+        |abstract class JUtil {
+        |  def foo: java.util.List[Int]
+        |}
+        |class Main extends JUtil {
+        |  val java = 42
+        |___
+        |}
+        |""".stripMargin,
+    "  def foo@@",
+    // Ensure we insert `_root_` prefix for import because `val java = 42`
+    """  import _root_.java.{util => ju}
+      |  def foo: ju.List[Int] = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "jutil-conflict2",
+    s"""|package jutil2
+        |abstract class JUtil {
+        |  def foo: java.util.List[Int]
+        |}
+        |class Main extends JUtil {
+        |  val ju = 42
+        |___
+        |}
+        |""".stripMargin,
+    "  def foo@@",
+    // Can't use `import java.{util => ju}` because `val ju = 42` is in scope.
+    """  def foo: java.util.List[Int] = ${0:???}"""
   )
 
   checkEditLine(

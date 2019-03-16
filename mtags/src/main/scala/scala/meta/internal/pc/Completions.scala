@@ -795,7 +795,7 @@ trait Completions { this: MetalsGlobal =>
                         val name =
                           if (isGroup) importNames.mkString("{", ", ", "}")
                           else importNames.mkString
-                        s"${indent}import ${owner.fullName}.${name}"
+                        s"${indent}import ${history.fullname(owner)}.${name}"
                     }
                     .mkString("", "\n", "\n")
                   val startPos = pos.withPoint(lineStart).focus

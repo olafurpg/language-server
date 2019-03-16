@@ -33,6 +33,21 @@ trait Signatures { this: MetalsGlobal =>
       val owners: collection.Set[Symbol] = Set.empty
   ) {
 
+    def fullname(sym: Symbol): String = {
+      if (topSymbolResolves(sym)) sym.fullName
+      else s"_root_.${sym.fullName}"
+    }
+    def topSymbolResolves(sym: Symbol): Boolean = {
+      // Returns the package `a` for the symbol `_root_.a.b.c`
+      def topPackage(s: Symbol): Symbol = {
+        val owner = s.owner
+        if (owner.isEffectiveRoot || owner.isEmptyPackageClass) s
+        else topPackage(owner)
+      }
+      val top = topPackage(sym)
+      nameResolvesToSymbol(top.name.toTermName, top)
+    }
+
     def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean = {
       lookupSymbol(name) match {
         case LookupNotFound => true

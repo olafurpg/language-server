@@ -9,9 +9,11 @@ object CompletionOverrideConfigSuite extends BaseCompletionSuite {
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(
       _symbolPrefixes = Map(
-        "a/Weekday." -> "w"
+        "a/Weekday." -> "w",
+        "java/util/function/" -> "f"
       )
     )
+
   checkEditLine(
     "object",
     """|package a
@@ -28,5 +30,20 @@ object CompletionOverrideConfigSuite extends BaseCompletionSuite {
     "  def weekday@@",
     """  import a.{Weekday => w}
       |  def weekday: w.Monday = ${0:???}""".stripMargin
+  )
+
+  checkEditLine(
+    "package",
+    """|package b
+       |class Package {
+       |  def function: java.util.function.Function[Int, String]
+       |}
+       |class Main extends Package {
+       |___
+       |}
+       |""".stripMargin,
+    "  def function@@",
+    """  import java.util.{function => f}
+      |  def function: f.Function[Int,String] = ${0:???}""".stripMargin
   )
 }
