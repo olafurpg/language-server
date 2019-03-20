@@ -16,6 +16,7 @@ import org.scalasbt.ipcsocket.UnixDomainSocket
  */
 sealed trait BloopSocket extends Cancelable {
   import BloopSocket._
+  def socket: Socket
   def input: InputStream = this match {
     case Unix(socket) => socket.getInputStream
     case NamedPipe(socket) => socket.getInputStream
@@ -34,16 +35,11 @@ sealed trait BloopSocket extends Cancelable {
         "bloop tcp output socket"
       )
   }
-  import BloopSocket._
-  override def cancel(): Unit = this match {
-    case NamedPipe(socket) =>
-      if (!socket.isClosed && socket.isConnected) socket.close()
-    case Unix(socket) =>
-      if (!socket.isInputShutdown) socket.shutdownInput()
-      if (!socket.isOutputShutdown) socket.shutdownOutput()
-      if (!socket.isClosed && socket.isConnected) socket.close()
-    case Tcp(socket) =>
-      if (!socket.isClosed && socket.isConnected) socket.close()
+  override def cancel(): Unit = {
+    if (!socket.isClosed && socket.isConnected) {
+      pprint.log("close")
+      socket.close()
+    }
   }
 }
 
