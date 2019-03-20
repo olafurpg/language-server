@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.io.File
 import java.nio.file.Path
 import java.util
+import java.util.Optional
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.logging.Logger
@@ -133,9 +134,11 @@ case class ScalaPresentationCompiler(
   // Internal methods
   // ================
 
-  override def hoverForDebuggingPurposes(params: OffsetParams): Hover =
-    access.withCompiler(new Hover(), params.token) { global =>
-      new HoverProvider(global).hover(params).orNull
+  override def hover(
+      params: OffsetParams
+  ): Optional[Hover] =
+    access.withCompiler(Optional.empty[Hover](), params.token) { global =>
+      Optional.ofNullable(new HoverProvider(global, params).hover().orNull)
     }
   override def diagnosticsForDebuggingPurposes(): util.List[String] = {
     access.reporter
