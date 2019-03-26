@@ -184,4 +184,46 @@ object HoverDefnSuite extends BaseHoverSuite {
     ""
   )
 
+  check(
+    "package",
+    """package b.p@@kg
+      |object Main
+      |""".stripMargin,
+    """```scala
+      |package b.pkg
+      |```
+      |""".stripMargin,
+    automaticPackage = false
+  )
+
+  check(
+    "pat-bind",
+    """
+      |object Main {
+      |  List(1) match {
+      |    case h@@ead :: _ =>
+      |  }
+      |}
+      |""".stripMargin,
+    """```scala
+      |head: Int
+      |```
+      |""".stripMargin
+  )
+
+  check(
+    "pat-bind2",
+    """
+      |object Main {
+      |  Option(1) match {
+      |    case Some(val@@ue) =>
+      |  }
+      |}
+      |""".stripMargin,
+    """```scala
+      |value: Int
+      |```
+      |""".stripMargin
+  )
+
 }

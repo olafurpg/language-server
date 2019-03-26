@@ -6,9 +6,11 @@ import org.eclipse.lsp4j.MarkedString
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.reflect.internal.{Flags => gf}
+import scala.collection.JavaConverters._
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
+
   def hover(): Option[Hover] = {
     if (params.offset() < 0 ||
       params.offset() >= params.text().length ||
@@ -21,12 +23,18 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         cursor = None
       )
       val pos = unit.position(params.offset())
-      val tree = compiler.typedTreeAt(pos)
+      val tree = typedHoverTreeAt(pos)
       val NamedArgument = new NamedArgument(pos)
       tree match {
         case NamedArgument(hover) =>
           Some(hover)
-        case _: Import | _: Select | _: Apply | _: TypeApply | _: Ident =>
+        case Import(qual, selectors) =>
+          for {
+            sel <- selectors.reverseIterator.find(_.namePos <= pos.start)
+            member = qual.symbol.info.member(sel.name)
+            hover <- toHover(member, pos)
+          } yield hover
+        case _: Select | _: Apply | _: TypeApply | _: Ident =>
           val expanded = expandRange(pos)
           if (expanded != null &&
             expanded.tpe != null &&
@@ -71,6 +79,16 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             symbol.info,
             pos,
             v.pos
+          )
+        case _: Bind =>
+          val symbol = tree.symbol
+          toHover(
+            symbol = symbol,
+            keyword = "",
+            seenFrom = symbol.info,
+            tpe = symbol.info,
+            pos = pos,
+            range = pos
           )
         case _ =>
           // Don't show hover for non-identifiers.
@@ -128,6 +146,12 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
 
   def toHover(
       symbol: Symbol,
+      pos: Position
+  ): Option[Hover] = {
+    toHover(symbol, symbol.keyString, symbol.info, symbol.info, pos, pos)
+  }
+  def toHover(
+      symbol: Symbol,
       keyword: String,
       seenFrom: Type,
       tpe: Type,
@@ -137,7 +161,20 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     if (tpe == null || tpe.isErroneous || tpe == NoType) None
     else if (symbol == null || symbol == NoSymbol || symbol.isErroneous) None
     else if (symbol.info.finalResultType.isInstanceOf[ClassInfoType]) None
-    else {
+    else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
+      Some(
+        new Hover(
+          List(
+            JEither.forRight[String, MarkedString](
+              new MarkedString(
+                "scala",
+                s"${symbol.keyString} ${symbol.fullName}"
+              )
+            )
+          ).asJava
+        )
+      )
+    } else {
       val context = doLocateContext(pos)
       def widen(t: Type): Type =
         if (symbol.isLocallyDefinedSymbol) {
@@ -265,5 +302,16 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     // Strip case modifier off non-class symbols like synthetic apply/copy.
     if (sym.isCase && !sym.isClass) mask &= ~gf.CASE
     sym.flagString(mask)
+  }
+
+  private def typedHoverTreeAt(pos: Position): Tree = {
+    def loop(tree: Tree): Tree = tree match {
+      case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
+      case t => t
+    }
+    typedTreeAt(pos) match {
+      case Import(qual, _) if qual.pos.includes(pos) => loop(qual)
+      case t => t
+    }
   }
 }

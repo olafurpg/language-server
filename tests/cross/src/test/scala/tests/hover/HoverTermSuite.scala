@@ -300,4 +300,92 @@ object HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin
   )
 
+  check(
+    "object",
+    """
+      |import java.nio.file._
+      |object a {
+      |  FileVisit@@Result.CONTINUE
+      |}
+      |""".stripMargin,
+    """|```scala
+       |object java.nio.file.FileVisitResult
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "object2",
+    """package app
+      |import java.nio.file._
+      |object Outer {
+      |  object Foo {
+      |    class Inner
+      |  }
+      |}
+      |object a {
+      |  new Outer.Fo@@o.Inner
+      |}
+      |""".stripMargin,
+    """|```scala
+       |object app.Outer.Foo
+       |```
+       |""".stripMargin,
+    automaticPackage = false
+  )
+
+  check(
+    "import",
+    """
+      |import java.n@@io.file._
+      |""".stripMargin,
+    """|```scala
+       |package java.nio
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "import2",
+    """
+      |import jav@@a.nio.file._
+      |""".stripMargin,
+    """|```scala
+       |package java
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "import3",
+    """
+      |import java.nio.fil@@e._
+      |""".stripMargin,
+    """|```scala
+       |package java.nio.file
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "import4",
+    """
+      |import java.nio.file.{Fil@@es => File,Paths}
+      |""".stripMargin,
+    """|```scala
+       |object java.nio.file.Files
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "import5",
+    """
+      |import java.nio.file.{Files => File,P@@aths}
+      |""".stripMargin,
+    """|```scala
+       |object java.nio.file.Paths
+       |```
+       |""".stripMargin
+  )
 }

@@ -13,7 +13,8 @@ abstract class BaseHoverSuite extends BasePCSuite {
       name: String,
       original: String,
       expected: String,
-      includeRange: Boolean = false
+      includeRange: Boolean = false,
+      automaticPackage: Boolean = true
   ): Unit = {
     test(name) {
       val filename = "Hover.scala"
@@ -21,7 +22,9 @@ abstract class BaseHoverSuite extends BasePCSuite {
       val noRange = original
         .replaceAllLiterally("<<", "")
         .replaceAllLiterally(">>", "")
-      val packagePrefix = s"package $pkg\n"
+      val packagePrefix =
+        if (automaticPackage) s"package $pkg\n"
+        else ""
       val codeOriginal = packagePrefix + noRange
       val (code, offset) = params(codeOriginal, filename)
       val hover = pc.hover(
