@@ -488,6 +488,7 @@ class MetalsGlobal(
   object TreeApply {
     def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
       case TypeApply(qual, args) => Some(qual -> args)
+      case AppliedTypeTree(qual, args) => Some(qual -> args)
       case Apply(qual, args) => Some(qual -> args)
       case UnApply(qual, args) => Some(qual -> args)
       case _ => None

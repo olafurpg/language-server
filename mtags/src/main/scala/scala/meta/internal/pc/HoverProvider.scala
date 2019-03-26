@@ -115,7 +115,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     def tryTail(enclosing: List[Tree]): Option[Tree] = enclosing match {
       case Nil => None
       case head :: tail =>
-        val x = head match {
+        head match {
           case TreeApply(qual, _) if qual.pos.includes(pos) =>
             tryTail(tail).orElse(Some(head))
           case New(_) =>
@@ -129,7 +129,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           case _ =>
             None
         }
-        x
     }
     lastEnclosing match {
       case head :: tail =>

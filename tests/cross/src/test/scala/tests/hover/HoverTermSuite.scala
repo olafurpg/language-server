@@ -172,6 +172,20 @@ object HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
+    "new-tparam2",
+    """
+      |class Foo[T](name: String, age: T)
+      |object a {
+      |  <<new Fo@@o[Int]("", 42)>>
+      |}
+      |""".stripMargin,
+    """|```scala
+       |def this(name: String, age: T): Foo[T]
+       |```
+       |""".stripMargin
+  )
+
+  check(
     "new-anon",
     """
       |class Foo(name: String, age: Int)
