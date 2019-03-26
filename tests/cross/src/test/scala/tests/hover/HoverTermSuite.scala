@@ -419,6 +419,8 @@ object HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin
   )
 
+  ""
+
   check(
     "implicit-conv2",
     """case class Text[T](value: T)

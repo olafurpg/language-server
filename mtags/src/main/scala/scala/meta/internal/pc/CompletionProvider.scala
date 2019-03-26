@@ -311,6 +311,7 @@ class CompletionProvider(
           new DynamicFallbackCompletions(position).print()
         case r => r
       }
+      pprint.log(lastEnclosing.take(3))
       params.checkCanceled()
       val matchingResults = completions.matchingResults { entered => name =>
         CompletionFuzzy.matches(entered, name)

@@ -802,4 +802,27 @@ object CompletionSuite extends BaseCompletionSuite {
     filterText = "substring"
   )
 
+  Option(1) match {
+    case Some(value) =>
+  }
+
+  check(
+    "case",
+    s"""|object Main {
+        |  def bar = 2
+        |
+        |  Option(1) match {
+        |    ca@@
+        |    case Some(a) =>
+        |      println(a)
+        |  }
+        |  def foo = 2
+        |}
+        |""".stripMargin,
+    """substring(beginIndex: Int): String
+      |substring(beginIndex: Int, endIndex: Int): String
+      |""".stripMargin,
+    filterText = "substring"
+  )
+
 }
