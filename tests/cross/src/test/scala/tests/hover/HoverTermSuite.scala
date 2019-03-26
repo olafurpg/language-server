@@ -402,4 +402,39 @@ object HoverTermSuite extends BaseHoverSuite {
        |```
        |""".stripMargin
   )
+
+  check(
+    "implicit-conv",
+    """
+      |object Main {
+      |  <<"".substring(0, 1).stripSu@@ffix("")>>
+      |}
+      |""".stripMargin,
+    """|```scala
+       |def stripSuffix(suffix: String): String
+       |```
+       |```scala
+       |String
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "implicit-conv2",
+    """case class Text[T](value: T)
+      |object Text {
+      |  implicit def conv[T](value: T): Text[T] =
+      |    Text(value)
+      |}
+      |object Main {
+      |  def foo[T](text: Text[T]): T = text.value
+      |  val number = 42
+      |  foo(<<num@@ber>>)
+      |}
+      |""".stripMargin,
+    """|```scala
+       |val number: Int
+       |```
+       |""".stripMargin
+  )
 }
