@@ -1,9 +1,14 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.BuildTargetCapabilities
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import java.net.URLClassLoader
+import java.nio.file.Paths
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.ScheduledExecutorService
@@ -140,11 +145,12 @@ class Compilers(
         .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
       compiler <- loadCompiler(target)
     } yield compiler
+
   def loadCompiler(
       target: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
+    val info = buildTargets.info(target).getOrElse(defaultScalaLibraryTarget)
     for {
-      info <- buildTargets.info(target)
       scala <- info.asScalaBuildTarget
       isSupported = ScalaVersions.isSupportedScalaVersion(
         ScalaVersions.dropVendorSuffix(scala.getScalaVersion)
@@ -167,6 +173,39 @@ class Compilers(
         }
       )
     }
+  }
+
+  def defaultScalaLibraryTarget: BuildTarget = {
+    val target = new BuildTarget(
+      new BuildTargetIdentifier("scala-library-fallback"),
+      Collections.emptyList(),
+      Collections.emptyList(),
+      Collections.emptyList(),
+      new BuildTargetCapabilities(false, false, false)
+    )
+    target.setData(
+      new ScalaBuildTarget(
+        "org.scala-lang",
+        Properties.versionNumberString,
+        "2.12",
+        ScalaPlatform.JVM,
+        this.getClass.getClassLoader match {
+          case u: URLClassLoader =>
+            u.getURLs.iterator
+              .map(_.toURI)
+              .filter { f =>
+                f.getPath.contains("scala-library") ||
+                f.getPath.contains("scala-reflect")
+              }
+              .map(_.toString)
+              .toList
+              .asJava
+          case _ =>
+            Collections.emptyList()
+        }
+      )
+    )
+    target
   }
 
   private def withPC[T](
