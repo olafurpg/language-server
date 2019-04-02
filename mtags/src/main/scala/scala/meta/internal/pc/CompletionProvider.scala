@@ -34,6 +34,10 @@ class CompletionProvider(
       .withStart(inferIdentStart(pos, params.text()))
       .withEnd(end.offset)
       .toLSP
+    val editSnippetRange = pos
+      .withStart(inferIdentStart(pos, params.text()))
+      .withEnd(end.snippetOffset)
+      .toLSP
     def textEdit(newText: String) = new l.TextEdit(editRange, newText)
     val (i, completion) = safeCompletionsAt(pos, editRange)
     val history = new ShortenedNames()
@@ -74,7 +78,8 @@ class CompletionProvider(
             r.sym.dealiased.requiresTemplateCurlyBraces) " {}"
           else ""
         val typeSuffix =
-          if (completion.isType && r.sym.dealiased.hasTypeParams) "[$0]"
+          if (end.customSnippet.isDefined) ""
+          else if (completion.isType && r.sym.dealiased.hasTypeParams) "[$0]"
           else if (completion.isNew && r.sym.dealiased.hasTypeParams) "[$0]"
           else ""
         val suffix = typeSuffix + templateSuffix
@@ -122,7 +127,7 @@ class CompletionProvider(
             }
           case _ =>
             val baseLabel = ident
-            if (r.sym.isNonNullaryMethod) {
+            if (r.sym.isNonNullaryMethod && end.customSnippet.isEmpty) {
               r.sym.paramss match {
                 case Nil =>
                 case Nil :: Nil =>

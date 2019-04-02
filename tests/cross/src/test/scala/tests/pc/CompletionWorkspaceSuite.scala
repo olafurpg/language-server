@@ -394,4 +394,5 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent"
   )
+
 }

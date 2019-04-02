@@ -1428,7 +1428,11 @@ trait Completions { this: MetalsGlobal =>
    *                      into the argument list `println(@@)` instead of introducing duplicate
    *                      parentheses `println(@@)()`.
    */
-  class CompletionEnd(val offset: Int, customSnippet: Option[String]) {
+  class CompletionEnd(
+      val offset: Int,
+      val snippetOffset: Int,
+      val customSnippet: Option[String]
+  ) {
     def snippet(defaultSnippet: String): String =
       customSnippet.getOrElse(defaultSnippet)
   }
@@ -1441,11 +1445,12 @@ trait Completions { this: MetalsGlobal =>
     while (i < text.length && text.charAt(i).isUnicodeIdentifierPart) {
       i += 1
     }
-    if (text.startsWith("(", i)) new CompletionEnd(i + 1, Some("($0"))
-    else if (text.startsWith("{", i)) new CompletionEnd(i + 1, Some("{$0"))
-    else if (text.startsWith(" {", i)) new CompletionEnd(i + 2, Some(" {$0"))
-    else if (text.startsWith(" _", i)) new CompletionEnd(i + 2, Some(" _$0"))
-    else new CompletionEnd(i, None)
+    if (text.startsWith("(", i)) new CompletionEnd(i, i + 1, Some("($0"))
+    else if (text.startsWith("[", i)) new CompletionEnd(i, i + 1, Some("[$0"))
+    else if (text.startsWith("{", i)) new CompletionEnd(i, i + 1, Some("{$0"))
+    else if (text.startsWith(" {", i)) new CompletionEnd(i, i + 2, Some(" {$0"))
+    else if (text.startsWith(" _", i)) new CompletionEnd(i, i + 2, Some(" _$0"))
+    else new CompletionEnd(i, i, None)
   }
 
 }
