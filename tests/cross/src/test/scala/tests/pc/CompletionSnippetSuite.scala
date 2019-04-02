@@ -217,7 +217,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "out.+@@=('a')",
     "out.++=('a')",
-    filter = _.contains("++=")
+    filter = _.contains("++=(s: String)")
   )
 
 }

@@ -1406,12 +1406,33 @@ trait Completions { this: MetalsGlobal =>
     }
   }
 
+  def isIdentifierPart(text: String, x: Int, isSymbolic: Boolean): Boolean =
+    if (isSymbolic) {
+      // TODO(olafur): this is buggy
+      text.charAt(x) match {
+        case '.' | '(' | '[' | '{' => false
+        case ch => ch.isWhitespace || !ch.isUnicodeIdentifierPart
+      }
+    } else {
+      text.charAt(x).isUnicodeIdentifierPart
+    }
+
+  def isSymbolic(text: String, i: Int): Boolean = {
+    i > 0 &&
+    i < text.length() && {
+      val curr = text.charAt(i)
+      !curr.isWhitespace &&
+      !curr.isUnicodeIdentifierPart
+    }
+  }
+
   /**
    * Returns the start offset of the identifier starting as the given offset position.
    */
   def inferIdentStart(pos: Position, text: String): Int = {
     var i = pos.point - 1
-    while (i > 0 && text.charAt(i).isUnicodeIdentifierPart) {
+    val isSymbolic = this.isSymbolic(text, i)
+    while (i > 0 && isIdentifierPart(text, i, isSymbolic)) {
       i -= 1
     }
     i + 1
@@ -1442,7 +1463,8 @@ trait Completions { this: MetalsGlobal =>
    */
   def inferIdentEnd(pos: Position, text: String): CompletionEnd = {
     var i = pos.point
-    while (i < text.length && text.charAt(i).isUnicodeIdentifierPart) {
+    val isSymbolic = this.isSymbolic(text, i)
+    while (i < text.length && isIdentifierPart(text, i, isSymbolic)) {
       i += 1
     }
     if (text.startsWith("(", i)) new CompletionEnd(i, i + 1, Some("($0"))
