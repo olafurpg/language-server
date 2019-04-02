@@ -65,22 +65,39 @@ class Compilers(
     )
   }
 
-  def load(paths: Seq[AbsolutePath]): Future[Unit] = Future {
-    val targets = paths
-      .flatMap(path => buildTargets.inverseSources(path).toList)
-      .distinct
-    targets.foreach { target =>
-      loadCompiler(target).foreach { pc =>
-        pc.hover(
-          CompilerOffsetParams(
-            "Main.scala",
-            "object Ma\n",
-            "object Ma".length()
-          )
+  def load(paths: Seq[AbsolutePath]): Future[Unit] =
+    if (Testing.isEnabled) Future.successful(())
+    else {
+      Future {
+        val allScalaVersions = for {
+          path <- paths
+          target <- buildTargets.inverseSources(path)
+          info <- buildTargets.info(target)
+          scala <- info.asScalaBuildTarget
+          scalaVersion = ScalaVersions.dropVendorSuffix(scala.getScalaVersion())
+          if scalaVersion != Properties.versionNumberString
+        } yield scalaVersion
+        val options = new ScalacOptionsItem(
+          new BuildTargetIdentifier(""),
+          Nil.asJava,
+          Nil.asJava,
+          ""
         )
+        val scalaVersions = allScalaVersions
+        if (scalaVersions.nonEmpty) {
+          val list =
+            if (scalaVersions.length == 1) s" ${scalaVersions.head}"
+            else s"s ${scalaVersions.mkString(", ")}"
+          statusBar.trackSlowTask(
+            s"Downloading presentation compiler for Scala version$list"
+          ) {
+            scalaVersions.distinct.foreach { version =>
+              Embedded.downloadMtags(version, false)
+            }
+          }
+        }
       }
     }
-  }
 
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {

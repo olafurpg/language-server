@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import com.geirsson.coursiersmall
 import com.geirsson.coursiersmall.Dependency
@@ -8,11 +7,13 @@ import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.Path
 import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 import scala.util.control.NonFatal
@@ -91,7 +92,7 @@ final class Embedded(
       scalac: ScalacOptionsItem
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
-      ScalaVersions.dropVendorSuffix(info.getScalaVersion),
+      ScalaVersions.dropVendorSuffix(info.getScalaVersion()),
       statusBar.trackSlowTask("Downloading presentation compiler") {
         Embedded.newPresentationCompilerClassLoader(info, scalac)
       }
@@ -124,22 +125,29 @@ object Embedded {
         )
       )
 
-  def newPresentationCompilerClassLoader(
-      info: ScalaBuildTarget,
-      scalac: ScalacOptionsItem
-  ): URLClassLoader = {
+  def downloadMtags(
+      scalaVersion: String,
+      needsFullClasspath: Boolean
+  ): List[Path] = {
     val pc = new Dependency(
       "org.scalameta",
-      s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
+      s"mtags_${ScalaVersions.dropVendorSuffix(scalaVersion)}",
       BuildInfo.metalsVersion
     )
-    val needsFullClasspath = !scalac.isSemanticdbEnabled
     val dependency =
       if (needsFullClasspath) pc
       else pc.withTransitive(false)
     val settings = downloadSettings(dependency)
-    val jars = CoursierSmall.fetch(settings)
-    val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
+    CoursierSmall.fetch(settings)
+  }
+
+  def newPresentationCompilerClassLoader(
+      info: ScalaBuildTarget,
+      scalac: ScalacOptionsItem
+  ): URLClassLoader = {
+    val needsFullClasspath = !scalac.isSemanticdbEnabled
+    val jars = downloadMtags(info.getScalaVersion(), needsFullClasspath)
+    val scalaJars = info.getJars().asScala.map(_.toAbsolutePath.toNIO)
     val semanticdbJars =
       if (needsFullClasspath) Nil
       else {
