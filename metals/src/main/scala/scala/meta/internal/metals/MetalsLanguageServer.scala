@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
@@ -347,6 +348,9 @@ class MetalsLanguageServer(
       capabilities.setDefinitionProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
+      capabilities.setDocumentOnTypeFormattingProvider(
+        new DocumentOnTypeFormattingOptions("\n", List("}", "{").asJava)
+      )
       capabilities.setDocumentHighlightProvider(true)
       capabilities.setSignatureHelpProvider(
         new SignatureHelpOptions(List("(", "[").asJava)
@@ -405,6 +409,7 @@ class MetalsLanguageServer(
   }
 
   private def startHttpServer(): Unit = {
+
     if (config.isHttpEnabled) {
       val host = "localhost"
       val port = 5031
@@ -741,6 +746,47 @@ class MetalsLanguageServer(
         token
       )
     }
+
+  @JsonRequest("textDocument/onTypeFormatting")
+  def onTypeFormatting(
+      params: DocumentOnTypeFormattingParams
+  ): CompletableFuture[util.List[TextEdit]] =
+    Future {
+      val path = params.getTextDocument().getUri().toAbsolutePath
+      val input = path.toInputFromBuffers(buffers)
+      try {
+        pprint.log(input.text)
+        val pos = params.getPosition().toMeta(input)
+        val tokens = input.tokenize.get
+        import PositionSyntax._
+        pprint.log(pos.formatMessage("", "query"))
+        tokens.foreach { token =>
+          pprint.log(token.productPrefix -> token.syntax)
+        }
+        import scala.meta.tokens.Token
+
+        val result = tokens
+          .collectFirst {
+            case lit: Token.Constant.String if {
+                  params.getCh() == "\n" &&
+                  lit.pos.contains(pos)
+                } =>
+              pprint.log(lit.value)
+              new TextEdit(
+                new l.Range(params.getPosition(), params.getPosition()),
+                "|"
+              )
+          }
+          .toList
+          .asJava
+        pprint.log(result)
+        result
+      } catch {
+        case NonFatal(e) =>
+          pprint.log(e.toString())
+          List[TextEdit]().asJava
+      }
+    }.asJava
 
   @JsonRequest("textDocument/rename")
   def rename(
