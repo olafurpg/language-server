@@ -514,8 +514,6 @@ trait Completions { this: MetalsGlobal =>
         CompletionPosition.CaseKeyword(m.selector, editRange, pos, text, parent)
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         CompletionPosition.Filename(c, p, pos, editRange)
-      case (_: Ident) :: (p: PackageDef) :: _ if p.namePos.includes(pos) =>
-        CompletionPosition.Package(p, params, editRange)
       case (ident: Ident) :: (t: Template) :: _ =>
         CompletionPosition.Override(
           ident.name,
@@ -526,12 +524,14 @@ trait Completions { this: MetalsGlobal =>
           _ => true
         )
       case _ =>
+      pprint.log(lastEnclosing.take(2))
         inferCompletionPosition(
           pos,
           text,
           lastEnclosing,
           completions,
-          editRange
+          editRange,
+          params
         )
     }
   }
@@ -658,7 +658,8 @@ trait Completions { this: MetalsGlobal =>
       text: String,
       enclosing: List[Tree],
       completions: CompletionResult,
-      editRange: l.Range
+      editRange: l.Range,
+      params: OffsetParams
   ): CompletionPosition = {
     object ExhaustiveMatch {
       def unapply(sel: Select): Option[CompletionPosition] = {
@@ -695,7 +696,7 @@ trait Completions { this: MetalsGlobal =>
               CompletionPosition.None
             }
           case _ =>
-            inferCompletionPosition(pos, text, tail, completions, editRange)
+            inferCompletionPosition(pos, text, tail, completions, editRange, params)
         }
       case AppliedTypeTree(_, args) :: _ =>
         if (args.exists(_.pos.includes(pos))) {
@@ -705,8 +706,10 @@ trait Completions { this: MetalsGlobal =>
         }
       case New(_) :: _ =>
         CompletionPosition.New
+      case (p: PackageDef) :: _ if p.namePos.includes(pos) =>
+        CompletionPosition.Package(p, params, editRange)
       case head :: tail if !head.pos.includes(pos) =>
-        inferCompletionPosition(pos, text, tail, completions, editRange)
+        inferCompletionPosition(pos, text, tail, completions, editRange, params)
       case _ =>
         CompletionPosition.None
     }
