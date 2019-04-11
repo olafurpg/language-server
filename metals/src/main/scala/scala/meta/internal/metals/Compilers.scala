@@ -16,7 +16,6 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.concurrent.ExecutionContextExecutorService
-import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -26,6 +25,7 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.Properties
 import scala.concurrent.Future
+import scala.meta.pc.OffsetParams
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -140,39 +140,31 @@ class Compilers(
       params: CompletionParams,
       token: CancelToken
   ): Option[CompletionList] =
-    withPC(params, None) { (pc, pos) =>
-      pc.complete(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+    withPC(params, None, token) { (pc, params) =>
+      pc.complete(params)
     }
   def hover(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
   ): Option[Optional[Hover]] =
-    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
-      pc.hover(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+    withPC(params, Some(interactiveSemanticdbs), token) { (pc, params) =>
+      pc.hover(params)
     }
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Option[ju.List[Location]] =
-    withPC(params, None) { (pc, pos) =>
-      pc.definition(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+    withPC(params, None, token) { (pc, params) =>
+      pc.definition(params)
     }
   def signatureHelp(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
   ): Option[SignatureHelp] =
-    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
-      pc.signatureHelp(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+    withPC(params, Some(interactiveSemanticdbs), token) { (pc, params) =>
+      pc.signatureHelp(params)
     }
 
   def loadCompiler(
@@ -221,15 +213,27 @@ class Compilers(
 
   private def withPC[T](
       params: TextDocumentPositionParams,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
-  )(fn: (PresentationCompiler, Position) => T): Option[T] = {
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs],
+      token: CancelToken
+  )(fn: (PresentationCompiler, OffsetParams) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     loadCompiler(path, interactiveSemanticdbs).map { compiler =>
       val input = path
         .toInputFromBuffers(buffers)
         .copy(path = params.getTextDocument.getUri())
       val pos = params.getPosition.toMeta(input)
-      val result = fn(compiler, pos)
+      val sourceDirectory = buildTargets.inverseSourceDirectory(path).map(_.toNIO)
+      pprint.log(sourceDirectory)
+      pprint.log(path)
+      val offsetParams = CompilerOffsetParams(
+        pos.input.syntax,
+        pos.input.text,
+        pos.start,
+        token,
+        path = Optional.of(path.toNIO),
+        sourceDirectory = Optional.ofNullable(sourceDirectory.orNull),
+      )
+      val result = fn(compiler, offsetParams)
       result
     }
   }

@@ -327,7 +327,8 @@ class CompletionProvider(
         pos,
         params.text(),
         editRange,
-        CompletionResult.NoResults
+        CompletionResult.NoResults,
+        params
       ) match {
         case CompletionPosition.None =>
           logger.warning(e.getMessage)
@@ -369,8 +370,9 @@ class CompletionProvider(
         if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
         else CompletionFuzzy.matches(entered, name)
       }
-      val completion =
-        completionPosition(pos, params.text(), editRange, completions)
+      val completion = completionPosition(
+        pos, params.text(), editRange, completions, params
+      )
       val query = completions.name.toString
       val items =
         filterInteresting(matchingResults, kind, query, pos, completion)

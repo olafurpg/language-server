@@ -1,5 +1,7 @@
 package tests
 
+import java.nio.file.Paths
+import java.net.URI
 import java.util.Collections
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
@@ -29,9 +31,19 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       filename: String = "A.scala"
   ): Seq[CompletionItem] = {
+    val root = Paths.get(URI.create("file:/"))
+    val file = root.resolve(filename)
     val (code, offset) = params(original)
+    import java.{util => ju}
     val result = resolvedCompletions(
-      CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
+      CompilerOffsetParams(
+        file.toUri().toString(),
+        code,
+        offset,
+        cancelToken,
+        ju.Optional.of(file),
+        ju.Optional.of(root)
+      )
     )
     result.getItems.asScala.sortBy(_.getSortText)
   }
@@ -73,10 +85,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       filterText: String = "",
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
-      command: Option[String] = None
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+      command: Option[String] = None,
+      filename: String = "A.scala"
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
-      val items = getItems(original).filter(item => filter(item.getLabel))
+      val items = getItems(original, filename).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {
         fail(

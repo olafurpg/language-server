@@ -3,12 +3,15 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 object CompletionPackageSuite extends BaseCompletionSuite {
-  check(
+  checkEdit(
     "class",
-    """|package a@@
-       |class MMain
+    """|package abc@@
+       |class Main
        |""".stripMargin,
-    "package abc.def",
-    filename = "abc/def/Main.scala"
+    """|package abc.def.ghi
+       |class Main
+       |""".stripMargin,
+    filterText = "abc.def.ghi",
+    filename = "abc/def/ghi/Main.scala"
   )
 }

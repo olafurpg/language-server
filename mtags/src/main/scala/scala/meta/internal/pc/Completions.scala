@@ -9,6 +9,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.reflect.internal.util.Position
 import java.nio.file.Paths
@@ -429,12 +430,13 @@ trait Completions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       editRange: l.Range,
-      completions: CompletionResult
+      completions: CompletionResult,
+      params: OffsetParams
   ): CompletionPosition = {
     // the implementation of completionPositionUnsafe does a lot of `typedTreeAt(pos).tpe`
     // which often causes null pointer exceptions, it's easier to catch the error here than
     // enforce discipline in the code.
-    try completionPositionUnsafe(pos, text, editRange, completions)
+    try completionPositionUnsafe(pos, text, editRange, completions, params)
     catch {
       case NonFatal(e) =>
         logger.log(Level.SEVERE, e.getMessage(), e)
@@ -445,7 +447,8 @@ trait Completions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       editRange: l.Range,
-      completions: CompletionResult
+      completions: CompletionResult,
+      params: OffsetParams
   ): CompletionPosition = {
     val PatternMatch = new PatternMatch(pos)
     def fromIdentApply(
@@ -511,6 +514,8 @@ trait Completions { this: MetalsGlobal =>
         CompletionPosition.CaseKeyword(m.selector, editRange, pos, text, parent)
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         CompletionPosition.Filename(c, p, pos, editRange)
+      case (_: Ident) :: (p: PackageDef) :: _ if p.namePos.includes(pos) =>
+        CompletionPosition.Package(p, params, editRange)
       case (ident: Ident) :: (t: Template) :: _ =>
         CompletionPosition.Override(
           ident.name,
@@ -849,6 +854,51 @@ trait Completions { this: MetalsGlobal =>
             val filterText = filter + s.sym.name.decoded
             new TextEditMember(filterText, edit, s.sym)
         }
+      }
+    }
+
+    /**
+     * Completion for the name of a toplevel class, trait or object matching the filename.
+     *
+     * Example: {{{
+     *   // src/main/scala/app/controllers/UserDatabaseService.scala
+     *   package ap@@ // completes "app.controllers"
+     * }}}
+     *
+     */
+    case class Package(
+        pkg: PackageDef,
+        params: OffsetParams,
+        editRange: l.Range
+    ) extends CompletionPosition {
+      override def isCandidate(member: Member): Boolean =
+        member.isInstanceOf[TextEditMember]
+      override def contribute: List[Member] = {
+        val prefix = pkg.symbol.fullName.stripSuffix(CURSOR)
+        val candidate = for {
+          sourceDirectory <- params.sourceDirectory().asScala
+          file <- params.path().asScala
+        } yield {
+          sourceDirectory
+            .relativize(file.getParent())
+            .iterator()
+            .asScala
+            .mkString(".")
+        }
+        candidate.toList
+          .filter(_.startsWith(prefix))
+          .map { fullname =>
+            new TextEditMember(
+              fullname,
+              new l.TextEdit(
+                editRange,
+                fullname
+              ),
+              pkg.symbol.newErrorSymbol(TermName(fullname)).setInfo(NoType),
+              label = Some(s"package $fullname"),
+              detail = Some("")
+            )
+          }
       }
     }
 
@@ -1662,13 +1712,14 @@ trait Completions { this: MetalsGlobal =>
   }
 
   def isSnippetEnabled(pos: Position, text: String): Boolean = {
-    text.charAt(pos.point) match {
+    pos.point < text.length() &&
+    (text.charAt(pos.point) match {
       case ')' | ']' | '}' | ',' | '\n' => true
       case _ =>
         !text.startsWith(" _", pos.point) && {
           text.startsWith("\r\n", pos.point)
         }
-    }
+    })
   }
 
 }
