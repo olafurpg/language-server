@@ -369,9 +369,7 @@ trait Completions { this: MetalsGlobal =>
    */
   object NonSyntheticBlock {
     def unapply(tree: Tree): Option[List[Tree]] = tree match {
-      case t: Template => Some(t.body)
       case t: PackageDef => Some(t.stats)
-      case b: Block => Some(b.stats)
       case _ => None
     }
   }
@@ -410,15 +408,39 @@ trait Completions { this: MetalsGlobal =>
           case List(
               stat @ NonSyntheticStatement(),
               block @ NonSyntheticBlock(stats)
-              ) if block.pos.line != stat.pos.line =>
-            val top = stats.find(_.pos.includes(stat.pos)).getOrElse(stat)
-            val defaultStart = top.pos.start
-            val startOffset = top match {
-              case d: MemberDef =>
-                d.mods.annotations.foldLeft(defaultStart)(_ min _.pos.start)
-              case _ =>
-                defaultStart
-            }
+              ) => // if block.pos.line != stat.pos.line =>
+            val startOffset = stats
+              .filter {
+                case i: Import => i.pos.precedes(stat.pos)
+                case t => false
+              }
+              .lastOption
+              .map { topImport =>
+                pos.source.lineToOffset(
+                  pos.source.offsetToLine(topImport.pos.end) + 1
+                )
+              }
+              .getOrElse[Int] {
+                block match {
+                  case pkg: PackageDef
+                      if pkg.symbol != rootMirror.EmptyPackage =>
+                    pos.source.lineToOffset(
+                      pos.source.offsetToLine(pkg.pid.pos.end) + 1
+                    )
+                  case _ =>
+                    val topStat = stats
+                      .find(_.pos.includes(stat.pos))
+                      .getOrElse(stat)
+                    val defaultStart = topStat.pos.start
+                    topStat match {
+                      case d: MemberDef =>
+                        d.mods.annotations
+                          .foldLeft(defaultStart)(_ min _.pos.start)
+                      case _ =>
+                        defaultStart
+                    }
+                }
+              }
             val start = Position.offset(pos.source, startOffset)
             val line = pos.source.lineToOffset(start.line - 1)
             AutoImportPosition(line, inferIndent(line, text))

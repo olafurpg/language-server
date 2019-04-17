@@ -4,16 +4,19 @@ import tests.BaseCompletionSuite
 
 object CompletionWorkspaceSuite extends BaseCompletionSuite {
 
-  checkEditLine(
+  checkEdit(
     "files",
     """package pkg
       |object Main {
-      |___
+      |  val x = Files@@
       |}
       |""".stripMargin,
-    "  val x = Files@@",
-    """  import java.nio.file.Files
-      |  val x = Files""".stripMargin
+    """package pkg
+      |import java.nio.file.Files
+      |object Main {
+      |  val x = Files
+      |}
+      |""".stripMargin
   )
 
   checkEditLine(
@@ -67,9 +70,9 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """package `import-conflict`
+      |import _root_.java.nio.file.Files
       |object Main {
       |  val java = 42
-      |  import _root_.java.nio.file.Files
       |  val x = Files
       |}
       |""".stripMargin,
@@ -106,8 +109,9 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|object Main {
-       |  import java.nio.file.Files
+    """|
+       |import java.nio.file.Files
+       |object Main {
        |  def foo(): Unit = {
        |    Files
        |  }
@@ -117,17 +121,20 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
 
   checkEdit(
     "block2",
-    """|object Main {
+    """|
+       |import java.nio.file.Files
+       |object Main {
        |  def foo(): Unit = {
        |    val x = 1
        |    Files@@
        |  }
        |}
        |""".stripMargin,
-    """|object Main {
+    """|
+       |import java.nio.file.Files
+       |object Main {
        |  def foo(): Unit = {
        |    val x = 1
-       |    import java.nio.file.Files
        |    Files
        |  }
        |}
@@ -143,10 +150,11 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|object Main {
+    """|
+       |import java.nio.file.Files
+       |object Main {
        |  def foo(): Unit = {
        |    val x = 1
-       |    import java.nio.file.Files
        |    println("".substring(Files))
        |  }
        |}
@@ -162,8 +170,9 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|object Main {
-       |  import java.nio.file.Files
+    """|
+       |import java.nio.file.Files
+       |object Main {
        |  def foo(): Unit = 1 match {
        |    case 2 =>
        |      Files
@@ -182,8 +191,9 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|object Main {
-       |  import java.nio.file.Files
+    """|
+       |import java.nio.file.Files
+       |object Main {
        |  def foo(): Unit = 1 match {
        |    case 2 if {
        |      Files
@@ -195,14 +205,16 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
 
   checkEdit(
     "match-typed",
-    """|object Main {
+    """|
+       |object Main {
        |  def foo(): Unit = null match {
        |    case x: ArrayDeque@@ =>
        |  }
        |}
        |""".stripMargin,
-    """|object Main {
-       |  import java.{util => ju}
+    """|
+       |import java.{util => ju}
+       |object Main {
        |  def foo(): Unit = null match {
        |    case x: ju.ArrayDeque =>
        |  }
@@ -218,9 +230,10 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|object Main {
+    """|
+       |import scala.util.Failure
+       |object Main {
        |  def foo(): Unit = {
-       |    import scala.util.Failure
        |    val x: Failure
        |  }
        |}
@@ -239,8 +252,8 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """package pkg
+      |import java.nio.file.Files
       |object Main {
-      |  import java.nio.file.Files
       |  List(1).collect {
       |    case 2 =>
       |      Files
@@ -262,8 +275,8 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """package pkg
+      |import java.nio.file.Files
       |object Main {
-      |  import java.nio.file.Files
       |  for {
       |    x <- List(1)
       |    y = x + 1
@@ -288,12 +301,12 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """package pkg
+      |import java.nio.file.Files
       |object Main {
       |  for {
       |    x <- List(1)
       |    _ = {
       |      println(1)
-      |      import java.nio.file.Files
       |      Files
       |    }
       |  } yield x
@@ -315,12 +328,12 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """package pkg
+      |import java.nio.file.Files
       |object Main {
       |  for {
       |    x <- List(1)
       |    if {
       |      println(x)
-      |      import java.nio.file.Files
       |      Files
       |    }
       |  } yield x
@@ -352,8 +365,8 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|
+       |import scala.collection.mutable
        |object Main {
-       |  import scala.collection.mutable
        |  @noinline
        |  def foo: mutable.ArrayBuffer[Int] = ???
        |}
@@ -370,8 +383,8 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|package annotationclass
+       |import scala.collection.mutable
        |object Main {
-       |  import scala.collection.mutable
        |  @deprecated("", "")
        |  class Foo extends mutable.ArrayBuffer[Int]
        |}
@@ -388,8 +401,8 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|package annotationtrait
+       |import scala.collection.mutable
        |object Main {
-       |  import scala.collection.mutable
        |  @deprecated("", "")
        |  trait Foo extends mutable.ArrayBuffer[Int]
        |}
@@ -409,6 +422,52 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |case class Foo(
        |  name: Future[String]
        |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "docstring",
+    """|package docstring
+       |/**
+       | * Hello
+       | */
+       |object Main {
+       |  val x = Future@@
+       |}
+       |""".stripMargin,
+    """|package docstring
+       |import scala.concurrent.Future
+       |/**
+       | * Hello
+       | */
+       |object Main {
+       |  val x = Future
+       |}
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "docstring-import",
+    """|package docstring
+       |import scala.util._
+       |/**
+       | * Hello
+       | */
+       |object Main {
+       |  val x = Future@@
+       |}
+       |""".stripMargin,
+    """|package docstring
+       |import scala.util._
+       |import scala.concurrent.Future
+       |/**
+       | * Hello
+       | */
+       |object Main {
+       |  val x = Future
+       |}
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent"
   )
