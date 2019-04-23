@@ -174,6 +174,16 @@ class Compilers(
       )
     }
 
+  def overrides(path: AbsolutePath, symbol: String): List[String] = {
+    loadCompilerOrRambo(path).overrides(symbol).asScala.toList
+  }
+
+  def parentSymbols(path: AbsolutePath, symbol: String): List[String] = {
+    loadCompilerOrRambo(path).parentSymbols(symbol).asScala.toList
+  }
+
+  def loadCompilerOrRambo(path: AbsolutePath): PresentationCompiler =
+    loadCompiler(path, None).getOrElse(ramboCompiler)
   def loadCompiler(
       path: AbsolutePath,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]

@@ -103,6 +103,7 @@ class MetalsLanguageServer(
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
+  private val superclasses = new Superclasses()
   private val languageClient =
     new DelegatingLanguageClient(NoopLanguageClient, config)
   var userConfig = UserConfiguration()
@@ -130,6 +131,7 @@ class MetalsLanguageServer(
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
+  private var renameProvider: RenameProvider = _
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
@@ -282,7 +284,8 @@ class MetalsLanguageServer(
       workspace,
       semanticdbs,
       buffers,
-      definitionProvider
+      definitionProvider,
+      superclasses
     )
     documentHighlightProvider = new DocumentHighlightProvider(
       definitionProvider,
@@ -317,6 +320,13 @@ class MetalsLanguageServer(
         statusBar,
         sh
       )
+    )
+    renameProvider = new RenameProvider(
+      workspace,
+      superclasses,
+      definitionProvider,
+      semanticdbs,
+      compilers
     )
     doctor = new Doctor(
       workspace,
@@ -356,6 +366,7 @@ class MetalsLanguageServer(
       capabilities.setFoldingRangeProvider(true)
       capabilities.setDefinitionProvider(true)
       capabilities.setHoverProvider(true)
+      capabilities.setRenameProvider(true)
       capabilities.setReferencesProvider(true)
       capabilities.setDocumentHighlightProvider(true)
       capabilities.setSignatureHelpProvider(
@@ -760,9 +771,8 @@ class MetalsLanguageServer(
   def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/rename is not supported.")
-      null
+    CancelTokens { token =>
+      renameProvider.rename(params, token)
     }
 
   @JsonRequest("textDocument/references")

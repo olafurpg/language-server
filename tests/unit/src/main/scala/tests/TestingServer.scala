@@ -42,6 +42,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.{lsp4j => l}
 import org.scalactic.source.Position
 import tests.MetalsTestEnrichments._
@@ -674,6 +675,26 @@ final class TestingServer(
         }
       }
     )
+  }
+
+  def rename(filename: String, query: String, newName: String): Future[Unit] = {
+    val original = textContents(filename)
+      .replaceAllLiterally(query.replaceAllLiterally("@@", ""), query)
+    for {
+      (text, params) <- offsetParams(filename, original, workspace)
+      edit <- server
+        .rename(
+          new RenameParams(
+            params.getTextDocument(),
+            params.getPosition(),
+            newName
+          )
+        )
+        .asScala
+    } yield {
+      pprint.log(edit)
+      ()
+    }
   }
 }
 

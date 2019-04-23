@@ -66,6 +66,16 @@ public abstract class PresentationCompiler {
      */
     public abstract byte[] semanticdbTextDocument(String filename, String code);
 
+    /**
+     * Returns the method symbols that are overridden by the given method symbol.
+     */
+    public abstract List<String> overrides(String symbol);
+
+    /**
+     * Returns the class symbols that are overridden by the given class symbol.
+     */
+    public abstract List<String> parentSymbols(String symbol);
+
     // =================================
     // Configuration and lifecycle APIs.
     // =================================

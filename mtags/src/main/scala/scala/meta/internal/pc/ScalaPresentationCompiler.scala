@@ -22,6 +22,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
+import java.{util => ju}
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -134,6 +135,26 @@ case class ScalaPresentationCompiler(
       new SemanticdbTextDocumentProvider(global)
         .textDocument(filename, code)
         .toByteArray
+    }
+  }
+
+  def overrides(symbol: String): ju.List[String] = {
+    access.withSharedCompiler(ju.Collections.emptyList[String]()) { global =>
+      (for {
+        gsym <- global.inverseSemanticdbSymbols(symbol)
+        if global.semanticdbSymbol(gsym) == symbol
+        over <- gsym.overrides
+      } yield global.semanticdbSymbol(over)).asJava
+    }
+  }
+
+  def parentSymbols(symbol: String): ju.List[String] = {
+    access.withSharedCompiler(ju.Collections.emptyList[String]()) { global =>
+      (for {
+        gsym <- global.inverseSemanticdbSymbols(symbol)
+        if global.semanticdbSymbol(gsym) == symbol
+        parent <- gsym.parentSymbols
+      } yield global.semanticdbSymbol(parent)).asJava
     }
   }
 

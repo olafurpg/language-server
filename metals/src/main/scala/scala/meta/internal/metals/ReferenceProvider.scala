@@ -30,7 +30,8 @@ final class ReferenceProvider(
     workspace: AbsolutePath,
     semanticdbs: Semanticdbs,
     buffers: Buffers,
-    definition: DefinitionProvider
+    definition: DefinitionProvider,
+    superclasses: Superclasses
 ) {
   var referencedPackages = BloomFilters.create(10000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
@@ -99,6 +100,7 @@ final class ReferenceProvider(
             Synthetics.Continue
           }
         }
+        d.symbols.foreach(info => superclasses.visitSymbol(file, info))
       }
       resizeReferencedPackages()
     } else {
