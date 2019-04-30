@@ -35,6 +35,39 @@ final class ReferenceProvider(
 ) {
   var referencedPackages = BloomFilters.create(10000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
+
+  def references(params: ReferenceParams): ReferencesResult = {
+    val source = params.getTextDocument.getUri.toAbsolutePath
+    semanticdbs.textDocument(source).documentIncludingStale match {
+      case Some(doc) =>
+        val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
+          definition.positionOccurrence(source, params, doc)
+        maybeOccurrence match {
+          case Some(occurrence) =>
+            val alternatives = referenceAlternatives(doc, occurrence)
+            val locations = references(
+              source,
+              params,
+              doc,
+              distance,
+              occurrence,
+              alternatives,
+              params.getContext.isIncludeDeclaration
+            )
+            ReferencesResult(
+              occurrence.symbol,
+              locations,
+              Some(source),
+              Some(doc)
+            )
+          case None =>
+            ReferencesResult.empty
+        }
+      case None =>
+        ReferencesResult.empty
+    }
+  }
+
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
     for {
       item <- scalacOptions.getItems.asScala
@@ -105,33 +138,6 @@ final class ReferenceProvider(
       resizeReferencedPackages()
     } else {
       scribe.warn(s"not semanticdb file: $file")
-    }
-  }
-
-  def references(params: ReferenceParams): ReferencesResult = {
-    val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs.textDocument(source).documentIncludingStale match {
-      case Some(doc) =>
-        val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
-          definition.positionOccurrence(source, params, doc)
-        maybeOccurrence match {
-          case Some(occurrence) =>
-            val alternatives = referenceAlternatives(doc, occurrence)
-            val locations = references(
-              source,
-              params,
-              doc,
-              distance,
-              occurrence,
-              alternatives,
-              params.getContext.isIncludeDeclaration
-            )
-            ReferencesResult(occurrence.symbol, locations)
-          case None =>
-            ReferencesResult.empty
-        }
-      case None =>
-        ReferencesResult.empty
     }
   }
 
