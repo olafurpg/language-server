@@ -12,6 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -31,20 +32,22 @@ final class ReferenceProvider(
     semanticdbs: Semanticdbs,
     buffers: Buffers,
     definition: DefinitionProvider,
-    superclasses: Superclasses
+    superclasses: Superclasses,
+    compilers: () => Compilers
 ) {
   var referencedPackages = BloomFilters.create(10000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
 
   def references(params: ReferenceParams): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
+    index.get(source.toNIO)
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
           definition.positionOccurrence(source, params, doc)
         maybeOccurrence match {
           case Some(occurrence) =>
-            val alternatives = referenceAlternatives(doc, occurrence)
+            val alternatives = referenceAlternatives(doc, occurrence.symbol)
             val locations = references(
               source,
               params,
@@ -141,18 +144,39 @@ final class ReferenceProvider(
     }
   }
 
+  def expandSymbol(
+      path: AbsolutePath,
+      symbol: String,
+      doc: TextDocument
+  ): List[String] = {
+    val symtab = doc.symtab
+    val displayName =
+      if (symbol.isLocal)
+        symtab.get(symbol) match {
+          case Some(info) => info.displayName
+          case None => symbol
+        } else symbol.desc.name.value
+    val isMethod = symbol.desc.isMethod ||
+      symtab
+        .get(symbol)
+        .exists(info => info.symbol == symbol == info.kind.isMethod)
+    if (isMethod) expandMethodSymbol(path, symbol, displayName, doc, symtab)
+    else Nil
+  }
+
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
   private def referenceAlternatives(
       doc: TextDocument,
-      occ: SymbolOccurrence
+      occ: String
   ): Set[String] = {
-    val name = occ.symbol.desc.name.value
+    val desc = occ.desc
+    val name = desc.name.value
     val isCopyOrApply = Set("apply", "copy")
     // Returns true if `info` is the companion object matching the occurrence class symbol.
     def isCompanionObject(info: SymbolInformation): Boolean =
       info.isObject &&
         info.displayName == name &&
-        occ.symbol == Symbols.Global(
+        occ == Symbols.Global(
           info.symbol.owner,
           Descriptor.Type(info.displayName)
         )
@@ -160,7 +184,7 @@ final class ReferenceProvider(
     def isCopyOrApplyMethod(info: SymbolInformation): Boolean =
       info.isMethod &&
         isCopyOrApply(info.displayName) &&
-        occ.symbol == (Symbol(info.symbol) match {
+        occ == (Symbol(info.symbol) match {
           case GlobalSymbol(
               GlobalSymbol(owner, Descriptor.Term(obj)),
               Descriptor.Method("apply", _)
@@ -178,7 +202,7 @@ final class ReferenceProvider(
     def isCopyOrApplyParam(info: SymbolInformation): Boolean =
       info.isParameter &&
         info.displayName == name &&
-        occ.symbol == (Symbol(info.symbol) match {
+        occ == (Symbol(info.symbol) match {
           case GlobalSymbol(
               GlobalSymbol(
                 GlobalSymbol(owner, Descriptor.Term(obj)),
@@ -204,11 +228,11 @@ final class ReferenceProvider(
           case _ =>
             ""
         })
-    // Returns true if `info` is companion var setter method for occ.symbol var getter.
+    // Returns true if `info` is companion var setter method for occ var getter.
     def isVarSetter(info: SymbolInformation): Boolean =
       info.displayName.endsWith("_=") &&
         info.displayName.startsWith(name) &&
-        occ.symbol == (Symbol(info.symbol) match {
+        occ == (Symbol(info.symbol) match {
           case GlobalSymbol(owner, Descriptor.Method(setter, disambiguator)) =>
             Symbols.Global(
               owner.value,
@@ -235,6 +259,7 @@ final class ReferenceProvider(
     } yield doc.symbol
     isCandidate -- nonSyntheticSymbols
   }
+
   private def references(
       source: AbsolutePath,
       params: ReferenceParams,
@@ -329,6 +354,58 @@ final class ReferenceProvider(
       referencedPackages =
         BloomFilters.create(referencedPackages.approximateElementCount() * 2)
     }
+  }
+
+  private def expandMethodSymbol(
+      path: AbsolutePath,
+      sym: String,
+      displayName: String,
+      doc: TextDocument,
+      tab: Map[String, SymbolInformation]
+  ): List[String] = {
+    val isVisited = mutable.Set.empty[String]
+    val overrides = compilers().overrides(path, sym).toSet
+    def isOverride(candidate: SymbolInformation): Boolean = {
+      if (candidate.symbol.isLocal) {
+        // NOTE(olafur) rename all overloads instead of only the specific override
+        // because don't have the means yet to query override symbols for
+        // anonymous classes, which would require implementing asSeenFrom for
+        // SemanticDB symbols.
+        candidate.displayName == displayName
+      } else {
+        overrides.contains(candidate.symbol)
+      }
+    }
+    val owners =
+      if (sym.isLocal) {
+        for {
+          info <- doc.symbols
+          decl <- info.declarations
+          if decl == sym
+        } yield info.symbol
+      } else {
+        sym.owner :: Nil
+      }
+    val result = for {
+      owner <- owners
+      ownerInfo <- tab.get(owner).iterator
+      parent <- ownerInfo.parents
+      over <- parent :: compilers().parentSymbols(path, parent)
+      subclass <- superclasses
+        .allKnownSubclasses(over, isVisited)
+        .iterator
+      if subclass.semanticdbFile.isFile
+      doc <- TextDocuments
+        .parseFrom(subclass.semanticdbFile.readAllBytes)
+        .documents
+      if subclass.semanticdbFile.isFile
+      symtab = doc.symbols.iterator.map(i => i.symbol -> i).toMap
+      info <- symtab.get(subclass.symbol).iterator
+      decl <- info.declarations
+      declInfo <- symtab.get(decl)
+      if isOverride(declInfo)
+    } yield decl
+    result.toList
   }
 
 }

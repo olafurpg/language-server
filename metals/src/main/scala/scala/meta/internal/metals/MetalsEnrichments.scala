@@ -376,6 +376,10 @@ object MetalsEnrichments
           occ.toLocation(uri)
         }
     }
+    def symtab: Map[String, s.SymbolInformation] =
+      textDocument.symbols.iterator.map { i =>
+        i.symbol -> i
+      }.toMap
   }
 
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
@@ -521,6 +525,29 @@ object MetalsEnrichments
 
     def findFirstTrailing(predicate: Token => Boolean): Option[Token] =
       trailingTokens.find(predicate)
+  }
+
+  implicit class XtensionSymbolInfo(info: s.SymbolInformation) {
+    def parents: Seq[String] = {
+      info.signature match {
+        case c: s.ClassSignature =>
+          c.parents.collect {
+            case s.TypeRef(_, symbol, _) =>
+              symbol
+          }
+        case _ => Nil
+      }
+    }
+    def declarations: Seq[String] = {
+      info.signature match {
+        case c: s.ClassSignature =>
+          c.declarations match {
+            case None => Nil
+            case Some(scope) => scope.symlinks
+          }
+        case _ => Nil
+      }
+    }
   }
 
 }

@@ -285,7 +285,8 @@ class MetalsLanguageServer(
       semanticdbs,
       buffers,
       definitionProvider,
-      superclasses
+      superclasses,
+      () => compilers
     )
     documentHighlightProvider = new DocumentHighlightProvider(
       definitionProvider,
@@ -324,7 +325,7 @@ class MetalsLanguageServer(
     renameProvider = new RenameProvider(
       workspace,
       superclasses,
-      definitionProvider,
+      referencesProvider,
       semanticdbs,
       compilers
     )
