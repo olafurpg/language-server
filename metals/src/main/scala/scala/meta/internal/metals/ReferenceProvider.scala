@@ -40,7 +40,6 @@ final class ReferenceProvider(
 
   def references(params: ReferenceParams): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    index.get(source.toNIO)
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
@@ -148,7 +147,7 @@ final class ReferenceProvider(
       path: AbsolutePath,
       symbol: String,
       doc: TextDocument
-  ): List[String] = {
+  ): Map[AbsolutePath, Seq[Subclass]] = {
     val symtab = doc.symtab
     val displayName =
       if (symbol.isLocal)
@@ -162,6 +161,7 @@ final class ReferenceProvider(
         .exists(info => info.symbol == symbol == info.kind.isMethod)
     if (isMethod) expandMethodSymbol(path, symbol, displayName, doc, symtab)
     else Nil
+    Map.empty
   }
 
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
