@@ -16,6 +16,7 @@ import scala.collection.mutable
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -24,6 +25,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -31,40 +33,49 @@ final class ReferenceProvider(
     buffers: Buffers,
     definition: DefinitionProvider,
     superclasses: Superclasses,
-    compilers: () => Compilers
+    compilers: () => Compilers,
+    definitionIndex: OnDemandSymbolIndex
 ) {
   var referencedPackages = BloomFilters.create(10000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
 
   def references(params: ReferenceParams): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs.textDocument(source).documentIncludingStale match {
-      case Some(doc) =>
-        val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
-          definition.positionOccurrence(source, params, doc)
-        maybeOccurrence match {
-          case Some(occurrence) =>
-            val alternatives = ReferenceAlternatives(doc, occurrence.symbol)
-            val locations = references(
-              source,
-              params,
-              doc,
-              distance,
-              occurrence,
-              alternatives,
-              params.getContext.isIncludeDeclaration
-            )
-            ReferencesResult(
-              occurrence.symbol,
-              locations,
-              Some(source),
-              Some(doc)
-            )
-          case None =>
-            ReferencesResult.empty
-        }
-      case None =>
-        ReferencesResult.empty
+    val result = for {
+      doc <- semanticdbs.textDocument(source).documentIncludingStale
+      defn = definition.positionOccurrence(source, params, doc)
+      occurrence <- defn.occurrence
+      defnDoc = definitionDoc(occurrence.symbol, source, doc)
+      alternatives = ReferenceAlternatives(doc, occurrence.symbol)
+      locations = references(
+        source,
+        params,
+        doc,
+        defn.distance,
+        occurrence,
+        alternatives,
+        params.getContext.isIncludeDeclaration
+      )
+    } yield {
+      ReferencesResult(
+        occurrence.symbol,
+        locations,
+        Some(source),
+        Some(doc)
+      )
+    }
+    result.getOrElse(ReferencesResult.empty)
+  }
+
+  def definitionDoc(
+      occ: String,
+      source: AbsolutePath,
+      doc: TextDocument
+  ): Option[TextDocument] = {
+    definitionIndex.definition(Symbol(occ)).flatMap { defn =>
+      if (defn.path == source) Some(doc)
+      else if (defn.path.isDependencySource(workspace)) None
+      else semanticdbs.textDocument(defn.path).documentIncludingStale
     }
   }
 

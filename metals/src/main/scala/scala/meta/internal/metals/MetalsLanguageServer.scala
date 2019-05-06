@@ -286,7 +286,8 @@ class MetalsLanguageServer(
       buffers,
       definitionProvider,
       superclasses,
-      () => compilers
+      () => compilers,
+      definitionIndex
     )
     documentHighlightProvider = new DocumentHighlightProvider(
       definitionProvider,
