@@ -46,7 +46,10 @@ final class ReferenceProvider(
           definition.positionOccurrence(source, params, doc)
         maybeOccurrence match {
           case Some(occurrence) =>
-            val alternatives = referenceAlternatives(doc, occurrence.symbol)
+            val alternatives = Alternatives(
+              occurrence,
+              referenceAlternatives(doc, occurrence.symbol) + occurrence.symbol
+            )
             val locations = references(
               source,
               params,
@@ -260,20 +263,25 @@ final class ReferenceProvider(
     isCandidate -- nonSyntheticSymbols
   }
 
+  case class Alternatives(
+      occ: SymbolOccurrence,
+      references: Set[String]
+  )
+
   private def references(
       source: AbsolutePath,
       params: ReferenceParams,
       snapshot: TextDocument,
       distance: TokenEditDistance,
       occ: SymbolOccurrence,
-      alternatives: Set[String],
+      alternatives: Alternatives,
       isIncludeDeclaration: Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     if (occ.symbol.isLocal) {
       referenceLocations(
         snapshot,
-        isSymbol,
+        alternatives,
         distance,
         params.getTextDocument.getUri,
         isIncludeDeclaration
@@ -298,7 +306,7 @@ final class ReferenceProvider(
         reference <- try {
           referenceLocations(
             semanticdb,
-            isSymbol,
+            alternatives,
             semanticdbDistance,
             uri,
             isIncludeDeclaration
@@ -316,7 +324,7 @@ final class ReferenceProvider(
 
   private def referenceLocations(
       snapshot: TextDocument,
-      isSymbol: Set[String],
+      alternatives: Alternatives,
       distance: TokenEditDistance,
       uri: String,
       isIncludeDeclaration: Boolean
@@ -334,14 +342,14 @@ final class ReferenceProvider(
 
     for {
       reference <- snapshot.occurrences
-      if isSymbol(reference.symbol)
+      if alternatives.references(reference.symbol)
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
     } add(range)
 
     for {
       synthetic <- snapshot.synthetics
-      if Synthetics.existsSymbol(synthetic)(isSymbol)
+      if Synthetics.existsSymbol(synthetic)(alternatives.references)
       range <- synthetic.range.toList
     } add(range)
 
