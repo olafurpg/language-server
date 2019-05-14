@@ -35,7 +35,8 @@ trait Completions { this: MetalsGlobal =>
       val label: Option[String] = None,
       val detail: Option[String] = None,
       val command: Option[String] = None,
-      val additionalTextEdits: List[l.TextEdit] = Nil
+      val additionalTextEdits: List[l.TextEdit] = Nil,
+      val commitCharacter: Option[String] = None
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
   class OverrideDefMember(
@@ -1431,7 +1432,7 @@ trait Completions { this: MetalsGlobal =>
               lastEnclosing ::= t
             }
             super.traverse(t)
-          } else
+          } else {
             t match {
               case mdef: MemberDef =>
                 val annTrees = mdef.mods.annotations match {
@@ -1444,6 +1445,7 @@ trait Completions { this: MetalsGlobal =>
                 traverseTrees(annTrees)
               case _ =>
             }
+          }
       }
     }
   }

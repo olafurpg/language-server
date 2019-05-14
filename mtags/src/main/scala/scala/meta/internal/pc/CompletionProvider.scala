@@ -201,14 +201,21 @@ class CompletionProvider(
           item.setDeprecated(true)
         }
         // Commit character
-        if (r.sym.isMethod && !isNullary(r.sym)) {
-          // NOTE(olafur) don't use `(` as a commit character for methods because it conflicts with
-          // the `($0)` snippet behavior resulting in a redundant unit literal: `println(())`.
-          // The ideal solution would be to not use the `($0)` snippet when the commit character `(` is used,
-          // however language servers can't distinguish what commit character is used. It works as
-          // expected in IntelliJ.
-        } else {
-          item.setCommitCharacters(List(".").asJava)
+        r match {
+          case t: TextEditMember if t.commitCharacter.isDefined =>
+            item.setCommitCharacters(t.commitCharacter.toList.asJava)
+          case _ =>
+            if (r.sym.isMethod && !isNullary(r.sym)) {
+              // NOTE(olafur) don't use `(` as a commit character for methods because it conflicts with
+              // the `($0)` snippet behavior resulting in a redundant unit literal: `println(())`.
+              // The ideal solution would be to not use the `($0)` snippet when the commit character `(` is used,
+              // however language servers can't distinguish what commit character is used. It works as
+              // expected in IntelliJ.
+            } else if (r.sym.isError) {
+              () // No commit character
+            } else {
+              item.setCommitCharacters(List(".").asJava)
+            }
         }
         if (idx == 0) {
           item.setPreselect(true)

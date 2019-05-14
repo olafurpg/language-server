@@ -4,7 +4,6 @@ import tests.BaseCompletionSuite
 import tests.pc.CrossTestEnrichments._
 
 object CompletionInterpolatorSuite extends BaseCompletionSuite {
-
   checkEdit(
     "string",
     """|object Main {
