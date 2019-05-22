@@ -5,6 +5,7 @@ import scala.meta.internal.metals.BatchedFunction
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object BatchedFunctionSuite extends BaseSuite {
+
   testAsync("batch") {
     val lock = new Object
     val mkString = BatchedFunction.fromFuture[String, String]({ numbers =>

@@ -41,8 +41,8 @@ object ClientCommands {
 
   val RunCode = Command(
     "metals-scala-run",
-    "run",
-    "runs code",
+    "Run",
+    "Run main function",
     """|`string`, Build target identifier
        |`string`, Name of the class containing the main method  
     """.stripMargin

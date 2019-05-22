@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.meta.internal.metals.GlobalTrace
 
 object JvmDebugServer {
   def launch(
@@ -48,6 +49,7 @@ object JvmDebugServer {
   )(implicit executorService: ExecutorService): Launcher[IDebugProtocolClient] =
     new DebugLauncher.Builder[IDebugProtocolClient]()
       .setLocalService(adapter)
+      .traceMessages(GlobalTrace.setupTracePrinter("dap"))
       .setInput(clientSocket.getInputStream)
       .setOutput(clientSocket.getOutputStream)
       .setRemoteInterface(classOf[IDebugProtocolClient])
