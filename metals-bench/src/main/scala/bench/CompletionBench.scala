@@ -20,6 +20,8 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import tests.Library
 import tests.TestingSymbolSearch
+import org.openjdk.jmh.annotations.TearDown
+import org.openjdk.jmh.annotations.Level
 
 @State(Scope.Benchmark)
 abstract class CompletionBench {
@@ -34,6 +36,19 @@ abstract class CompletionBench {
   def setup(): Unit = {
     runSetup()
   }
+
+  @TearDown(Level.Trial)
+  def teardownAfterAll(): Unit = {
+    afterAll()
+  }
+
+  @TearDown(Level.Iteration)
+  def teardownAfterEach(): Unit = {
+    afterEach()
+  }
+
+  def afterAll(): Unit = {}
+  def afterEach(): Unit = {}
 
   def downloadLibraries(): Unit = {
     libraries = Library.jdk :: Library.all
@@ -133,5 +148,31 @@ class CachedSearchAndCompilerCompletionBench extends CompletionBench {
     pc = newPC()
   }
 
+  override def afterAll(): Unit = {
+    pc.shutdown()
+  }
+
   override def presentationCompiler(): PresentationCompiler = pc
+}
+
+class CachedSearchAndUncachedCompilerCompletionBench extends CompletionBench {
+
+  var pc: PresentationCompiler = _
+
+  override def runSetup(): Unit = {
+    downloadLibraries()
+    pc = newPC()
+  }
+
+  override def afterEach(): Unit = {
+    pc.restart()
+  }
+
+  override def afterAll(): Unit = {
+    pc.shutdown()
+  }
+
+  override def presentationCompiler(): PresentationCompiler = {
+    pc
+  }
 }

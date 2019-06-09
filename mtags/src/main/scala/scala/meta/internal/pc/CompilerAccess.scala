@@ -51,13 +51,26 @@ class CompilerAccess(
     if (compiler != null) {
       compiler.askShutdown()
       _compiler = null
-      sh.foreach { scheduler =>
-        scheduler.schedule[Unit](() => {
-          if (compiler.presentationCompilerThread.isAlive) {
-            compiler.presentationCompilerThread.stop()
+      sh match {
+        case None =>
+          Thread.sleep(TimeUnit.SECONDS.toMillis(2))
+          val start = System.nanoTime()
+          def elapsedSeconds =
+            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - start)
+          while (elapsedSeconds < 2 && compiler.presentationCompilerThread.isAlive) {
+            Thread.sleep(10)
           }
-        }, 2, TimeUnit.SECONDS)
+          killCompiler(compiler)
+        case Some(scheduler) =>
+          scheduler.schedule[Unit](() => {
+            killCompiler(compiler)
+          }, 2, TimeUnit.SECONDS)
       }
+    }
+  }
+  private def killCompiler(compiler: MetalsGlobal): Unit = {
+    if (compiler.presentationCompilerThread.isAlive) {
+      compiler.presentationCompilerThread.stop()
     }
   }
 
