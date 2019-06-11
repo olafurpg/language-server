@@ -53,13 +53,13 @@ class CompilerAccess(
       _compiler = null
       sh match {
         case None =>
-          Thread.sleep(TimeUnit.SECONDS.toMillis(2))
-          val start = System.nanoTime()
-          def elapsedSeconds =
-            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - start)
-          while (elapsedSeconds < 2 && compiler.presentationCompilerThread.isAlive) {
-            Thread.sleep(10)
-          }
+          // Thread.sleep(TimeUnit.SECONDS.toMillis(2))
+          // val start = System.nanoTime()
+          // def elapsedSeconds =
+          //   TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - start)
+          // while (elapsedSeconds < 2 && compiler.presentationCompilerThread.isAlive) {
+          //   Thread.sleep(10)
+          // }
           killCompiler(compiler)
         case Some(scheduler) =>
           scheduler.schedule[Unit](() => {

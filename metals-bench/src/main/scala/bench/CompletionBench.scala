@@ -164,15 +164,14 @@ class CachedSearchAndUncachedCompilerCompletionBench extends CompletionBench {
     pc = newPC()
   }
 
-  override def afterEach(): Unit = {
-    pc.restart()
-  }
+  override def afterEach(): Unit = {}
 
   override def afterAll(): Unit = {
     pc.shutdown()
   }
 
   override def presentationCompiler(): PresentationCompiler = {
+    pc.restart()
     pc
   }
 }
