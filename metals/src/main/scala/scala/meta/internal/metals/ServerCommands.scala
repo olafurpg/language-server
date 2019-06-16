@@ -94,6 +94,15 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val Goto = Command(
+    "goto",
+    "Go to URI",
+    """|Move the cursor to the definition of the argument symbol.
+       |
+       |Arguments: [string], where the string is a SemanticDB symbol.
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */

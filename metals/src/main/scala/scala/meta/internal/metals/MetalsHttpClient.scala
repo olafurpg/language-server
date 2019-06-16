@@ -51,6 +51,12 @@ final class MetalsHttpClient(
 )(implicit ec: ExecutionContext)
     extends MetalsLanguageClient {
 
+  override def metalsTreeViewDidChange(
+      params: MetalsTreeViewDidChangeParams
+  ): Unit = {
+    underlying.metalsTreeViewDidChange(params)
+  }
+
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
@@ -294,6 +300,10 @@ final class MetalsHttpClient(
         }
       }
     }
+  }
+
+  override def metalsGoTo(params: MetalsGoToParams): Unit = {
+    underlying.metalsGoTo(params)
   }
 
 }

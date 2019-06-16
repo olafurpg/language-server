@@ -44,6 +44,7 @@ import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
+import com.google.gson.JsonPrimitive
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -158,6 +159,8 @@ class MetalsLanguageServer(
   private var embedded: Embedded = _
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
+  private val treeView =
+    new TreeViewProvider(buildTargets, () => buildClient, definitionIndex)
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = client
@@ -227,7 +230,8 @@ class MetalsLanguageServer(
       config,
       statusBar,
       time,
-      report => compilers.didCompile(report)
+      report => compilers.didCompile(report),
+      sh
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -988,10 +992,38 @@ class MetalsLanguageServer(
         Future {
           compilers.restartAll()
         }.asJavaObject
+      case ServerCommands.Goto() =>
+        Future {
+          val symbol = params
+            .getArguments()
+            .get(0)
+            .asInstanceOf[JsonPrimitive]
+            .getAsString()
+          pprint.log(symbol)
+          val path = definitionIndex.definition(Symbol(symbol)).map(_.path)
+          val locations = definitionProvider.fromSymbol(symbol)
+          if (!locations.isEmpty) {
+            val l = locations.get(0)
+            languageClient.metalsGoTo(
+              MetalsGoToParams(l.getUri(), l.getRange())
+            )
+          } else {
+            scribe.warn(s"no definition: $symbol")
+          }
+        }.asJavaObject
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
     }
+
+  @JsonRequest("metals/treeViewChildren")
+  def treeViewChildren(
+      params: MetalsTreeViewChildrenParams
+  ): CompletableFuture[MetalsTreeViewChildrenResult] = {
+    CompletableFuture.completedFuture {
+      treeView.children(params)
+    }
+  }
 
   private def slowConnectToBuildServer(
       forceImport: Boolean
@@ -1079,6 +1111,14 @@ class MetalsLanguageServer(
         case None =>
           Future.successful(BuildChange.None)
       }
+      _ = languageClient.metalsTreeViewDidChange(
+        MetalsTreeViewDidChangeParams(
+          Array(
+            MetalsTreeViewNode("build", null, null, isCollapsible = true),
+            MetalsTreeViewNode("compile", null, null, isCollapsible = true)
+          )
+        )
+      )
     } yield result
   }.recover {
     case NonFatal(e) =>

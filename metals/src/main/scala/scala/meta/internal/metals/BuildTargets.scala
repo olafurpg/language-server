@@ -55,6 +55,13 @@ final class BuildTargets() {
       scalac <- scalacTargetInfo.get(id)
     } yield ScalaTarget(target, scalac)
 
+  def allWorkspaceJars: Iterator[AbsolutePath] =
+    for {
+      target <- all
+      classpathEntry <- target.scalac.classpath
+      if classpathEntry.extension == "jar"
+    } yield classpathEntry
+
   def addSourceDirectory(
       directory: AbsolutePath,
       buildTarget: BuildTargetIdentifier

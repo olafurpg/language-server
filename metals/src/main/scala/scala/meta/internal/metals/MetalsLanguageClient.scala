@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
+import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
@@ -46,6 +47,12 @@ trait MetalsLanguageClient extends LanguageClient {
 
   def shutdown(): Unit = {}
 
+  @JsonNotification("metals/treeViewDidChange")
+  def metalsTreeViewDidChange(params: MetalsTreeViewDidChangeParams): Unit
+
+  @JsonNotification("metals/goto")
+  def metalsGoTo(params: MetalsGoToParams): Unit
+
 }
 
 /**
@@ -88,4 +95,38 @@ case class MetalsInputBoxResult(
     // value=null when cancelled=true
     @Nullable value: String = null,
     @Nullable cancelled: java.lang.Boolean = null
+)
+
+case class MetalsTreeViewChildrenParams(
+    viewId: String,
+    @Nullable nodeUri: String = null
+)
+
+case class MetalsTreeViewChildrenResult(
+    nodes: Array[MetalsTreeViewNode]
+)
+
+case class MetalsTreeViewNode(
+    viewId: String,
+    @Nullable nodeUri: String,
+    label: String,
+    @Nullable command: MetalsCommand = null,
+    @Nullable tooltip: String = null,
+    @Nullable isCollapsible: java.lang.Boolean = null
+)
+
+case class MetalsCommand(
+    title: String,
+    command: String,
+    @Nullable tooltip: String = null,
+    @Nullable arguments: Array[AnyRef] = null
+)
+
+case class MetalsTreeViewDidChangeParams(
+    nodes: Array[MetalsTreeViewNode]
+)
+
+case class MetalsGoToParams(
+    uri: String,
+    position: l.Range
 )

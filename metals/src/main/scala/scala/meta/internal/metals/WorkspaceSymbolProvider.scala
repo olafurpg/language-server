@@ -90,9 +90,7 @@ final class WorkspaceSymbolProvider(
     val packages = new PackageIndex()
     packages.visitBootClasspath()
     for {
-      target <- buildTargets.all
-      classpathEntry <- target.scalac.classpath
-      if classpathEntry.extension == "jar"
+      classpathEntry <- buildTargets.allWorkspaceJars
     } {
       packages.visit(classpathEntry)
     }

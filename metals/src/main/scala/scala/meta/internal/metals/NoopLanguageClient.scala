@@ -35,4 +35,8 @@ object NoopLanguageClient extends MetalsLanguageClient {
   ): CompletableFuture[MetalsInputBoxResult] = {
     CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
   }
+  override def metalsTreeViewDidChange(
+      params: MetalsTreeViewDidChangeParams
+  ): Unit = ()
+  override def metalsGoTo(params: MetalsGoToParams): Unit = ()
 }

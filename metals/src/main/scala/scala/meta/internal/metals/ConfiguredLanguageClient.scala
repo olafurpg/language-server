@@ -134,4 +134,15 @@ final class ConfiguredLanguageClient(
     }
   }
 
+  override def metalsTreeViewDidChange(
+      params: MetalsTreeViewDidChangeParams
+  ): Unit = {
+    // TODO(olafur): skip when client does not support tree view.
+    underlying.metalsTreeViewDidChange(params)
+  }
+
+  override def metalsGoTo(params: MetalsGoToParams): Unit = {
+    underlying.metalsGoTo(params)
+  }
+
 }
