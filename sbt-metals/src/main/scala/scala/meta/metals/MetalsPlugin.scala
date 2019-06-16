@@ -3,6 +3,7 @@ package scala.meta.metals {
   import sbt._
   import sbt.Keys._
   import scala.meta.internal.sbtmetals.BuildInfo
+  import com.lmax.disruptor.WorkerPool
 
   object MetalsPlugin extends AutoPlugin {
     override def trigger = allRequirements
@@ -28,6 +29,9 @@ package scala.meta.metals {
                  |2. Enables downloading of sources for bloopInstall""".stripMargin
     ) { s =>
       val extracted = Project.extract(s)
+      val workspace =
+        baseDirectory.in(ThisBuild).get(extracted.structure.data).get
+      val workspacePath = workspace.toPath()
       val settings: Seq[Setting[_]] = for {
         p <- extracted.structure.allProjectRefs
         projectScalaVersion <- scalaVersion
@@ -39,6 +43,19 @@ package scala.meta.metals {
         isExplicitlyDisabled = Some(true) ==
           SettingKey[Boolean]("noMetals").in(p).get(extracted.structure.data)
         if !isExplicitlyDisabled
+        projectBaseDirectory <- baseDirectory
+          .in(p)
+          // .in(ThisBuild)
+          .get(extracted.structure.data)
+          .toList
+        _ = println("project.build: " + p.build)
+        _ = println("project: " + p.project)
+        _ = println("projectBaseDirectory: " + projectBaseDirectory)
+        _ = println("workspaceBaseDirectory: " + workspace)
+        sourceroot = {
+          if (projectBaseDirectory.toPath().startsWith(workspacePath)) workspace
+          else projectBaseDirectory
+        }
         setting <- List(
           scalacOptions.in(p) --= List(
             // Disable fatal warnings so that SemanticDBs are generated even for unused warnings.
@@ -54,7 +71,7 @@ package scala.meta.metals {
             // The bloop server runs from a different working directory than the scala compiler
             // from inside an sbt shell session, setting sourceroot ensures paths are
             // relativized by the base directory of the build regardless.
-            s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
+            s"-P:semanticdb:sourceroot:${sourceroot}",
             "-Yrangepos",
             s"-Xplugin-require:semanticdb"
           ),
