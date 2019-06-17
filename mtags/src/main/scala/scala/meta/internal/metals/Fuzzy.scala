@@ -276,8 +276,8 @@ class Fuzzy {
               delimiter = i
               upper.append(ch)
             }
-            val namePrefix = new ZeroCopySubSequence(symbol, delimiter, i + 1)
-            result.add(namePrefix)
+          // val namePrefix = new ZeroCopySubSequence(symbol, delimiter, i + 1)
+          // result.add(namePrefix)
         }
         i += 1
       }

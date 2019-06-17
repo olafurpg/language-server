@@ -21,18 +21,24 @@ case class CompressedPackageIndex(
 }
 
 object CompressedPackageIndex {
-  private def isExcludedPackage(pkg: String): Boolean = {
+  def isExcludedPackage(pkg: String): Boolean = {
     // NOTE(olafur) At some point we may consider making this list configurable, I can
     // imagine that some people wouldn't mind excluding more packages or including for
     // example javax._.
+    pkg.startsWith("META-INF/") ||
+    pkg.startsWith("images/") ||
+    pkg.startsWith("toolbarButtonGraphics/") ||
     pkg.startsWith("jdk/") ||
     pkg.startsWith("sun/") ||
     pkg.startsWith("javax/") ||
     pkg.startsWith("oracle/") ||
     pkg.startsWith("org/omg/") ||
+    pkg.startsWith("org/graalvm/") ||
     pkg.startsWith("com/oracle/") ||
     pkg.startsWith("com/sun/") ||
-    pkg.startsWith("com/apple/")
+    pkg.startsWith("com/apple/") ||
+    pkg.startsWith("apple/")
+
   }
   def fromPackages(
       packages: PackageIndex
@@ -43,6 +49,10 @@ object CompressedPackageIndex {
     } yield {
       val buf = Fuzzy.bloomFilterSymbolStrings(members.asScala)
       buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)
+      if (buf.size > 1000000) {
+        pprint.log(pkg -> buf.size)
+        pprint.log(members.asScala)
+      }
       val bloom = BloomFilters.create(buf.size)
       buf.foreach { key =>
         bloom.put(key)

@@ -13,9 +13,14 @@ import java.util.logging.Logger
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.collection.JavaConverters._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.util.control.NonFatal
+import scala.util.Properties
+import java.nio.file.FileSystems
+import java.net.URI
+import java.util.concurrent.TimeUnit
 
 /**
  * An index to lookup classfiles contained in a given classpath.
@@ -80,6 +85,7 @@ class PackageIndex() {
       }
     )
   }
+
   private def visitJarEntry(jarpath: AbsolutePath): Unit = {
     val file = jarpath.toFile
     val jar = new JarFile(file)
@@ -113,10 +119,66 @@ class PackageIndex() {
   }
 
   def visitBootClasspath(): Unit = {
-    PackageIndex.bootClasspath.foreach(visit)
+    if (Properties.isJavaAtLeast("9")) {
+      expandJrtClasspath()
+    } else {
+      PackageIndex.bootClasspath.foreach(visit)
+    }
     PackageIndex.scalaLibrary.foreach { scalaLibrary =>
       visit(AbsolutePath(scalaLibrary))
     }
+  }
+
+  private def expandJrtClasspath(): Unit = {
+    val fs = FileSystems.getFileSystem(URI.create("jrt:/"))
+    val dir = fs.getPath("/packages")
+    var count = 0
+    val start = System.nanoTime()
+    for {
+      pkg <- Files.newDirectoryStream(dir).iterator().asScala
+      symbol = pkg.toString.stripPrefix("/packages/").replace('.', '/') + "/"
+      moduleLink <- Files.list(pkg).iterator().asScala
+    } {
+      val module =
+        if (!Files.isSymbolicLink(moduleLink)) moduleLink
+        else Files.readSymbolicLink(moduleLink)
+      Files.walkFileTree(
+        module,
+        new SimpleFileVisitor[Path] {
+          private var activeDirectory: String = ""
+          override def preVisitDirectory(
+              dir: Path,
+              attrs: BasicFileAttributes
+          ): FileVisitResult = {
+            activeDirectory =
+              module.relativize(dir).iterator().asScala.mkString("", "/", "/")
+            if (CompressedPackageIndex.isExcludedPackage(activeDirectory)) {
+              FileVisitResult.SKIP_SUBTREE
+            } else {
+              FileVisitResult.CONTINUE
+            }
+          }
+          override def visitFile(
+              file: Path,
+              attrs: BasicFileAttributes
+          ): FileVisitResult = {
+            val filename = file.getFileName().toString()
+            if (filename.endsWith(".class")) {
+              // pprint.log(activeDirectory -> filename)
+              addMember(activeDirectory, filename)
+              count += 1
+            }
+            // val rel = module.relativize(file)
+            // pprint.log(symbol -> rel)
+            FileVisitResult.CONTINUE
+          }
+        }
+      )
+    }
+    pprint.log(count)
+    val ms = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start)
+    pprint.log(ms)
+    new Exception().printStackTrace()
   }
 
 }
