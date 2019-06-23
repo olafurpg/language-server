@@ -53,6 +53,8 @@ trait MtagsEnrichments {
     else Language.UNKNOWN_LANGUAGE
   }
   implicit class XtensionPathMetals(file: Path) {
+    def isClassfile: Boolean = filename.endsWith(".class")
+    def filename: String = file.getFileName().toString()
     def toLanguage: Language = {
       filenameToLanguage(file.getFileName.toString)
     }

@@ -1126,8 +1126,18 @@ class MetalsLanguageServer(
       _ = languageClient.metalsTreeViewDidChange(
         MetalsTreeViewDidChangeParams(
           Array(
-            MetalsTreeViewNode("build", null, null, isCollapsible = true),
-            MetalsTreeViewNode("compile", null, null, isCollapsible = true)
+            MetalsTreeViewNode(
+              "build",
+              null,
+              null,
+              collapseState = MetalsTreeItemCollapseState.collapsed
+            ),
+            MetalsTreeViewNode(
+              "compile",
+              null,
+              null,
+              collapseState = MetalsTreeItemCollapseState.collapsed
+            )
           )
         )
       )

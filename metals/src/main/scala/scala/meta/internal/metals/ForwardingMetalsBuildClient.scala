@@ -207,7 +207,7 @@ final class ForwardingMetalsBuildClient(
       "compile",
       "metals://ongoing-compilations",
       s"Ongoing compilations$counter",
-      isCollapsible = true
+      collapseState = MetalsTreeItemCollapseState.collapsed
     )
   }
   def toplevelTreeNodes: Array[MetalsTreeViewNode] =

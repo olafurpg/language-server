@@ -117,8 +117,20 @@ case class MetalsTreeViewNode(
     label: String,
     @Nullable command: MetalsCommand = null,
     @Nullable tooltip: String = null,
-    @Nullable isCollapsible: java.lang.Boolean = null
-)
+    // One of "collapsed", "expanded" or "none"
+    @Nullable collapseState: String = null
+) {
+  def isCollapsed = collapseState == MetalsTreeItemCollapseState.collapsed
+  def isExpanded = collapseState == MetalsTreeItemCollapseState.expanded
+  def isNoCollapse = collapseState == MetalsTreeItemCollapseState.none
+}
+
+object MetalsTreeItemCollapseState {
+  def collapsed: String = "collapsed"
+  def expanded: String = "expanded"
+  def none: String = null
+
+}
 
 case class MetalsCommand(
     title: String,

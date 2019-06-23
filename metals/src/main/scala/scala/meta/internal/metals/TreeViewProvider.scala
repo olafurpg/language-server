@@ -16,6 +16,10 @@ import java.util.concurrent.ScheduledExecutorService
 import scala.collection.concurrent.TrieMap
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.FileVisitResult
+import java.nio.file.attribute.BasicFileAttributes
 
 class TreeViewProvider(
     buildTargets: BuildTargets,
@@ -73,13 +77,13 @@ class TreeViewProvider(
                 "build",
                 buildTargetsUri,
                 "Targets",
-                isCollapsible = true
+                collapseState = MetalsTreeItemCollapseState.collapsed
               ),
               MetalsTreeViewNode(
                 "build",
                 buildJarsUri,
                 "Libraries",
-                isCollapsible = true
+                collapseState = MetalsTreeItemCollapseState.collapsed
               )
             )
           case Some(uri) =>
@@ -89,7 +93,7 @@ class TreeViewProvider(
                   "build",
                   target.info.getId().getUri(),
                   target.info.getDisplayName,
-                  isCollapsible = true
+                  collapseState = MetalsTreeItemCollapseState.collapsed
                 )
               }.toArray
             } else if (uri == buildJarsUri) {
@@ -104,7 +108,7 @@ class TreeViewProvider(
                     uri,
                     jar.toNIO.getFileName().toString(),
                     tooltip = uri,
-                    isCollapsible = true
+                    collapseState = MetalsTreeItemCollapseState.collapsed
                   )
                 }
               }
@@ -177,52 +181,116 @@ class TreeViewProvider(
       create = false,
       close = true
     ) { root =>
-      list(root)
+      list(root).map { node =>
+        if (node.isCollapsed) {
+          node.copy(collapseState = MetalsTreeItemCollapseState.expanded)
+        } else node
+      }
     }
   }
 
-  def list(root: AbsolutePath): Array[MetalsTreeViewNode] = {
-    val ls = Files.list(root.toNIO)
+  private def containsClassfile(dir: Path): Boolean = {
+    var foundClassfile = false
+    Files.walkFileTree(
+      dir,
+      new SimpleFileVisitor[Path] {
+        override def preVisitDirectory(
+            dir: Path,
+            attrs: BasicFileAttributes
+        ): FileVisitResult = {
+          if (foundClassfile) FileVisitResult.SKIP_SUBTREE
+          else FileVisitResult.CONTINUE
+        }
+        override def visitFile(
+            file: Path,
+            attrs: BasicFileAttributes
+        ): FileVisitResult = {
+          if (file.isClassfile) {
+            foundClassfile = true
+          }
+          if (foundClassfile) FileVisitResult.SKIP_SIBLINGS
+          else FileVisitResult.CONTINUE
+        }
+      }
+    )
+    foundClassfile
+  }
+
+  private def listFiles(path: Path): collection.Seq[Path] = {
+    val ls = Files.list(path)
     try {
       ls.iterator()
         .asScala
-        .flatMap { path =>
-          val uri = path.toUri.toString()
-          if (uri.endsWith(".class") && uri.contains('$')) Nil
-          else {
-            val (command, isDefinition) =
-              if (uri.endsWith(".class")) {
-                val symbol = path
-                  .toString()
-                  .stripPrefix("/")
-                  .stripSuffix(".class") + "#"
-                Some(
-                  MetalsCommand(
-                    "Go to Definition",
-                    "metals.goto",
-                    symbol,
-                    Array(symbol)
-                  )
-                ) -> definitionIndex.definition(Symbol(symbol)).isDefined
-              } else {
-                (None, true)
-              }
-            if (!isDefinition) Nil
-            else {
-              MetalsTreeViewNode(
-                "build",
-                uri,
-                path.getFileName().toString(),
-                tooltip = uri,
-                isCollapsible = Files.isDirectory(path),
-                command = command.orNull
-              ) :: Nil
-            }
-          }
+        .filter { path =>
+          if (Files.isDirectory(path)) containsClassfile(path)
+          else path.isClassfile
         }
-        .toArray
+        .toBuffer
     } finally {
       ls.close()
     }
+  }
+  def list(root: AbsolutePath): Array[MetalsTreeViewNode] = {
+    def visit(
+        path: Path,
+        filenamePrefix: List[String] = Nil
+    ): List[MetalsTreeViewNode] = {
+      val uri = path.toUri.toString()
+      if (uri.endsWith(".class") && uri.contains('$')) Nil
+      else {
+        val (command, isDefinition) =
+          if (uri.endsWith(".class")) {
+            val symbol = path
+              .toString()
+              .stripPrefix("/")
+              .stripSuffix(".class") + "#"
+            Some(
+              MetalsCommand(
+                "Go to Definition",
+                "metals.goto",
+                symbol,
+                Array(symbol)
+              )
+            ) -> definitionIndex.definition(Symbol(symbol)).isDefined
+          } else {
+            (None, true)
+          }
+        if (!isDefinition) Nil
+        else {
+          val isDirectory = Files.isDirectory(path)
+          val children =
+            if (isDirectory) listFiles(path)
+            else Nil
+          val filename = path.getFileName().toString()
+          if (isDirectory &&
+            children.size == 1 &&
+            children.forall(child => Files.isDirectory(path))) {
+            visit(children.head, filename :: filenamePrefix)
+          } else if (isDirectory && children.isEmpty) {
+            Nil
+          } else {
+            val collapseState =
+              if (isDirectory) {
+                if (children.size == 1) MetalsTreeItemCollapseState.expanded
+                else MetalsTreeItemCollapseState.collapsed
+              } else {
+                MetalsTreeItemCollapseState.none
+              }
+            MetalsTreeViewNode(
+              "build",
+              uri,
+              (filename :: filenamePrefix).reverse.mkString,
+              tooltip = uri,
+              collapseState = collapseState,
+              command = command.orNull
+            ) :: Nil
+          }
+        }
+      }
+    }
+    listFiles(root.toNIO).iterator
+      .flatMap(path => visit(path))
+      .toArray
+      .sortBy(!_.isNoCollapse)
   }
 }
