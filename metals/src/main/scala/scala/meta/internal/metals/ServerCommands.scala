@@ -10,21 +10,20 @@ object ServerCommands {
   val ImportBuild = Command(
     "build-import",
     "Import build",
-    """Unconditionally `sbt bloopInstall` and re-connect to the build server.
+    """Import the latest changes from the build to for example pick up new library dependencies.
       |
-      |Is by default automatically managed by the language server, but sometimes it's
-      |useful to manually trigger it instead.
+      |By default, Metals automatically prompts you to import the build when sources of the build change.
+      |Use this command to manually trigger an import build instead of relying on the automatic prompt.
       |""".stripMargin
   )
 
   val ConnectBuildServer = Command(
     "build-connect",
     "Connect to build server",
-    """Unconditionally cancel existing build server connection and re-connect.
+    """Establish a new connection to the build server and reindex the workspace.
       |
-      |Useful if you manually run `bloopInstall` from the sbt shell, in which
-      |case this command is needed to tell metals to communicate with the bloop
-      |server.
+      |This command can be helpful in scenarios when Metals feels unresponsive, for example
+      |when reopening Metals after the computer it has been sleeping.
       |""".stripMargin
   )
 
@@ -50,14 +49,17 @@ object ServerCommands {
   val RunDoctor = Command(
     "doctor-run",
     "Run doctor",
-    """|Open the Metals doctor to troubleshoot potential problems.
+    """|Open the Metals doctor to troubleshoot potential problems with the build.
+       |
+       |This command can be helpful in scenarios where features are not working as expected such
+       |as compile errors are not appearing or completions are not correct.
        |""".stripMargin
   )
 
   val CascadeCompile = Command(
     "compile-cascade",
     "Cascade compile",
-    """|Compile the current file along with all build targets in this workspace that depend on it.
+    """|Compile the current open files along with all build targets in this workspace that depend on those files.
        |
        |By default, Metals compiles only the current build target and its dependencies when saving a file.
        |Run the cascade compile task to additionally compile the inverse dependencies of the current build target.

@@ -12,47 +12,63 @@ import java.net.JarURLConnection
 import java.nio.file.Paths
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
+import java.util.concurrent.ScheduledExecutorService
+import scala.collection.concurrent.TrieMap
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 class TreeViewProvider(
     buildTargets: BuildTargets,
     buildClient: () => ForwardingMetalsBuildClient,
-    definitionIndex: OnDemandSymbolIndex
+    definitionIndex: OnDemandSymbolIndex,
+    sh: ScheduledExecutorService
 ) {
+  val ticks = TrieMap.empty[String, ScheduledFuture[_]]
   def buildTargetsUri: String = "metals:build/targets"
   def buildJarsUri: String = "metals:build/jars"
+
+  def visibilityDidChange(
+      params: MetalsTreeViewVisibilityDidChangeParams
+  ): Unit = {
+    if (params.visible) {
+      params.viewId match {
+        case "compile" =>
+          ticks(params.viewId) = sh.scheduleAtFixedRate(
+            () => buildClient().tickBuildTreeView(),
+            1,
+            1,
+            TimeUnit.SECONDS
+          )
+        case _ =>
+      }
+    } else {
+      ticks.remove(params.viewId).foreach(_.cancel(false))
+    }
+  }
+
+  private def toTreeViewNode(command: Command): MetalsTreeViewNode = {
+    MetalsTreeViewNode(
+      viewId = "commands",
+      nodeUri = command.id,
+      label = command.title,
+      command = MetalsCommand(command.title, command.id, command.description),
+      tooltip = command.description
+    )
+  }
+
   def children(
       params: MetalsTreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = {
     val children: Array[MetalsTreeViewNode] = params.viewId match {
       case "commands" =>
-        ServerCommands.all.map { command =>
-          MetalsTreeViewNode(
-            "commands",
-            command.id,
-            command.title,
-            command =
-              MetalsCommand(command.title, command.id, command.description)
-          )
-        }.toArray
-      case "compile" =>
-        Option(params.nodeUri) match {
-          case None =>
-            buildClient().toplevelTreeNodes
-          case Some(uri) =>
-            if (uri == buildClient().recentCompilationNode.nodeUri) {
-              buildClient().recentCompilations
-            } else if (uri == buildClient().ongoingCompilationNode.nodeUri) {
-              buildClient().ongoingCompilations
-            } else {
-              buildClient()
-                .ongoingCompileNode(new BuildTargetIdentifier(uri))
-                .toArray
-            }
-        }
+        ServerCommands.all.map(toTreeViewNode).toArray
       case "build" =>
         Option(params.nodeUri) match {
           case None =>
             Array(
+              toTreeViewNode(ServerCommands.ImportBuild),
+              toTreeViewNode(ServerCommands.ConnectBuildServer),
+              toTreeViewNode(ServerCommands.RunDoctor),
               MetalsTreeViewNode(
                 "build",
                 buildTargetsUri,
@@ -131,6 +147,23 @@ class TreeViewProvider(
                     )
                   )
               }
+            }
+        }
+      case "compile" =>
+        Option(params.nodeUri) match {
+          case None =>
+            Array(
+              toTreeViewNode(ServerCommands.CascadeCompile),
+              toTreeViewNode(ServerCommands.CancelCompile),
+              buildClient().ongoingCompilationNode
+            )
+          case Some(uri) =>
+            if (uri == buildClient().ongoingCompilationNode.nodeUri) {
+              buildClient().ongoingCompilations
+            } else {
+              buildClient()
+                .ongoingCompileNode(new BuildTargetIdentifier(uri))
+                .toArray
             }
         }
       case _ => Array.empty

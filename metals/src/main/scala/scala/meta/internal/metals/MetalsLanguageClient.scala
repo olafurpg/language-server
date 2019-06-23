@@ -102,6 +102,11 @@ case class MetalsTreeViewChildrenParams(
     @Nullable nodeUri: String = null
 )
 
+case class MetalsTreeViewVisibilityDidChangeParams(
+    viewId: String,
+    visible: java.lang.Boolean
+)
+
 case class MetalsTreeViewChildrenResult(
     nodes: Array[MetalsTreeViewNode]
 )

@@ -159,8 +159,12 @@ class MetalsLanguageServer(
   private var embedded: Embedded = _
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
-  private val treeView =
-    new TreeViewProvider(buildTargets, () => buildClient, definitionIndex)
+  private val treeView = new TreeViewProvider(
+    buildTargets,
+    () => buildClient,
+    definitionIndex,
+    sh
+  )
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = client
@@ -230,8 +234,7 @@ class MetalsLanguageServer(
       config,
       statusBar,
       time,
-      report => compilers.didCompile(report),
-      sh
+      report => compilers.didCompile(report)
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -999,13 +1002,14 @@ class MetalsLanguageServer(
             .get(0)
             .asInstanceOf[JsonPrimitive]
             .getAsString()
-          pprint.log(symbol)
           val path = definitionIndex.definition(Symbol(symbol)).map(_.path)
           val locations = definitionProvider.fromSymbol(symbol)
           if (!locations.isEmpty) {
-            val l = locations.get(0)
-            languageClient.metalsGoTo(
-              MetalsGoToParams(l.getUri(), l.getRange())
+            languageClient.metalsExecuteClientCommand(
+              new ExecuteCommandParams(
+                ClientCommands.GotoLocation.id,
+                List(locations.get(0): Object).asJava
+              )
             )
           } else {
             scribe.warn(s"no definition: $symbol")
@@ -1024,6 +1028,14 @@ class MetalsLanguageServer(
       treeView.children(params)
     }
   }
+
+  @JsonNotification("metals/treeViewVisibilityDidChange")
+  def treeViewVisibilityDidChange(
+      params: MetalsTreeViewVisibilityDidChangeParams
+  ): CompletableFuture[Unit] =
+    Future {
+      treeView.visibilityDidChange(params)
+    }.asJava
 
   private def slowConnectToBuildServer(
       forceImport: Boolean

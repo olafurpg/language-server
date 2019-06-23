@@ -50,7 +50,25 @@ object ClientCommands {
     """.stripMargin
   )
 
+  val GotoLocation = Command(
+    "metals-goto-location",
+    "run",
+    "Move the cursor focus the the provided location",
+    """|A LSP `Location` object with `uri` and `range` fields.
+       |Example: 
+       |```json
+       |{
+       |  "uri": "file://path/to/Definition.scala",
+       |  "range": {
+       |    "start": {"line": 194, "character": 0},
+       |    "end":   {"line": 194, "character": 1}
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def all: List[Command] = List(
+    GotoLocation,
     RunDoctor,
     ToggleLogs,
     FocusDiagnostics

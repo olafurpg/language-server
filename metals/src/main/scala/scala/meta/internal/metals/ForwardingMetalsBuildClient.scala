@@ -15,8 +15,6 @@ import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -29,12 +27,9 @@ final class ForwardingMetalsBuildClient(
     config: MetalsServerConfig,
     statusBar: StatusBar,
     time: Time,
-    didCompile: CompileReport => Unit,
-    sh: ScheduledExecutorService
+    didCompile: CompileReport => Unit
 ) extends MetalsBuildClient
     with Cancelable {
-
-  sh.scheduleAtFixedRate(() => tickBuildTreeView(), 1, 1, TimeUnit.SECONDS)
 
   private case class Compilation(
       timer: Timer,
@@ -201,7 +196,7 @@ final class ForwardingMetalsBuildClient(
       MetalsTreeViewNode(
         "compile",
         id.getUri,
-        s"${info.getDisplayName()} - ${compilation.timer} (${compilation.progress.percentage}%)"
+        s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progress.percentage}%)"
       )
   }
 
@@ -215,15 +210,8 @@ final class ForwardingMetalsBuildClient(
       isCollapsible = true
     )
   }
-  def recentCompilationNode: MetalsTreeViewNode =
-    MetalsTreeViewNode(
-      "compile",
-      "metals://recent-compilations",
-      "Recent compilations",
-      isCollapsible = true
-    )
   def toplevelTreeNodes: Array[MetalsTreeViewNode] =
-    Array(ongoingCompilationNode, recentCompilationNode)
+    Array(ongoingCompilationNode)
 
   private val wasEmpty = new AtomicBoolean(true)
   private val isEmpty = new AtomicBoolean(true)
