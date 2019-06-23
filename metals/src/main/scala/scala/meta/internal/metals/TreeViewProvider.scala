@@ -21,6 +21,10 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.FileVisitResult
 import java.nio.file.attribute.BasicFileAttributes
 import org.eclipse.lsp4j.ExecuteCommandParams
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.semanticdb.Language.JAVA
+import scala.meta.internal.semanticdb.Language.SCALA
 
 class TreeViewProvider(
     workspace: () => AbsolutePath,
@@ -32,8 +36,8 @@ class TreeViewProvider(
 ) {
   val ticks = TrieMap.empty[String, ScheduledFuture[_]]
   private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
-  def buildTargetsUri: String = "metals:build/targets"
-  def buildJarsUri: String = "metals:build/jars"
+  def buildTargetsUri: String = "metals://build/targets"
+  def buildJarsUri: String = "metals://build/jars"
 
   def visibilityDidChange(
       params: MetalsTreeViewVisibilityDidChangeParams
@@ -58,13 +62,43 @@ class TreeViewProvider(
   private def toTreeViewNode(command: Command): MetalsTreeViewNode = {
     MetalsTreeViewNode(
       viewId = "commands",
-      nodeUri = command.id,
+      nodeUri = s"metals://command/${command.id}",
       label = command.title,
       command = MetalsCommand(command.title, command.id, command.description),
       tooltip = command.description
     )
   }
 
+  val parents = ConcurrentHashSet.empty[String]
+
+  def parent(
+      params: MetalsTreeViewParentParams
+  ): MetalsTreeViewParentResult = {
+    MetalsTreeViewParentResult(
+      params.viewId match {
+        case "build" =>
+          val uri =
+            if (params.nodeUri.contains("!/")) {
+              val dirname = PathIO.dirname(params.nodeUri)
+              if (dirname.endsWith("!/")) {
+                dirname.stripSuffix("!/").stripPrefix("jar:")
+              } else dirname
+            } else if (params.nodeUri.endsWith(".jar")) {
+              buildJarsUri
+            } else {
+              null
+            }
+          if (uri != null) parents.add(uri)
+          uri
+        case _ =>
+          null
+      }
+    )
+  }
+
+  def collapsedIfNotParent(uri: String): String =
+    if (parents.contains(uri)) MetalsTreeItemCollapseState.expanded
+    else MetalsTreeItemCollapseState.collapsed
   def children(
       params: MetalsTreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = {
@@ -82,13 +116,13 @@ class TreeViewProvider(
                 "build",
                 buildTargetsUri,
                 "Targets",
-                collapseState = MetalsTreeItemCollapseState.collapsed
+                collapseState = collapsedIfNotParent(buildTargetsUri)
               ),
               MetalsTreeViewNode(
                 "build",
                 buildJarsUri,
                 "Libraries",
-                collapseState = MetalsTreeItemCollapseState.collapsed
+                collapseState = collapsedIfNotParent(buildTargetsUri)
               )
             )
           case Some(uri) =>
@@ -113,7 +147,7 @@ class TreeViewProvider(
                     uri,
                     jar.toNIO.getFileName().toString(),
                     tooltip = uri,
-                    collapseState = MetalsTreeItemCollapseState.collapsed
+                    collapseState = collapsedIfNotParent(uri)
                   )
                 }
               }
@@ -267,7 +301,7 @@ class TreeViewProvider(
             if (isDirectory) listFiles(path)
             else Nil
           val filename = path.getFileName().toString()
-          if (isDirectory &&
+          if (false && isDirectory &&
             children.size == 1 &&
             children.forall(child => Files.isDirectory(path))) {
             visit(children.head, filename :: filenamePrefix)
@@ -275,7 +309,8 @@ class TreeViewProvider(
             Nil
           } else {
             val collapseState =
-              if (isDirectory) {
+              if (parents.contains(uri)) MetalsTreeItemCollapseState.expanded
+              else if (isDirectory) {
                 if (children.size == 1) MetalsTreeItemCollapseState.expanded
                 else MetalsTreeItemCollapseState.collapsed
               } else {
@@ -299,19 +334,18 @@ class TreeViewProvider(
       .sortBy(!_.isNoCollapse)
   }
 
-  def findDependencySourceURI(path: AbsolutePath): Option[URI] = {
-    val relativeUri = path
-      .toRelative(workspace().resolve(Directories.readonly))
-      .toURI(false)
-      .toString()
-    val it = buildTargets.dependencySources.iterator
+  private def findClassfile(relativeUris: List[String]): Option[URI] = {
+    if (relativeUris.isEmpty) return None
+    val jars = buildTargets.allWorkspaceJars
     var result = Option.empty[URI]
-    while (it.hasNext && result == None) {
-      val jar = it.next()
+    while (jars.hasNext && result == None) {
+      val jar = jars.next()
       FileIO.withJarFileSystem(jar, create = false, close = false) { root =>
-        val source = root.resolve(relativeUri)
-        if (source.isFile) {
-          result = Some(source.toURI)
+        relativeUris.foreach { relativeUri =>
+          val source = root.resolve(relativeUri)
+          if (source.isFile) {
+            result = Some(source.toURI)
+          }
         }
       }
     }
@@ -320,9 +354,27 @@ class TreeViewProvider(
 
   def didFocusReadonly(path: AbsolutePath): Unit = {
     if (isVisible("build")) {
-      val dependencyURI = findDependencySourceURI(path)
-      pprint.log(dependencyURI)
-      dependencyURI.foreach { uri =>
+      val classfiles: List[String] = path.toLanguage match {
+        case JAVA =>
+          val uri = path
+            .toRelative(workspace().resolve(Directories.readonly))
+            .resolveSibling(_.replaceAllLiterally(".java", ".class"))
+            .toURI(false)
+            .toString
+          uri :: Nil
+        case SCALA =>
+          val input = path.toInput
+          val toplevels = Mtags.toplevels(input)
+          toplevels.map { toplevel =>
+            import scala.meta.internal.semanticdb.Scala._
+            toplevel.owner + toplevel.desc.name.value + ".class"
+          }
+        case _ => Nil
+      }
+      pprint.log(classfiles)
+      val classfileUri = findClassfile(classfiles)
+      pprint.log(classfileUri)
+      classfileUri.foreach { uri =>
         languageClient.metalsExecuteClientCommand(
           new ExecuteCommandParams(
             ClientCommands.RevealTreeView.id,

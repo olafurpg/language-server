@@ -1007,7 +1007,6 @@ class MetalsLanguageServer(
             .get(0)
             .asInstanceOf[JsonPrimitive]
             .getAsString()
-          val path = definitionIndex.definition(Symbol(symbol)).map(_.path)
           val locations = definitionProvider.fromSymbol(symbol)
           if (!locations.isEmpty) {
             languageClient.metalsExecuteClientCommand(
@@ -1031,6 +1030,15 @@ class MetalsLanguageServer(
   ): CompletableFuture[MetalsTreeViewChildrenResult] = {
     CompletableFuture.completedFuture {
       treeView.children(params)
+    }
+  }
+
+  @JsonRequest("metals/treeViewParent")
+  def treeViewParent(
+      params: MetalsTreeViewParentParams
+  ): CompletableFuture[MetalsTreeViewParentResult] = {
+    CompletableFuture.completedFuture {
+      treeView.parent(params)
     }
   }
 
