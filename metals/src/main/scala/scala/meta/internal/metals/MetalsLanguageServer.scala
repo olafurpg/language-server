@@ -25,7 +25,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.HashSet
+import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -160,6 +160,8 @@ class MetalsLanguageServer(
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
   private val treeView = new TreeViewProvider(
+    () => workspace,
+    languageClient,
     buildTargets,
     () => buildClient,
     definitionIndex,
@@ -579,7 +581,10 @@ class MetalsLanguageServer(
     interactiveSemanticdbs.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
-    if (openedFiles.isRecentlyActive(path)) {
+    if (path.isDependencySource(workspace)) {
+      treeView.didFocusReadonly(path)
+      CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
+    } else if (openedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
       buildTargets.inverseSources(path) match {
@@ -1398,7 +1403,7 @@ class MetalsLanguageServer(
     // Track used Jars so that we can
     // remove cached symbols from Jars
     // that are not used
-    val usedJars = HashSet[AbsolutePath]()
+    val usedJars = mutable.HashSet.empty[AbsolutePath]
     JdkSources(userConfig.javaHome).foreach { zip =>
       usedJars += zip
       addSourceJarSymbols(zip)

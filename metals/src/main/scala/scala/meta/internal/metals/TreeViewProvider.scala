@@ -20,20 +20,25 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.FileVisitResult
 import java.nio.file.attribute.BasicFileAttributes
+import org.eclipse.lsp4j.ExecuteCommandParams
 
 class TreeViewProvider(
+    workspace: () => AbsolutePath,
+    languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
     buildClient: () => ForwardingMetalsBuildClient,
     definitionIndex: OnDemandSymbolIndex,
     sh: ScheduledExecutorService
 ) {
   val ticks = TrieMap.empty[String, ScheduledFuture[_]]
+  private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
   def buildTargetsUri: String = "metals:build/targets"
   def buildJarsUri: String = "metals:build/jars"
 
   def visibilityDidChange(
       params: MetalsTreeViewVisibilityDidChangeParams
   ): Unit = {
+    isVisible(params.viewId) = params.visible
     if (params.visible) {
       params.viewId match {
         case "compile" =>
@@ -292,5 +297,39 @@ class TreeViewProvider(
       .flatMap(path => visit(path))
       .toArray
       .sortBy(!_.isNoCollapse)
+  }
+
+  def findDependencySourceURI(path: AbsolutePath): Option[URI] = {
+    val relativeUri = path
+      .toRelative(workspace().resolve(Directories.readonly))
+      .toURI(false)
+      .toString()
+    val it = buildTargets.dependencySources.iterator
+    var result = Option.empty[URI]
+    while (it.hasNext && result == None) {
+      val jar = it.next()
+      FileIO.withJarFileSystem(jar, create = false, close = false) { root =>
+        val source = root.resolve(relativeUri)
+        if (source.isFile) {
+          result = Some(source.toURI)
+        }
+      }
+    }
+    result
+  }
+
+  def didFocusReadonly(path: AbsolutePath): Unit = {
+    if (isVisible("build")) {
+      val dependencyURI = findDependencySourceURI(path)
+      pprint.log(dependencyURI)
+      dependencyURI.foreach { uri =>
+        languageClient.metalsExecuteClientCommand(
+          new ExecuteCommandParams(
+            ClientCommands.RevealTreeView.id,
+            List(MetalsRevealTreeViewParams("build", uri.toString()): Object).asJava
+          )
+        )
+      }
+    }
   }
 }

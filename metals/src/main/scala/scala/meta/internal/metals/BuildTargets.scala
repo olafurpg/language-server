@@ -196,6 +196,8 @@ final class BuildTargets() {
     inverseDependencySources.get(sourceJar)
   }
 
+  def dependencySources: Iterable[AbsolutePath] = inverseDependencySources.keys
+
 }
 
 object BuildTargets {

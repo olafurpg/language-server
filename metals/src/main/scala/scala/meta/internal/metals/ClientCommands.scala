@@ -67,6 +67,20 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val RevealTreeView = Command(
+    "metals-reveal-treeview",
+    "run",
+    "Reveal the tree view node with the given URI.",
+    """|An object with string fields `viewId` and `uri`.
+       |Example: 
+       |```json
+       |{
+       |  "viewId": "compile",
+       |  "uri": "jar:file://some.jar!/path/to/Definition.class"
+       |}
+       |""".stripMargin
+  )
+
   def all: List[Command] = List(
     GotoLocation,
     RunDoctor,

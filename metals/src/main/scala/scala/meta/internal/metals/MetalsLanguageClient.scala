@@ -147,3 +147,8 @@ case class MetalsGoToParams(
     uri: String,
     position: l.Range
 )
+
+case class MetalsRevealTreeViewParams(
+    viewId: String,
+    uri: String
+)
