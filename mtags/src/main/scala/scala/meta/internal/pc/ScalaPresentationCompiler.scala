@@ -26,6 +26,7 @@ import scala.util.Properties
 import java.util.concurrent.CompletableFuture
 import scala.meta.pc.DefinitionResult
 import scala.collection.Seq
+import scala.tools.nsc.reporters.ConsoleReporter
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -167,7 +168,8 @@ case class ScalaPresentationCompiler(
     require(unprocessed.isEmpty, unprocessed)
     new MetalsGlobal(
       settings,
-      new StoreReporter,
+      new ConsoleReporter(settings),
+      // new StoreReporter,
       search,
       buildTargetIdentifier,
       config

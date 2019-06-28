@@ -496,4 +496,14 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     filter = _.contains("hello")
   )
 
+  check(
+    "xxx",
+    """
+      |val message = "Hello!"
+      |println(messa@@)
+      |""".stripMargin,
+    "message",
+    enablePackageWrap = false
+  )
+
 }

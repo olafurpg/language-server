@@ -387,7 +387,18 @@ class MetalsGlobal(
       case _ => code
     }
     val unit = newCompilationUnit(codeWithCursor, filename)
+    val sc = """println("Hello world!") """"
     val richUnit = new RichCompilationUnit(unit.source)
+    val parser = newUnitParser(richUnit)
+    val stats = parser.parseStats()
+    val classdef = new ClassDef(
+      Modifiers(0),
+      TypeName("script"),
+      Nil,
+      new Template(Nil, ValDef(NoSymbol), stats)
+    )
+    richUnit.body = classdef
+    pprint.log(richUnit.body.toString())
     unitOfFile.get(richUnit.source.file) match {
       case Some(value)
           if util.Arrays.equals(

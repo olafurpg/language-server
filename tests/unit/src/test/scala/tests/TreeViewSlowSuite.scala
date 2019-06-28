@@ -36,18 +36,23 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
                                |class Fourth
                                |object Fourth
                                |""".stripMargin)
-      _ = assertNoDiff(
-        client.workspaceTreeViewChanges,
-        s"""|${TreeViewProvider.Build} <root>
-            |${TreeViewProvider.Compile} <root>
-            |""".stripMargin
-      )
-      _ = server.assertTreeViewChildren(
-        s"projects:${server.buildTarget("a")}",
-        ""
-      )
+      _ = {
+        assertNoDiff(
+          client.workspaceTreeViewChanges,
+          s"""|${TreeViewProvider.Build} <root>
+              |${TreeViewProvider.Compile} <root>
+              |""".stripMargin
+        )
+        client.treeViewChanges.clear()
+        server.assertTreeViewChildren(
+          s"projects:${server.buildTarget("a")}",
+          ""
+        )
+      }
       _ <- server.didOpen("a/src/main/scala/a/First.scala")
       _ <- server.didOpen("b/src/main/scala/b/Third.scala")
+      _ = pprint.log(client.workspaceTreeViewChanges)
+      _ = assertNotEmpty(client.workspaceTreeViewChanges)
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}",
         "a/ +"
