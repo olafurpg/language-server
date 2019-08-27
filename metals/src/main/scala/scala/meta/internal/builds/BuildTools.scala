@@ -81,6 +81,7 @@ final class BuildTools(
     else if (isGradle) Some(GradleBuildTool())
     else if (isMaven) Some(MavenBuildTool())
     else if (isMill) Some(MillBuildTool())
+    else if (isPants) Some(PantsBuildTool())
     else None
   }
   override def toString: String = {

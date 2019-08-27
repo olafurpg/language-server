@@ -22,6 +22,7 @@ object Configs {
         else workspace.toURI.toString.stripSuffix("/")
       new DidChangeWatchedFilesRegistrationOptions(
         List(
+          new FileSystemWatcher(s"$root/**/BUILD"),
           new FileSystemWatcher(s"$root/*.sbt"),
           new FileSystemWatcher(s"$root/pom.xml"),
           new FileSystemWatcher(s"$root/*.sc"),

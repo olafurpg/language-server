@@ -9,7 +9,8 @@ import scala.meta.internal.jdk.CollectionConverters._
 object GradleDigest extends Digestable {
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
+      userConfig: UserConfiguration
   ): Boolean = {
     val buildSrc = workspace.resolve("buildSrc")
     val buildSrcDigest = if (buildSrc.isDirectory) {

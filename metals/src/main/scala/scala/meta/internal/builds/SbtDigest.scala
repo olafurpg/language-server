@@ -13,7 +13,8 @@ object SbtDigest extends Digestable {
 
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
+      userConfig: UserConfiguration
   ): Boolean = {
     val project = workspace.resolve("project")
     digestSbtFiles(workspace, digest) &&

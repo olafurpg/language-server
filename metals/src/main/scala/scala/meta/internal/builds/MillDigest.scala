@@ -10,7 +10,8 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 object MillDigest extends Digestable {
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
+      userConfig: UserConfiguration
   ): Boolean = {
     def analyzeBuildScript(file: AbsolutePath): Boolean = {
       val imported = findImportedScripts(file)

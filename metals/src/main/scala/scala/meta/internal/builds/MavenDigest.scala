@@ -6,7 +6,8 @@ import scala.meta.io.AbsolutePath
 object MavenDigest extends Digestable {
   override protected def digestWorkspace(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
+      userConfig: UserConfiguration
   ): Boolean = {
     Digest.digestFile(workspace.resolve("pom.xml"), digest)
     Files.walk(workspace.toNIO).allMatch { file =>

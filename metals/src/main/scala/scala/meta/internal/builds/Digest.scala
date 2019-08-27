@@ -195,6 +195,7 @@ trait Digestable {
 
   protected def digestWorkspace(
       absolutePath: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
+      userConfig: UserConfiguration
   ): Boolean
 }
