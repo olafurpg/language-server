@@ -7,6 +7,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.builds.Digest.digestScala
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.UserConfiguration
 
 object SbtDigest extends Digestable {
   val sbtExtension = "sbt"

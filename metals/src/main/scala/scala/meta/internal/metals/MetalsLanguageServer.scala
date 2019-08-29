@@ -1148,7 +1148,7 @@ class MetalsLanguageServer(
             buildTool.minimumVersion,
             buildTool.version
           )) {
-          buildTool.digest(workspace) match {
+          buildTool.digest(workspace, userConfig) match {
             case None =>
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)

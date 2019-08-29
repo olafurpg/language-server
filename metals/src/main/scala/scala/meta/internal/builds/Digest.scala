@@ -13,6 +13,7 @@ import scala.meta.tokens.Token
 import scala.util.control.NonFatal
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.xml.Node
+import scala.meta.internal.metals.UserConfiguration
 
 case class Digest(
     md5: String,
@@ -177,7 +178,10 @@ object Digest {
 }
 
 trait Digestable {
-  def current(workspace: AbsolutePath): Option[String] = {
+  def current(
+      workspace: AbsolutePath,
+      userConfig: UserConfiguration
+  ): Option[String] = {
     if (!workspace.isDirectory) None
     else {
       val digest = MessageDigest.getInstance("MD5")
@@ -187,7 +191,7 @@ trait Digestable {
         digest.update(Digest.version.getBytes(StandardCharsets.UTF_8))
       }
 
-      val isSuccess = digestWorkspace(workspace, digest)
+      val isSuccess = digestWorkspace(workspace, digest, userConfig)
       if (isSuccess) Some(MD5.bytesToHex(digest.digest()))
       else None
     }

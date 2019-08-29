@@ -8,6 +8,12 @@ case class PantsBuildTool() extends BuildTool {
   def minimumVersion: String = "1.0.0"
   def recommendedVersion: String = "1.0.0"
   def executableName: String = "bash"
+  def digest(
+      workspace: AbsolutePath,
+      userConfig: UserConfiguration
+  ): Option[String] = {
+    PantsDigest.current(workspace, userConfig)
+  }
   def args(
       workspace: AbsolutePath,
       userConfig: () => UserConfiguration,

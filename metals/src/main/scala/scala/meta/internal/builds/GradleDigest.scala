@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.util.stream.Collectors
 import java.nio.file.Path
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.UserConfiguration
 
 object GradleDigest extends Digestable {
   override protected def digestWorkspace(
@@ -18,10 +19,9 @@ object GradleDigest extends Digestable {
     } else {
       true
     }
-    buildSrcDigest && Digest.digestDirectory(workspace, digest) && digestSubProjects(
-      workspace,
-      digest
-    )
+    buildSrcDigest &&
+    Digest.digestDirectory(workspace, digest) &&
+    digestSubProjects(workspace, digest, userConfig)
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
@@ -32,7 +32,8 @@ object GradleDigest extends Digestable {
 
   def digestSubProjects(
       workspace: AbsolutePath,
-      digest: MessageDigest
+      digest: MessageDigest,
+      userConfig: UserConfiguration
   ): Boolean = {
     val (subprojects, dirs) = Files
       .list(workspace.toNIO)
@@ -53,7 +54,8 @@ object GradleDigest extends Digestable {
     val isSuccessful = subprojects.forall { file =>
       digestWorkspace(
         AbsolutePath(file),
-        digest
+        digest,
+        userConfig
       )
     }
 
@@ -61,7 +63,7 @@ object GradleDigest extends Digestable {
        If it's a dir we need to keep searching since gradle can have non trivial workspace layouts
      */
     isSuccessful && dirs.forall { file =>
-      digestSubProjects(AbsolutePath(file), digest)
+      digestSubProjects(AbsolutePath(file), digest, userConfig)
     }
   }
 }
