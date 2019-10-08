@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.util.Properties
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.MetalsEnrichments._
 
 case class SbtBuildTool(version: String) extends BuildTool {
 
@@ -52,7 +53,7 @@ case class SbtBuildTool(version: String) extends BuildTool {
     }
     removeLegacyGlobalPlugin()
     writeSbtMetalsPlugin(workspace, config)
-    gitignore(workspace, List("project/metals.sbt"))
+    gitignoreMetals(workspace)
     allArgs
   }
 
@@ -78,6 +79,14 @@ case class SbtBuildTool(version: String) extends BuildTool {
 
     val metalsFile = plugins.resolve("metals.sbt")
     Files.deleteIfExists(metalsFile.toNIO)
+  }
+
+  private def gitignoreMetals(workspace: AbsolutePath) = {
+    val gitignore = workspace.resolve(".gitignore")
+    val gitIgnoreContents = "project/metals.sbt"
+    if (gitignore.exists && !gitignore.readText.contains(gitIgnoreContents)) {
+      gitignore.appendText(s"\n$gitIgnoreContents\n")
+    }
   }
 
   private def writeSbtMetalsPlugin(
