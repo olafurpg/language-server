@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.decorations.DecorationRangesTypeDidChange
+import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.decorations.DecorationTypeDidChange
 
 /**
@@ -130,7 +130,7 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsDecorationRangesDidChange(
-      params: DecorationRangesTypeDidChange
+      params: PublishDecorationsParams
   ): Unit = {
     pprint.log(clientCapabilities.decorationProvider)
     if (clientCapabilities.decorationProvider) {

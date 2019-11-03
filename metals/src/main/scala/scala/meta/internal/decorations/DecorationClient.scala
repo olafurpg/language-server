@@ -10,9 +10,9 @@ trait DecorationClient {
   def metalsDecorationTypeDidChange(
       params: DecorationTypeDidChange
   ): Unit
-  @JsonNotification("metals/decorationRangesDidChange")
+  @JsonNotification("metals/publishDecorations")
   def metalsDecorationRangesDidChange(
-      params: DecorationRangesTypeDidChange
+      params: PublishDecorationsParams
   ): Unit
 }
 
@@ -28,7 +28,7 @@ case class DecorationOptions(
     @Nullable renderOptions: ThemableDecorationInstanceRenderOptions = null
 )
 
-case class DecorationRangesTypeDidChange(
+case class PublishDecorationsParams(
     uri: String,
     options: Array[DecorationOptions]
 )
