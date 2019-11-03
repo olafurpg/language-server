@@ -38,6 +38,8 @@ import scala.meta.internal.metals.MetalsSlowTaskParams
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.pc.InterruptException
+import scala.util.control.NonFatal
 
 class MetalsWorksheetProvider(
     workspace: AbsolutePath,
@@ -99,7 +101,7 @@ class MetalsWorksheetProvider(
         token.checkCanceled()
         val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
           override def run(): Unit = {
-            result.complete(evaluate(path, token))
+            result.complete(evaluateWorksheet(path, token))
           }
         }
         stopThreadOnCancel(path, result, thread)
@@ -111,8 +113,7 @@ class MetalsWorksheetProvider(
         () => {
           try runEvaluation()
           catch {
-            case _: Throwable =>
-            // continue
+            case NonFatal(_) | InterruptException() => () // continue
           }
         }
       )
@@ -120,6 +121,13 @@ class MetalsWorksheetProvider(
     }
   }
 
+  /**
+   * Prompts the user to cancel the task after a few seconds.
+   *
+   * Attempts to gracefully shut down the thread when users requests to cancel:
+   * First tries `Thread.interrupt()` with fallback to `Thread.stop()` after
+   * one second if interruption doesn't work.
+   */
   private def stopThreadOnCancel(
       path: AbsolutePath,
       result: CompletableFuture[_],
@@ -149,6 +157,7 @@ class MetalsWorksheetProvider(
           )
           cancel.asScala.foreach { c =>
             if (c.cancel && thread.isAlive()) {
+              result.cancel(true)
               sh.schedule(stopThread, 1, TimeUnit.SECONDS)
               scribe.warn(s"thread interrupt: ${thread.getName()}")
               thread.interrupt()
@@ -158,9 +167,10 @@ class MetalsWorksheetProvider(
         }
       }
     }
-    sh.schedule(promptUserToCancel, 2, TimeUnit.SECONDS)
+    sh.schedule(promptUserToCancel, 4, TimeUnit.SECONDS)
   }
-  def evaluate(
+
+  private def evaluateWorksheet(
       path: AbsolutePath,
       token: CancelToken
   ): Array[DecorationOptions] = {
