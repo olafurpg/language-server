@@ -25,7 +25,7 @@ case class DecorationTypeDidChange(
 case class DecorationOptions(
     range: Range,
     @Nullable hoverMessage: MarkedString = null,
-    @Nullable renderOptions: ThemableDecorationAttachmentRenderOptions = null
+    @Nullable renderOptions: ThemableDecorationInstanceRenderOptions = null
 )
 
 case class DecorationRangesTypeDidChange(

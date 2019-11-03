@@ -25,10 +25,10 @@ final class ConfiguredLanguageClient(
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
-  @volatile private var debuggingSupported = true
+  private var clientCapabilities = ClientExperimentalCapabilities.Default
 
   override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
-    debuggingSupported = capabilities.debuggingProvider
+    clientCapabilities = capabilities
   }
 
   override def shutdown(): Unit = {
@@ -102,7 +102,8 @@ final class ConfiguredLanguageClient(
   ): Unit = {
     if (config.executeClientCommand.isOn) {
       params.getCommand match {
-        case ClientCommands.RefreshModel() if !debuggingSupported =>
+        case ClientCommands.RefreshModel()
+            if !clientCapabilities.debuggingProvider =>
         // ignore
         case _ =>
           underlying.metalsExecuteClientCommand(params)
@@ -122,10 +123,19 @@ final class ConfiguredLanguageClient(
 
   override def metalsDecorationTypeDidChange(
       params: DecorationTypeDidChange
-  ): Unit = ()
+  ): Unit = {
+    if (clientCapabilities.decorationProvider) {
+      underlying.metalsDecorationTypeDidChange(params)
+    }
+  }
 
   override def metalsDecorationRangesDidChange(
       params: DecorationRangesTypeDidChange
-  ): Unit = ()
+  ): Unit = {
+    pprint.log(clientCapabilities.decorationProvider)
+    if (clientCapabilities.decorationProvider) {
+      underlying.metalsDecorationRangesDidChange(params)
+    }
+  }
 
 }
