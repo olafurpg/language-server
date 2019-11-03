@@ -302,11 +302,12 @@ class MetalsTreeViewProvider(
     for {
       compilation <- compilations().get(id)
       info <- buildTargets.info(id)
-    } yield TreeViewNode(
-      Compile,
-      id.getUri,
-      s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)"
-    )
+    } yield
+      TreeViewNode(
+        Compile,
+        id.getUri,
+        s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)"
+      )
   }
 
   private def ongoingCompilationNode: TreeViewNode = {
