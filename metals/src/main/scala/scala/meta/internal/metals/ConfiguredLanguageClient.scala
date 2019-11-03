@@ -9,6 +9,8 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.decorations.DecorationRangesTypeDidChange
+import scala.meta.internal.decorations.DecorationTypeDidChange
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
@@ -117,5 +119,13 @@ final class ConfiguredLanguageClient(
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
     }
   }
+
+  override def metalsDecorationTypeDidChange(
+      params: DecorationTypeDidChange
+  ): Unit = ()
+
+  override def metalsDecorationRangesDidChange(
+      params: DecorationRangesTypeDidChange
+  ): Unit = ()
 
 }
