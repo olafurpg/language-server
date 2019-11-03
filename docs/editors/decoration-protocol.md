@@ -14,11 +14,14 @@ from the [VS Code API](https://code.visualstudio.com/api/references/vscode-api).
 ### Decoration
 
 A "decoration" represents non-editable code that is display in the text editor
-alongside editable code.
+alongside editable code. The GIF below demonstrates an example of green
+decorations that are formatted as comments, which contain the evaluated code.
 
 ![Example decoration](https://user-images.githubusercontent.com/1408093/68091453-bacbea00-fe77-11e9-80b9-52a9bbd6d98a.gif)
 
-A decoration can include an optional message that's displayed on hover.
+Although decorations appear as text inside the editor, they can't be edited by
+the user. In the GIF above, observe that the decoration can optionally include a
+message that's displayed on mouse hover.
 
 ## DecorationOptions
 

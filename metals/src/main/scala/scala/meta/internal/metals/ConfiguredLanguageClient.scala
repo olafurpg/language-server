@@ -104,7 +104,7 @@ final class ConfiguredLanguageClient(
       params.getCommand match {
         case ClientCommands.RefreshModel()
             if !clientCapabilities.debuggingProvider =>
-        // ignore
+          () // ignore
         case _ =>
           underlying.metalsExecuteClientCommand(params)
       }
