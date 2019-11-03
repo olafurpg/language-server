@@ -398,14 +398,16 @@ class MetalsLanguageServer(
       messages
     )
     if (clientExperimentalCapabilities.decorationProvider) {
-      worksheetProvider = new MetalsWorksheetProvider(
-        workspace,
-        buffers,
-        buildTargets,
-        languageClient,
-        () => userConfig,
-        sh,
-        statusBar
+      worksheetProvider = register(
+        new MetalsWorksheetProvider(
+          workspace,
+          buffers,
+          buildTargets,
+          languageClient,
+          () => userConfig,
+          sh,
+          statusBar
+        )
       )
     }
     if (clientExperimentalCapabilities.treeViewProvider) {

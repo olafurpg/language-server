@@ -132,7 +132,6 @@ final class ConfiguredLanguageClient(
   override def metalsDecorationRangesDidChange(
       params: PublishDecorationsParams
   ): Unit = {
-    pprint.log(clientCapabilities.decorationProvider)
     if (clientCapabilities.decorationProvider) {
       underlying.metalsDecorationRangesDidChange(params)
     }
