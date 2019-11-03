@@ -12,7 +12,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.UnregistrationParams
 import scala.meta.internal.tvp._
 import scala.meta.internal.decorations.DecorationTypeDidChange
-import scala.meta.internal.decorations.DecorationRangesTypeDidChange
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     extends MetalsLanguageClient {
@@ -106,7 +106,7 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
   }
 
   override def metalsDecorationRangesDidChange(
-      params: DecorationRangesTypeDidChange
+      params: PublishDecorationsParams
   ): Unit = {
     underlying.metalsDecorationRangesDidChange(params)
   }

@@ -40,7 +40,7 @@ import scala.meta.internal.metals.NoopLanguageClient
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import java.util.concurrent.ConcurrentHashMap
 import scala.meta.internal.decorations.DecorationOptions
-import scala.meta.internal.decorations.DecorationRangesTypeDidChange
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -277,7 +277,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
 
   override def metalsDecorationRangesDidChange(
-      params: DecorationRangesTypeDidChange
+      params: PublishDecorationsParams
   ): Unit = {
     val path = params.uri.toAbsolutePath
     decorations.put(path, params.options)

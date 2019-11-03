@@ -48,7 +48,7 @@ import com.google.gson.JsonPrimitive
 import scala.meta.internal.worksheets.MetalsWorksheetProvider
 import scala.meta.internal.worksheets.NoopWorksheetProvider
 import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.decorations.DecorationRangesTypeDidChange
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1656,7 +1656,7 @@ class MetalsLanguageServer(
             worksheetProvider
               .decorations(worksheet, EmptyCancelToken)
               .map { options =>
-                val params = new DecorationRangesTypeDidChange(
+                val params = new PublishDecorationsParams(
                   worksheet.toURI.toString(),
                   options
                 )
