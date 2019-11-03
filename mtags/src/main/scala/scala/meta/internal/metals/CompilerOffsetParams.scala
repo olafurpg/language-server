@@ -13,18 +13,10 @@ case class CompilerOffsetParams(
 
 object CompilerOffsetParams {
   def fromPos(pos: Position, token: CancelToken): CompilerOffsetParams = {
-    val isScript = pos.input.syntax.endsWith(".sc")
-    val scriptHeader = "object Script {\n"
-    val text =
-      if (isScript) scriptHeader + pos.input.text + "\n}"
-      else pos.input.text
-    val start =
-      if (isScript) scriptHeader.length + pos.start
-      else pos.start
     CompilerOffsetParams(
       pos.input.syntax,
-      text,
-      start,
+      pos.input.text,
+      pos.start,
       token
     )
   }

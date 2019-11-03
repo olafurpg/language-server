@@ -43,6 +43,9 @@ class CompletionProvider(
       cursorName = cursorName
     )
     val pos = unit.position(params.offset)
+    pprint.log(params.text)
+    println(pos.lineContent)
+    println(pos.lineCaret)
     val isSnippet = isSnippetEnabled(pos, params.text())
     val (i, completion, editRange, query) = safeCompletionsAt(pos)
     val start = inferIdentStart(pos, params.text())
@@ -359,6 +362,7 @@ class CompletionProvider(
           new DynamicFallbackCompletions(pos).print()
         case r => r
       }
+      pprint.log(completions)
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           CompletionListKind.Scope
@@ -519,9 +523,7 @@ class CompletionProvider(
           else Nil
       }
     } catch {
-      case NonFatal(_) =>
-        logger.warning(s"no such symbol: $classfile")
-        Nil
+      case NonFatal(_) => Nil
     }
   }
 

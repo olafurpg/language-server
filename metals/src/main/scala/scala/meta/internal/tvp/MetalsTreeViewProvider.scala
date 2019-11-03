@@ -199,7 +199,13 @@ class MetalsTreeViewProvider(
   ): MetalsTreeViewChildrenResult = {
     val children: Array[TreeViewNode] = params.viewId match {
       case Help =>
+        pprint.log(BuildInfo.metalsVersion)
         Array(
+          TreeViewNode(
+            Help,
+            "",
+            s"Metals Version ${BuildInfo.metalsVersion}"
+          ),
           echoCommand(ServerCommands.RunDoctor, "bug"),
           echoCommand(ServerCommands.GotoLog, "bug"),
           echoCommand(ServerCommands.ReadVscodeDocumentation, "book"),
@@ -296,12 +302,11 @@ class MetalsTreeViewProvider(
     for {
       compilation <- compilations().get(id)
       info <- buildTargets.info(id)
-    } yield
-      TreeViewNode(
-        Compile,
-        id.getUri,
-        s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)"
-      )
+    } yield TreeViewNode(
+      Compile,
+      id.getUri,
+      s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)"
+    )
   }
 
   private def ongoingCompilationNode: TreeViewNode = {
