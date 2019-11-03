@@ -4,13 +4,15 @@ import org.eclipse.{lsp4j => l}
 
 final case class ClientExperimentalCapabilities(
     debuggingProvider: java.lang.Boolean,
-    treeViewProvider: java.lang.Boolean
+    treeViewProvider: java.lang.Boolean,
+    decorationProvider: java.lang.Boolean
 )
 
 object ClientExperimentalCapabilities {
   val Default = new ClientExperimentalCapabilities(
     debuggingProvider = false,
-    treeViewProvider = false
+    treeViewProvider = false,
+    decorationProvider = false
   )
 
   def from(
