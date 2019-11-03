@@ -98,6 +98,12 @@ trait MtagsEnrichments {
         case _ => false
       }
     }
+    def isScalaOrScalaScript: Boolean = {
+      extension match {
+        case "scala" | "sc" => true
+        case _ => false
+      }
+    }
     def isScala: Boolean = {
       toLanguage == Language.SCALA
     }

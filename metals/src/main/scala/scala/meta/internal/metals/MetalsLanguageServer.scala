@@ -45,10 +45,6 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
-import scala.meta.internal.decorations.DecorationRangesTypeDidChange
-import scala.meta.internal.decorations.DecorationOptions
-import scala.meta.internal.decorations.ThemableDecorationAttachmentRenderOptions
-import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -602,28 +598,6 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (path.extension == "sc") {
-      pprint.log(path)
-      languageClient.metalsDecorationRangesDidChange(
-        DecorationRangesTypeDidChange(
-          params.getTextDocument().getUri(),
-          Array(
-            DecorationOptions(
-              range = new l.Range(
-                new l.Position(1, 10),
-                new l.Position(1, 10)
-              ),
-              renderOptions = ThemableDecorationInstanceRenderOptions(
-                after = ThemableDecorationAttachmentRenderOptions(
-                  contentText = " // decoration",
-                  opacity = java.lang.Double.valueOf(0.7)
-                )
-              )
-            )
-          )
-        )
-      )
-    }
     openedFiles.add(path)
     openTextDocument.set(path)
 
