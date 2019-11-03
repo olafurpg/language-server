@@ -99,7 +99,7 @@ trait MtagsEnrichments {
       }
     }
     def isWorksheet: Boolean = {
-      extension == "sc"
+      filename.endsWith(".worksheet.sc")
     }
     def isScalaOrScalaScript: Boolean = {
       extension match {

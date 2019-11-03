@@ -17,19 +17,19 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
         """
           |/metals.json
           |{"a": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]}}
-          |/a/src/main/scala/foo/Main.sc
+          |/a/src/main/scala/foo/Main.worksheet.sc
           |identity(42)
-          |sourcecode.File.generate.value.takeRight(7)
+          |sourcecode.File.generate.value.takeRight(17)
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/foo/Main.sc")
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
       identity <- server.completion(
-        "a/src/main/scala/foo/Main.sc",
+        "a/src/main/scala/foo/Main.worksheet.sc",
         "identity@@"
       )
       _ = assertNoDiff(identity, "identity[A](x: A): A")
       generate <- server.completion(
-        "a/src/main/scala/foo/Main.sc",
+        "a/src/main/scala/foo/Main.worksheet.sc",
         "generate@@"
       )
       _ = assertNoDiff(generate, "generate: File")
@@ -37,18 +37,19 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|identity(42) // 42
-           |sourcecode.File.generate.value.takeRight(7) // "Main.sc"
+           |sourcecode.File.generate.value.takeRight(17) // "Main.worksheet.sc"
            |""".stripMargin
       )
     } yield ()
   }
+
   testAsync("decoration") {
     for {
       _ <- server.initialize(
         """
           |/metals.json
           |{"a": {}}
-          |/a/src/main/scala/Main.sc
+          |/a/src/main/scala/Main.worksheet.sc
           |import java.nio.file.Files
           |val name = "Susan"
           |val greeting = s"Hello $name"
@@ -57,7 +58,7 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
           |val List(a, b) = List(42, 10)
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.sc")
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|
@@ -100,17 +101,17 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
         """
           |/metals.json
           |{"a": {}}
-          |/a/src/main/scala/Main.sc
+          |/a/src/main/scala/Main.worksheet.sc
           |println(42)
           |Stream.from(10).last
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.sc")
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ <- cancelled.future
-      _ <- server.didSave("a/src/main/scala/Main.sc")(
+      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replaceAllLiterally("Stream", "// Stream")
       )
-      _ <- server.didSave("a/src/main/scala/Main.sc")(
+      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replaceAllLiterally("42", "43")
       )
       _ = assertNoDiff(
@@ -129,12 +130,12 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
         """
           |/metals.json
           |{"a": {}}
-          |/a/src/main/scala/Main.sc
+          |/a/src/main/scala/Main.worksheet.sc
           |val x = 42
           |???
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.sc")
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|
@@ -144,10 +145,10 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/Main.sc:2:1: error: scala.NotImplementedError: an implementation is missing
+        """|a/src/main/scala/Main.worksheet.sc:2:1: error: scala.NotImplementedError: an implementation is missing
            |	at scala.Predef$.$qmark$qmark$qmark(Predef.scala:288)
-           |	at repl.Session$App.<init>(Main.sc:11)
-           |	at repl.Session$.app(Main.sc:3)
+           |	at repl.Session$App.<init>(Main.worksheet.sc:11)
+           |	at repl.Session$.app(Main.worksheet.sc:3)
            |
            |???
            |^^^
@@ -168,14 +169,14 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
           |/b/src/main/scala/core/Lib2.scala
           |package core
           |case object Lib2
-          |/b/src/main/scala/foo/Main.sc
+          |/b/src/main/scala/foo/Main.worksheet.sc
           |println(core.Lib)
           |println(core.Lib2)
           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/core/Lib.scala")
       _ <- server.didOpen("b/src/main/scala/core/Lib2.scala")
-      _ <- server.didOpen("b/src/main/scala/foo/Main.sc")
+      _ <- server.didOpen("b/src/main/scala/foo/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
@@ -183,6 +184,30 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
            |println(core.Lib2) // Lib2
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  testAsync("no-worksheet") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/Main.sc
+          |identity(42)
+          |val x: Int = ""
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.sc")
+      _ = assertNoDiagnostics()
+      identity <- server.completion(
+        "a/src/main/scala/Main.sc",
+        "identity@@"
+      )
+      // completions work despite error
+      _ = assertNoDiff(identity, "identity[A](x: A): A")
+      // decorations do not appear for non ".worksheet.sc" files.
+      _ = assertNoDiff(client.workspaceDecorations, "")
     } yield ()
   }
 }
