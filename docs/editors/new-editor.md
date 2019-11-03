@@ -369,6 +369,8 @@ _Request_:
 interface MetalsSlowTaskParams {
   /** The name of this slow task */
   message: string;
+  /** If true, don't open the logs output. */
+  noLogs?: boolean;
 }
 ```
 

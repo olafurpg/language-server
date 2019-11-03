@@ -85,7 +85,10 @@ case class MetalsStatusParams(
     @Nullable command: String = null
 )
 
-case class MetalsSlowTaskParams(message: String)
+case class MetalsSlowTaskParams(
+    message: String,
+    noLogs: java.lang.Boolean = null
+)
 case class MetalsSlowTaskResult(cancel: Boolean)
 
 case class MetalsInputBoxParams(

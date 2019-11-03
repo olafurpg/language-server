@@ -33,6 +33,7 @@ class CompilerJobQueue(val executor: ThreadPoolExecutor) {
     submit(new CompletableFuture[Unit](), fn)
   }
   def submit(result: CompletableFuture[_], fn: () => Unit): Unit = {
+    pprint.log(executor.isShutdown())
     executor.execute(new CompilerJobQueue.Job(result, fn))
   }
   // The implementation of `Executors.newSingleThreadExecutor()` uses finalize.

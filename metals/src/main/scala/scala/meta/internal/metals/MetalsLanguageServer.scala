@@ -403,7 +403,9 @@ class MetalsLanguageServer(
         buffers,
         buildTargets,
         languageClient,
-        () => userConfig
+        () => userConfig,
+        sh,
+        statusBar
       )
     }
     if (clientExperimentalCapabilities.treeViewProvider) {
