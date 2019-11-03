@@ -2,39 +2,42 @@ package tests.worksheets
 import tests.BaseLspSuite
 import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.concurrent.Promise
 
 object WorksheetLspSuite extends BaseLspSuite("worksheet") {
   override def experimentalCapabilities
       : Option[ClientExperimentalCapabilities] =
     Some(ClientExperimentalCapabilities(decorationProvider = true))
   override def userConfig: UserConfiguration =
-    super.userConfig.copy(screenWidth = 40)
-  testAsync("basic") {
+    super.userConfig.copy(screenWidth = 40, worksheetCancelTimeout = 1)
+  testAsync("completion") {
     for {
       _ <- server.initialize(
         """
           |/metals.json
-          |{"a": {}}
-          |/a/src/main/scala/foo/Lib.scala
-          |package foo
-          |object Lib {
-          |  def increment(i: Int): Int = i + 1
-          |}
-          |/a/src/main/scala/Main.sc
-          |val x = identity(42)
-          |println(foo.Lib.increment(x))
+          |{"a": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]}}
+          |/a/src/main/scala/foo/Main.sc
+          |identity(42)
+          |sourcecode.File.generate.value.takeRight(7)
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/foo/Lib.scala")
-      _ <- server.didOpen("a/src/main/scala/Main.sc")
-      completion <- server.completion("a/src/main/scala/Main.sc", "identity@@")
-      _ = assertNoDiff(completion, "identity[A](x: A): A")
-      completion <- server.completion("a/src/main/scala/Main.sc", "increment@@")
-      _ = assertNoDiff(completion, "increment(i: Int): Int")
+      _ <- server.didOpen("a/src/main/scala/foo/Main.sc")
+      identity <- server.completion(
+        "a/src/main/scala/foo/Main.sc",
+        "identity@@"
+      )
+      _ = assertNoDiff(identity, "identity[A](x: A): A")
+      generate <- server.completion(
+        "a/src/main/scala/foo/Main.sc",
+        "generate@@"
+      )
+      _ = assertNoDiff(generate, "generate: File")
+      _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|val x = identity(42) // 42
-           |println(foo.Lib.increment(x)) 43
+        """|identity(42) // 42
+           |sourcecode.File.generate.value.takeRight(7) // "Main.sc"
            |""".stripMargin
       )
     } yield ()
@@ -81,6 +84,103 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
            |val List(a, b) = List(42, 10)
            |a: Int = 42
            |b: Int = 10
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("cancel") {
+    val cancelled = Promise[Unit]()
+    client.slowTaskHandler = { params =>
+      cancelled.trySuccess(())
+      Some(MetalsSlowTaskResult(cancel = true))
+    }
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/Main.sc
+          |println(42)
+          |Stream.from(10).last
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.sc")
+      _ <- cancelled.future
+      _ <- server.didSave("a/src/main/scala/Main.sc")(
+        _.replaceAllLiterally("Stream", "// Stream")
+      )
+      _ <- server.didSave("a/src/main/scala/Main.sc")(
+        _.replaceAllLiterally("42", "43")
+      )
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|
+           |println(43) // 43
+           |// Stream.from(10).last
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("crash") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/Main.sc
+          |val x = 42
+          |???
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.sc")
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|
+           |val x = 42
+           |???
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/Main.sc:2:1: error: scala.NotImplementedError: an implementation is missing
+           |	at scala.Predef$.$qmark$qmark$qmark(Predef.scala:288)
+           |	at repl.Session$App.<init>(Main.sc:11)
+           |	at repl.Session$.app(Main.sc:3)
+           |
+           |???
+           |^^^
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("dependsOn") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}, "b": {"dependsOn": ["a"]}}
+          |/a/src/main/scala/core/Lib.scala
+          |package core
+          |case object Lib
+          |/b/src/main/scala/core/Lib2.scala
+          |package core
+          |case object Lib2
+          |/b/src/main/scala/foo/Main.sc
+          |println(core.Lib)
+          |println(core.Lib2)
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/core/Lib.scala")
+      _ <- server.didOpen("b/src/main/scala/core/Lib2.scala")
+      _ <- server.didOpen("b/src/main/scala/foo/Main.sc")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|println(core.Lib) // Lib
+           |println(core.Lib2) // Lib2
            |""".stripMargin
       )
     } yield ()

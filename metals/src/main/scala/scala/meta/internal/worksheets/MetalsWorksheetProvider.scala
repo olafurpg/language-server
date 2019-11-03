@@ -87,12 +87,12 @@ class MetalsWorksheetProvider(
     } else {
       reporter.reset()
       val result = new CompletableFuture[Array[DecorationOptions]]()
-      cancelables.add(Cancelable(() => result.cancel(true)))
       token.onCancel().asScala.foreach {
-        case java.lang.Boolean.TRUE => result.cancel(true)
+        case java.lang.Boolean.TRUE => result.complete(Array.empty)
         case _ =>
       }
       def runEvaluation(): Unit = {
+        cancelables.add(Cancelable(() => result.complete(Array.empty)))
         statusBar.trackFuture(
           s"Evaluting ${path.filename}",
           result.asScala,
@@ -104,6 +104,13 @@ class MetalsWorksheetProvider(
             result.complete(evaluateWorksheet(path, token))
           }
         }
+        cancelables.add(
+          Cancelable(() => {
+            if (thread.isAlive) {
+              thread.stop()
+            }
+          })
+        )
         stopThreadOnCancel(path, result, thread)
         thread.start()
         thread.join()
@@ -117,7 +124,9 @@ class MetalsWorksheetProvider(
           }
         }
       )
-      result.asScala
+      result.asScala.recover {
+        case NonFatal(_) | InterruptException() => Array.empty
+      }
     }
   }
 
@@ -130,7 +139,7 @@ class MetalsWorksheetProvider(
    */
   private def stopThreadOnCancel(
       path: AbsolutePath,
-      result: CompletableFuture[_],
+      result: CompletableFuture[Array[DecorationOptions]],
       thread: Thread
   ): Unit = {
     val stopThread = new Runnable {
@@ -157,7 +166,7 @@ class MetalsWorksheetProvider(
           )
           cancel.asScala.foreach { c =>
             if (c.cancel && thread.isAlive()) {
-              result.cancel(true)
+              result.complete(Array.empty)
               sh.schedule(stopThread, 1, TimeUnit.SECONDS)
               scribe.warn(s"thread interrupt: ${thread.getName()}")
               thread.interrupt()
@@ -167,7 +176,11 @@ class MetalsWorksheetProvider(
         }
       }
     }
-    sh.schedule(promptUserToCancel, 4, TimeUnit.SECONDS)
+    sh.schedule(
+      promptUserToCancel,
+      userConfig().worksheetCancelTimeout,
+      TimeUnit.SECONDS
+    )
   }
 
   private def evaluateWorksheet(
@@ -312,7 +325,7 @@ class MetalsWorksheetProvider(
   ): Context = {
     scribe.info(s"worksheet: new compiler for $target")
     val settings = Settings.default(workspace)
-    val classpath = Classpath(info.classpath).syntax
+    val classpath = Classpath(info.fullClasspath).syntax
     val options = info.scalac.getOptions().asScala.mkString(" ")
     val compiler = MarkdownCompiler.fromClasspath(classpath, options)
     Context(settings, reporter, compiler)

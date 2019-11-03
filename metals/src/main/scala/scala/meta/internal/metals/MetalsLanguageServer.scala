@@ -647,15 +647,11 @@ class MetalsLanguageServer(
       }
     } else {
       compilers.load(List(path))
-      Future
-        .sequence(
-          List(
-            compilations.compileFiles(List(path)),
-            onWorksheetChanged(List(path))
-          )
-        )
-        .ignoreValue
-        .asJava
+      val compile = for {
+        _ <- compilations.compileFiles(List(path))
+        _ <- onWorksheetChanged(List(path))
+      } yield ()
+      compile.asJava
     }
   }
 
