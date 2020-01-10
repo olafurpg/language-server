@@ -21,6 +21,7 @@ case class PantsTarget(
     isPantsTargetRoot &&
       !name.startsWith(".pants.d") &&
       !pantsTargetType.isFiles
+  def isResource: Boolean = targetType.isAnyResource || pantsTargetType.isJvmApp
   val directoryName: String = BloopPants.makeReadableFilename(name)
   def baseDirectory(workspace: Path): Path =
     PantsConfiguration

@@ -161,7 +161,7 @@ object BloopPants {
         args.workspace.resolve(".pants.d").resolve("metals")
       )
       val outputFilename = PantsConfiguration.outputFilename(args.targets)
-      val outputFile = cacheDir.resolve(s"$outputFilename.json")
+      val outputFile = cacheDir.resolve(s"$outputFilename-export.json")
       val bloopDir = Files.createDirectories(args.out.resolve(".bloop"))
       args.token.checkCanceled()
 
@@ -226,10 +226,8 @@ object BloopPants {
       args.workspace.resolve("pants").toString(),
       "--concurrent",
       s"--no-quiet",
-      s"--export-libraries-sources",
-      s"--export-output-file=$outputFile",
-      s"export-classpath",
-      s"export"
+      s"--export-dep-as-jar-output-file=$outputFile",
+      s"export-dep-as-jar"
     ) ++ args.targets
     val shortName = "pants export-classpath export"
     SystemProcess.run(
@@ -403,7 +401,7 @@ private class BloopPants(
     val baseDirectory: Path = target.baseDirectory(workspace)
 
     val sources: List[Path] =
-      if (target.targetType.isResource) Nil
+      if (target.isResource) Nil
       else {
         target.globs.sourceDirectory(workspace) match {
           case Some(dir) => List(dir)
@@ -426,7 +424,7 @@ private class BloopPants(
     } yield acyclicDependency.name
 
     val libraries: List[PantsLibrary] = for {
-      dependency <- transitiveDependencies
+      dependency <- target :: transitiveDependencies
       libraryName <- dependency.libraries
       // The "$ORGANIZATION:$ARTIFACT" part of Maven library coordinates.
       module = {
@@ -438,6 +436,11 @@ private class BloopPants(
       if !target.excludes.contains(module)
       library <- export.libraries.get(libraryName)
     } yield library
+    pprint.log(target.name)
+    if (target.name.contains("buildcache/server/src/main/scala:scala")) {
+      pprint.log(transitiveDependencies)
+      pprint.log(libraries.flatMap(_.nonSources))
+    }
 
     val classpath = new mutable.LinkedHashSet[Path]()
     classpath ++= (for {
