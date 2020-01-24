@@ -13,6 +13,7 @@ import java.nio.channels.Pipe
 import java.io.ByteArrayInputStream
 import bloop.bloopgun.BloopgunCli
 import org.eclipse.lsp4j.services.LanguageClient
+import scala.concurrent.ExecutionContext
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -35,15 +36,7 @@ final class BloopServers(
 )(implicit ec: ExecutionContextExecutorService) {
 
   def shutdownServer(): Boolean = {
-    val dummyIn = new ByteArrayInputStream(new Array(0))
-    val cli = new BloopgunCli(
-      BuildInfo.bloopVersion,
-      dummyIn,
-      System.out,
-      System.err,
-      Shell.default
-    )
-    val result = cli.run(Array("exit")) == 0
+    val result = BloopServers.runCommandLine(Array("exit")) == 0
     if (!result) {
       scribe.warn("There were issues stopping the Bloop server.")
       scribe.warn(
@@ -62,15 +55,18 @@ final class BloopServers(
         workspace,
         client,
         languageClient,
-        () => connectToLauncher(bloopVersion),
+        () => BloopServers.connectToLauncher(bloopVersion),
         tables
       )
       .map(Option(_))
   }
 
-  private def connectToLauncher(
+}
+
+object BloopServers {
+  def connectToLauncher(
       bloopVersion: String
-  ): Future[SocketConnection] = {
+  )(implicit ec: ExecutionContextExecutorService): Future[SocketConnection] = {
     val launcherInOutPipe = Pipe.open()
     val launcherIn = new QuietInputStream(
       Channels.newInputStream(launcherInOutPipe.source()),
@@ -122,5 +118,17 @@ final class BloopServers(
         )
       )
     }
+  }
+
+  def runCommandLine(arguments: Array[String]): Int = {
+    val dummyIn = new ByteArrayInputStream(new Array(0))
+    val cli = new BloopgunCli(
+      BuildInfo.bloopVersion,
+      dummyIn,
+      System.out,
+      System.err,
+      Shell.default
+    )
+    cli.run(arguments)
   }
 }

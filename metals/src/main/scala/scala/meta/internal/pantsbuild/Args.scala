@@ -24,6 +24,7 @@ case class Args(
     maxFileCount: Int = 5000,
     workspace: Path = PathIO.workingDirectory.toNIO,
     out: Path = PathIO.workingDirectory.toNIO,
+    isRestartOldBloop: Boolean = true,
     targets: List[String] = Nil,
     token: CancelToken = EmptyCancelToken,
     onFilemap: Filemap => Unit = _ => Unit
@@ -114,6 +115,10 @@ object Args {
         parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
       case "--vscode" :: tail =>
         parse(tail, base.copy(isVscode = true))
+      case "--restart-old-bloop" :: tail =>
+        parse(tail, base.copy(isRestartOldBloop = true))
+      case "--no-restart-old-bloop" :: tail =>
+        parse(tail, base.copy(isRestartOldBloop = false))
       case "--launch-intellij" :: tail =>
         parse(tail, base.copy(isLaunchIntelliJ = true))
       case "--no-launch-intellij" :: tail =>

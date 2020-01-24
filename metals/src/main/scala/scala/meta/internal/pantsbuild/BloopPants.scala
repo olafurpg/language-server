@@ -33,6 +33,7 @@ import scala.meta.internal.io.PathIO
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.io.IOException
+import scala.meta.internal.metals.BloopServers
 
 object BloopPants {
 
@@ -80,6 +81,9 @@ object BloopPants {
               scribe.info(s"time: exported ${count} Pants target(s) in $timer")
               if (args.out != args.workspace) {
                 scribe.info(s"output: ${args.out}")
+              }
+              if (args.isRestartOldBloop) {
+                BloopServers.runCommandLine()
               }
               if (args.isLaunchIntelliJ) {
                 IntelliJ.launch(args.out)
