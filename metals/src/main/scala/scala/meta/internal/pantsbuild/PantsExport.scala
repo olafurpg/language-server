@@ -3,6 +3,8 @@ package scala.meta.internal.pantsbuild
 import java.nio.file.Paths
 import scala.collection.mutable
 import java.nio.file.Files
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 case class PantsExport(
     targets: Map[String, PantsTarget],
@@ -69,12 +71,20 @@ object PantsExport {
     val allLibraries = output.obj(PantsKeys.libraries).obj
     val libraries: Map[String, PantsLibrary] = allLibraries.iterator.map {
       case (name, valueObj) =>
-        name -> PantsLibrary(name, valueObj.obj.flatMap {
-          case (key, value) =>
-            val path = Paths.get(value.str)
-            if (Files.isRegularFile(path)) Some(key -> path)
-            else None
-        })
+        name -> PantsLibrary(
+          name,
+          valueObj.obj.flatMap {
+            case (key, value) =>
+              // NOTE(olafur): URL decode path names since they are URL encoded from `coursier fetch`
+              // ❯ cs fetch  --intransitive ch.epfl.scala:bloop-launcher-core_2.12:1.3.4+298-2c6ff971
+              // .../Caches/Coursier/.../bloop-launcher-core_2.12-1.3.4%2B298-2c6ff971.jar
+              val decodedPath =
+                URLDecoder.decode(value.str, StandardCharsets.UTF_8.name())
+              val path = Paths.get(decodedPath)
+              if (Files.isRegularFile(path)) Some(key -> path)
+              else None
+          }
+        )
     }.toMap
 
     val cycles = Cycles.findConnectedComponents(output)
