@@ -245,6 +245,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
+      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.10",
       // for file watching

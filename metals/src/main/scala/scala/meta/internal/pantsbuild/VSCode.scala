@@ -9,7 +9,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.control.NonFatal
 
 object VSCode {
-  def launch(args: Args): Unit =
+  def launch(args: Create): Unit =
     try {
       val settings = AbsolutePath(args.out)
         .resolve(".vscode")
@@ -66,7 +66,7 @@ object VSCode {
     require(exit == 0, s"command failed: ${command.mkString(" ")}")
   }
 
-  private def findFileToOpen(args: Args): List[AbsolutePath] = {
+  private def findFileToOpen(args: Create): List[AbsolutePath] = {
     val readonly = args.out.resolve(".metals")
     for {
       root <- PantsConfiguration.sourceRoots(

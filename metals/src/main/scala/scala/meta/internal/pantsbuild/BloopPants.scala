@@ -38,16 +38,16 @@ object BloopPants {
 
   def main(argStrings: Array[String]): Unit = {
     MetalsLogger.updateDefaultFormat()
-    Args.parse(argStrings.toList) match {
+    Command.parse(argStrings.toList) match {
       case Left(errors) =>
         errors.foreach { error =>
           scribe.error(error)
         }
         System.exit(1)
-      case Right(args) =>
-        if (args.cmd.isHelp) {
-          println(args.helpMessage)
-        } else if (!args.pants.isFile) {
+      case Right(Help) =>
+        println(Create().helpMessage)
+      case Right(args: Create) =>
+        if (!args.pants.isFile) {
           scribe.error(
             s"No Pants build detected, file '${args.pants}' does not exist."
           )
@@ -89,6 +89,9 @@ object BloopPants {
               }
           }
         }
+      case Right(args) =>
+        pprint.log(args)
+        ???
     }
   }
 
@@ -156,7 +159,7 @@ object BloopPants {
       case e @ InterruptException() => Failure(e)
     }
 
-  def bloopInstall(args: Args)(implicit ec: ExecutionContext): Try[Int] =
+  def bloopInstall(args: Create)(implicit ec: ExecutionContext): Try[Int] =
     interruptedTry {
       val cacheDir = Files.createDirectories(
         args.workspace.resolve(".pants.d").resolve("metals")
@@ -233,7 +236,7 @@ object BloopPants {
     }
   }
 
-  private def symlinkToOut(args: Args): Unit = {
+  private def symlinkToOut(args: Create): Unit = {
     val workspaceBloop = args.workspace.resolve(".bloop")
 
     if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
@@ -264,7 +267,7 @@ object BloopPants {
   }
 
   private def runPantsExport(
-      args: Args,
+      args: Create,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
     val command = List[Option[String]](
@@ -301,7 +304,7 @@ object BloopPants {
 }
 
 private class BloopPants(
-    args: Args,
+    args: Create,
     bloopDir: Path,
     export: PantsExport,
     filemap: Filemap
