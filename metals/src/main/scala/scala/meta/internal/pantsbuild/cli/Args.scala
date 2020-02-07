@@ -9,6 +9,8 @@ import metaconfig.annotation._
 import metaconfig.generic.Settings
 import metaconfig.Configured
 import metaconfig.ConfDecoder
+import java.nio.file.Paths
+import scala.meta.io.AbsolutePath
 
 sealed abstract class Args
 object Args {
@@ -65,9 +67,18 @@ object Help {
 }
 
 case class Common(
+    @Description("Print this help message.")
+    help: Boolean = false,
     @Description("The root directory of the Pants build.")
     workspace: Path = PathIO.workingDirectory.toNIO
-)
+) {
+  val home = AbsolutePath {
+    Option(System.getenv("FASTPASS_HOME")) match {
+      case Some(value) => Paths.get(value)
+      case None => workspace.resolveSibling("intellij-bsp")
+    }
+  }
+}
 object Common {
   val default = Common()
   implicit lazy val surface = generic.deriveSurface[Common]
@@ -116,5 +127,3 @@ object Create {
   implicit lazy val decoder = generic.deriveDecoder[Create](default)
   implicit lazy val settings = Settings[Create]
 }
-
-// app()
