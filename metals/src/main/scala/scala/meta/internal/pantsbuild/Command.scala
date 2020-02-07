@@ -16,8 +16,10 @@ sealed abstract class Command {
 }
 case object Help extends Command
 case object ListProjects extends Command
+case class Refresh(
+    name: String
+) extends Command
 case object Edit extends Command
-case object Refresh extends Command
 case object Open extends Command
 
 /**
@@ -93,7 +95,24 @@ object Command {
   def parse(args: List[String]): Either[List[String], Command] =
     args match {
       case Nil => Right(Help)
-      case _ =>
+      case ("help" | "-h" | "--help") :: tail =>
+        Right(Help)
+      case "list" :: tail =>
+        Right(ListProjects)
+      case "refresh" :: tail =>
+        tail match {
+          case Nil =>
+            Left(List("missing argument: <name>"))
+          case name :: Nil =>
+            Right(Refresh(name))
+          case _ =>
+            Left(
+              List(
+                s"expected only one argument, obtained: ${tail.mkString(", ")}"
+              )
+            )
+        }
+      case "create" :: tail =>
         parseCreate(args, Create()).map {
           case parsed: Create =>
             if (parsed.isIntelliJ) {
@@ -112,6 +131,8 @@ object Command {
             }
           case c => c
         }
+      case _ =>
+        Right(Help)
     }
 
   def parseCreate(
