@@ -22,7 +22,7 @@ object Interpreter {
         }
         1
       case Ok(value) =>
-        interpret(args)
+        interpret(value)
     }
   }
   def interpret(args: Args): Int = {
@@ -41,22 +41,31 @@ object Interpreter {
             noSuchProject(info.name)
         }
       case list: ListProjects =>
-        Project.fromCommon(list.common).foreach { name =>
-          println(name)
+        Project.fromCommon(list.common).foreach { project =>
+          println(project.name)
         }
         0
       case refresh: Refresh =>
-        Project.fromName(refresh.name, refresh.common) match {
-          case Some(project) =>
-            interpretExport(
-              Export().copy(
-                projectName = Some(refresh.name),
-                targets = project.targets,
-                out = project.root.bspRoot.toNIO
-              )
-            )
-          case None =>
-            noSuchProject(refresh.name)
+        if (refresh.names.isEmpty) {
+          scribe.error("no projects to refresh")
+          1
+        } else {
+          val errors = refresh.names.map { name =>
+            Project.fromName(name, refresh.common) match {
+              case Some(project) =>
+                interpretExport(
+                  Export().copy(
+                    workspace = refresh.common.workspace,
+                    projectName = Some(name),
+                    targets = project.targets,
+                    out = project.root.bspRoot.toNIO
+                  )
+                )
+              case None =>
+                noSuchProject(name)
+            }
+          }
+          errors.sum
         }
       case create: Create =>
         Project.fromName(create.name, create.common) match {
@@ -68,6 +77,7 @@ object Interpreter {
           case None =>
             interpretExport(
               Export().copy(
+                workspace = create.common.workspace,
                 projectName = Some(create.name),
                 targets = create.targets,
                 out = create.common.home
@@ -162,7 +172,7 @@ object Project {
     for {
       project <- common.home.list.toBuffer[AbsolutePath].toList
       if (isEnabled(project.filename))
-      root = ProjectRoot(project.resolve(project.filename))
+      root = ProjectRoot(project)
       if (root.bspJson.isFile)
       json <- Try(ujson.read(root.bspJson.readText)).toOption
       targets <- json.obj.get("pantsTargets")

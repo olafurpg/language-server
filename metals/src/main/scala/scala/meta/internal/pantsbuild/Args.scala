@@ -90,7 +90,8 @@ object Common {
 }
 
 case class Refresh(
-    name: String = "",
+    @ExtraName("remainingArgs")
+    names: List[String] = Nil,
     @Inline common: Common = Common()
 ) extends Args
 object Refresh {

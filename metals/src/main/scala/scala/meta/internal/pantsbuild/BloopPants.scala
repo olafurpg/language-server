@@ -15,12 +15,9 @@ import java.nio.file.StandardCopyOption
 import java.util.concurrent.CancellationException
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsLogger
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.Timer
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
