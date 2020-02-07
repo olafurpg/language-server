@@ -38,61 +38,8 @@ object BloopPants {
 
   def main(argStrings: Array[String]): Unit = {
     MetalsLogger.updateDefaultFormat()
-    Command.parse(argStrings.toList) match {
-      case Left(errors) =>
-        errors.foreach { error =>
-          scribe.error(error)
-        }
-        System.exit(1)
-      case Right(Help) =>
-        println(Create().helpMessage)
-      case Right(args: Create) =>
-        if (!args.pants.isFile) {
-          scribe.error(
-            s"No Pants build detected, file '${args.pants}' does not exist."
-          )
-          scribe.error(
-            s"Is the working directory correct? (${PathIO.workingDirectory})"
-          )
-          System.exit(1)
-        } else if (args.isRegenerate) {
-          bloopRegenerate(
-            AbsolutePath(args.workspace),
-            args.targets
-          )(ExecutionContext.global)
-        } else if (args.isVscode && args.isWorkspaceAndOutputSameDirectory) {
-          VSCode.launch(args)
-        } else {
-          val workspace = args.workspace
-          val targets = args.targets
-          val timer = new Timer(Time.system)
-          val installResult = bloopInstall(args)(ExecutionContext.global)
-          installResult match {
-            case Failure(exception) =>
-              exception match {
-                case MessageOnlyException(message) =>
-                  scribe.error(message)
-                case _ =>
-                  scribe.error(s"${args.command} failed to run", exception)
-              }
-              sys.exit(1)
-            case Success(count) =>
-              scribe.info(s"time: exported ${count} Pants target(s) in $timer")
-              if (args.out != args.workspace) {
-                scribe.info(s"output: ${args.out}")
-                symlinkToOut(args)
-              }
-              if (args.isLaunchIntelliJ) {
-                IntelliJ.launch(args.out, args.targets)
-              } else if (args.isVscode) {
-                VSCode.launch(args)
-              }
-          }
-        }
-      case Right(args) =>
-        pprint.log(args)
-        ???
-    }
+    val exit = Interpreter.interpret(Args.parse(argStrings.toList))
+    System.exit(exit)
   }
 
   def bloopAddOwnerOf(
@@ -159,7 +106,7 @@ object BloopPants {
       case e @ InterruptException() => Failure(e)
     }
 
-  def bloopInstall(args: Create)(implicit ec: ExecutionContext): Try[Int] =
+  def bloopInstall(args: Export)(implicit ec: ExecutionContext): Try[Int] =
     interruptedTry {
       val cacheDir = Files.createDirectories(
         args.workspace.resolve(".pants.d").resolve("metals")
@@ -236,7 +183,7 @@ object BloopPants {
     }
   }
 
-  private def symlinkToOut(args: Create): Unit = {
+  def symlinkToOut(args: Export): Unit = {
     val workspaceBloop = args.workspace.resolve(".bloop")
 
     if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
@@ -267,7 +214,7 @@ object BloopPants {
   }
 
   private def runPantsExport(
-      args: Create,
+      args: Export,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
     val command = List[Option[String]](
@@ -304,7 +251,7 @@ object BloopPants {
 }
 
 private class BloopPants(
-    args: Create,
+    args: Export,
     bloopDir: Path,
     export: PantsExport,
     filemap: Filemap

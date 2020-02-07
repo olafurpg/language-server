@@ -1,4 +1,4 @@
-package scala.meta.internal.pantsbuild.cli
+package scala.meta.internal.pantsbuild
 
 import metaconfig.Conf
 import metaconfig.generic
@@ -20,6 +20,7 @@ object Args {
        |Commands:
        |  help                                              Print this help message.
        |  list                                              List all projects.
+       |  info PROJECT_NAME                                 Print information about an existing project.
        |  create [--name PROJECT_NAME] [PANTS_TARGETS ..]   Create new project.
        |  refresh PROJECT_NAME                              Refresh existing project.
        |
@@ -50,9 +51,9 @@ object Args {
             Conf
               .parseCliArgs(tail)(subcommand.settings)
               .andThen(_.as(subcommand.decoder))
-          case None => Configured.error(s"unknown command: $head\n$helpMessage")
+          case None =>
+            Configured.error(s"unknown command: $head\n$helpMessage")
         }
-        Configured.ok(Help())
     }
   }
 }
@@ -72,6 +73,7 @@ case class Common(
     @Description("The root directory of the Pants build.")
     workspace: Path = PathIO.workingDirectory.toNIO
 ) {
+  val pants = AbsolutePath(workspace.resolve("pants"))
   val home = AbsolutePath {
     Option(System.getenv("FASTPASS_HOME")) match {
       case Some(value) => Paths.get(value)
@@ -117,6 +119,8 @@ object ListProjects {
 
 case class Create(
     name: String = "",
+    @ExtraName("remainingArgs")
+    targets: List[String] = Nil,
     @Inline common: Common = Common.default
 ) extends Args
 

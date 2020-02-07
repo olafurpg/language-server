@@ -15,7 +15,7 @@ import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.FutureCancelToken
-import scala.meta.internal.pantsbuild.Create
+import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.PantsConfiguration
 
 case class PantsBuildTool(
@@ -84,7 +84,7 @@ case class PantsBuildTool(
           )
           val token = FutureCancelToken(response.asScala.map(_.cancel))
           try {
-            val args = Create().copy(
+            val args = Export().copy(
               workspace = workspace.toNIO,
               out = workspace.toNIO,
               targets = targets,
