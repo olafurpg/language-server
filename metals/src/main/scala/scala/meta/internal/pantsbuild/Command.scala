@@ -94,7 +94,7 @@ object Command {
     args match {
       case Nil => Right(Help)
       case _ =>
-        parse(args, Create()).map {
+        parseCreate(args, Create()).map {
           case parsed: Create =>
             if (parsed.isIntelliJ) {
               val projectName = parsed.projectName.getOrElse(
@@ -113,7 +113,11 @@ object Command {
           case c => c
         }
     }
-  def parse(args: List[String], base: Create): Either[List[String], Command] =
+
+  def parseCreate(
+      args: List[String],
+      base: Create
+  ): Either[List[String], Command] =
     args match {
       case Nil => Right(base)
       case ("help" | "-h" | "--help") :: tail =>
@@ -123,35 +127,35 @@ object Command {
         val out =
           if (base.out == base.workspace) dir
           else base.out
-        parse(tail, base.copy(workspace = dir, out = out))
+        parseCreate(tail, base.copy(workspace = dir, out = out))
       case "--out" :: out :: tail =>
-        parse(
+        parseCreate(
           tail,
           base.copy(out = AbsolutePath(out)(AbsolutePath(base.workspace)).toNIO)
         )
       case "--regenerate" :: tail =>
-        parse(tail, base.copy(isRegenerate = true))
+        parseCreate(tail, base.copy(isRegenerate = true))
       case "--merge-targets-in-same-directory" :: tail =>
-        parse(
+        parseCreate(
           tail,
           base.copy(
             isMergeTargetsInSameDirectory = true
           )
         )
       case "--intellij" :: tail =>
-        parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
+        parseCreate(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
       case "--vscode" :: tail =>
-        parse(tail, base.copy(isVscode = true))
+        parseCreate(tail, base.copy(isVscode = true))
       case "--no-sources" :: tail =>
-        parse(tail, base.copy(isSources = false))
+        parseCreate(tail, base.copy(isSources = false))
       case "--launch-intellij" :: tail =>
-        parse(tail, base.copy(isLaunchIntelliJ = true))
+        parseCreate(tail, base.copy(isLaunchIntelliJ = true))
       case "--no-launch-intellij" :: tail =>
-        parse(tail, base.copy(isLaunchIntelliJ = false))
+        parseCreate(tail, base.copy(isLaunchIntelliJ = false))
       case ("--update" | "--cache") :: tail =>
-        parse(tail, base.copy(isCache = true))
+        parseCreate(tail, base.copy(isCache = true))
       case "--project-name" :: name :: tail =>
-        parse(tail, base.copy(projectName = Some(name)))
+        parseCreate(tail, base.copy(projectName = Some(name)))
       case "--max-file-count" :: count :: tail =>
         Try(count.toInt) match {
           case Failure(_) =>
@@ -161,7 +165,7 @@ object Command {
               )
             )
           case Success(value) =>
-            parse(tail, base.copy(maxFileCount = value))
+            parseCreate(tail, base.copy(maxFileCount = value))
         }
       case tail =>
         tail.headOption match {
