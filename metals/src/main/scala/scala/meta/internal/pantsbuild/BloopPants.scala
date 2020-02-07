@@ -45,7 +45,7 @@ object BloopPants {
         }
         System.exit(1)
       case Right(args) =>
-        if (args.isHelp) {
+        if (args.cmd.isHelp) {
           println(args.helpMessage)
         } else if (!args.pants.isFile) {
           scribe.error(

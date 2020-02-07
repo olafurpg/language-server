@@ -11,11 +11,23 @@ import scala.util.Success
 import java.nio.file.Paths
 import scala.meta.internal.metals.BuildInfo
 
+sealed abstract class Command {
+  def isHelp = this == Command.Help
+}
+object Command {
+  case object Help extends Command
+  case object Create extends Command
+  case object List extends Command
+  case object Edit extends Command
+  case object Refresh extends Command
+  case object Open extends Command
+}
+
 /**
  * The command-line argument parser for BloopPants.
  */
 case class Args(
-    isHelp: Boolean = false,
+    cmd: Command = Command.Create,
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
     isIntelliJ: Boolean = false,
@@ -84,7 +96,7 @@ case class Args(
 object Args {
   def parse(args: List[String]): Either[List[String], Args] =
     args match {
-      case Nil => Right(Args(isHelp = true))
+      case Nil => Right(Args(cmd = Command.Help))
       case _ =>
         parse(args, Args()).map { parsed =>
           if (parsed.isIntelliJ) {
@@ -107,8 +119,8 @@ object Args {
   def parse(args: List[String], base: Args): Either[List[String], Args] =
     args match {
       case Nil => Right(base)
-      case "--help" :: tail =>
-        Right(Args(isHelp = true))
+      case ("help" | "-h" | "--help") :: tail =>
+        Right(Args(Command.Help))
       case "--workspace" :: workspace :: tail =>
         val dir = AbsolutePath(workspace).toNIO
         val out =
