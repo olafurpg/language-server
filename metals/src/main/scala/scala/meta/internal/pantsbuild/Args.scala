@@ -92,6 +92,8 @@ object Common {
 case class Refresh(
     @ExtraName("remainingArgs")
     names: List[String] = Nil,
+    @Hidden()
+    update: Boolean = false,
     @Inline common: Common = Common()
 ) extends Args
 object Refresh {

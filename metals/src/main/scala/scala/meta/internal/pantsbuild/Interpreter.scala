@@ -56,6 +56,7 @@ object Interpreter {
                 interpretExport(
                   Export().copy(
                     workspace = refresh.common.workspace,
+                    isCache = refresh.update,
                     projectName = Some(name),
                     targets = project.targets,
                     out = project.root.bspRoot.toNIO
