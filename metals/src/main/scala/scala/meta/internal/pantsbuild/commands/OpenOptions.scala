@@ -14,7 +14,9 @@ case class OpenOptions(
     @Hidden()
     projects: List[String] = Nil,
     @Inline common: SharedOptions = SharedOptions.default
-)
+) {
+  def isEmpty: Boolean = !intellij && !vscode
+}
 
 object OpenOptions {
   val default: OpenOptions = OpenOptions()

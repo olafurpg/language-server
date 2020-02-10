@@ -81,6 +81,13 @@ case class Project(
   def bspRoot: AbsolutePath = root.bspRoot
 }
 object Project {
+  def create(
+      name: String,
+      common: SharedOptions,
+      targets: List[String]
+  ): Project = {
+    Project(common, name, targets, ProjectRoot(common.home.resolve(name)))
+  }
   def fromName(
       name: String,
       common: SharedOptions

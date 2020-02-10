@@ -24,14 +24,8 @@ object CreateCommand extends Command[CreateOptions]("create") {
         )
         1
       case None =>
-        val root = ProjectRoot(create.common.home.resolve(name))
-        SharedCommand.interpretExport(
-          Export(create.common, create.open, root, app).copy(
-            workspace = create.common.workspace,
-            projectName = name,
-            targets = create.targets
-          )
-        )
+        val project = Project.create(name, create.common, create.targets)
+        SharedCommand.interpretExport(Export(project, create.open, app))
     }
     if (exit == 0) {
       OpenCommand
