@@ -11,6 +11,7 @@ case class RefreshOptions(
     names: List[String] = Nil,
     @Hidden()
     update: Boolean = false,
+    @Inline open: OpenOptions = OpenOptions.default,
     @Inline common: SharedOptions = SharedOptions()
 )
 object RefreshOptions {

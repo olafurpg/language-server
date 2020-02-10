@@ -9,6 +9,7 @@ import scala.meta.internal.pantsbuild.PantsConfiguration
 
 case class CreateOptions(
     @ExtraName("remainingArgs")
+    @Hidden()
     targets: List[String] = Nil,
     @Description(
       "The name of the generated project that appears in the IntelliJ projects view. " +
@@ -16,6 +17,7 @@ case class CreateOptions(
         "Defaults to an auto-generated name based on the --targets option."
     )
     name: Option[String] = None,
+    @Inline open: OpenOptions = OpenOptions.default,
     @Inline common: SharedOptions = SharedOptions.default
 ) {
   def actualName: String = name.getOrElse {

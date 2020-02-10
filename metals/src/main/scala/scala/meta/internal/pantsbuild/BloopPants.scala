@@ -45,7 +45,8 @@ object BloopPants {
       CreateCommand,
       RefreshCommand,
       ListCommand,
-      InfoCommand
+      InfoCommand,
+      OpenCommand
     )
   )
 

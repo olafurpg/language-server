@@ -18,12 +18,11 @@ object RefreshCommand extends Command[RefreshOptions]("refresh") {
         Project.fromName(name, refresh.common) match {
           case Some(project) =>
             SharedCommand.interpretExport(
-              Export().copy(
+              Export(refresh.common, refresh.open, project.root, app).copy(
                 workspace = refresh.common.workspace,
                 isCache = refresh.update,
-                projectName = Some(name),
-                targets = project.targets,
-                out = project.root.bspRoot.toNIO
+                projectName = name,
+                targets = project.targets
               )
             )
           case None =>

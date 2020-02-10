@@ -11,9 +11,9 @@ import scala.util.Failure
 import scala.util.Success
 import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.BloopPants
-import scala.meta.internal.pantsbuild.VSCode
 import scala.meta.internal.pantsbuild.MessageOnlyException
 import scala.meta.internal.pantsbuild.IntelliJ
+import scala.meta.internal.pantsbuild.VSCode
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -30,9 +30,6 @@ object SharedCommand {
         AbsolutePath(export.workspace),
         export.targets
       )(ExecutionContext.global)
-      0
-    } else if (export.isVscode && export.isWorkspaceAndOutputSameDirectory) {
-      VSCode.launch(export)
       0
     } else {
       val workspace = export.workspace
@@ -51,15 +48,9 @@ object SharedCommand {
           1
         case Success(count) =>
           scribe.info(s"time: exported ${count} Pants target(s) in $timer")
-          if (export.out != export.workspace) {
-            scribe.info(s"output: ${export.out}")
-            BloopPants.symlinkToOut(export)
-          }
-          if (export.isLaunchIntelliJ) {
-            IntelliJ.launch(export.out, export.targets)
-          } else if (export.isVscode) {
-            VSCode.launch(export)
-          }
+          scribe.info(s"output: ${export.root.bspRoot}")
+          BloopPants.symlinkToOut(export)
+          OpenCommand.run(export.open, export.app)
           0
       }
     }
@@ -79,11 +70,16 @@ case class ProjectRoot(
   val bspRoot: AbsolutePath = root.resolve(root.filename)
   val bspJson: AbsolutePath = bspRoot.resolve(".bsp").resolve("bloop.json")
 }
+
 case class Project(
+    common: SharedOptions,
     name: String,
     targets: List[String],
     root: ProjectRoot
-)
+) {
+  def parentRoot: AbsolutePath = root.root
+  def bspRoot: AbsolutePath = root.bspRoot
+}
 object Project {
   def fromName(
       name: String,
@@ -102,6 +98,7 @@ object Project {
       json <- Try(ujson.read(root.bspJson.readText)).toOption
       targets <- json.obj.get("pantsTargets")
     } yield Project(
+      common,
       project.filename,
       targets.arr.map(_.str).toList,
       root
