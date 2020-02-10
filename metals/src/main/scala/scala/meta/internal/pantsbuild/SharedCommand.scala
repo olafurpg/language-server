@@ -1,8 +1,5 @@
 package scala.meta.internal.pantsbuild
 
-import metaconfig.Configured
-import metaconfig.Configured.NotOk
-import metaconfig.Configured.Ok
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
@@ -13,85 +10,7 @@ import scala.meta.internal.metals.Time
 import scala.util.Failure
 import scala.util.Success
 
-object Interpreter {
-  def interpret(args: Configured[Args]): Int = {
-    args match {
-      case NotOk(error) =>
-        error.all.foreach { msg =>
-          scribe.error(msg)
-        }
-        1
-      case Ok(value) =>
-        interpret(value)
-    }
-  }
-  def interpret(args: Args): Int = {
-    args match {
-      case Help() =>
-        println(Args.helpMessage)
-        0
-      case info: Info =>
-        Project.fromName(info.name, info.common) match {
-          case Some(value) =>
-            value.targets.foreach { target =>
-              println(target)
-            }
-            0
-          case None =>
-            noSuchProject(info.name)
-        }
-      case list: ListProjects =>
-        Project.fromCommon(list.common).foreach { project =>
-          println(project.name)
-        }
-        0
-      case refresh: Refresh =>
-        if (refresh.names.isEmpty) {
-          scribe.error("no projects to refresh")
-          1
-        } else {
-          val errors = refresh.names.map { name =>
-            Project.fromName(name, refresh.common) match {
-              case Some(project) =>
-                interpretExport(
-                  Export().copy(
-                    workspace = refresh.common.workspace,
-                    isCache = refresh.update,
-                    projectName = Some(name),
-                    targets = project.targets,
-                    out = project.root.bspRoot.toNIO
-                  )
-                )
-              case None =>
-                noSuchProject(name)
-            }
-          }
-          errors.sum
-        }
-      case create: Create =>
-        Project.fromName(create.name, create.common) match {
-          case Some(value) =>
-            scribe.error(
-              s"project '${create.name}' already exists, did you mean 'fastpass refresh ${create.name}'?"
-            )
-            1
-          case None =>
-            interpretExport(
-              Export().copy(
-                workspace = create.common.workspace,
-                projectName = Some(create.name),
-                targets = create.targets,
-                out = create.common.home
-                  .resolve(create.name)
-                  .resolve(create.name)
-                  .toNIO
-              )
-            )
-        }
-    }
-    0
-  }
-
+object SharedCommand {
   def interpretExport(export: Export): Int = {
     if (!export.pants.isFile) {
       scribe.error(
@@ -146,14 +65,14 @@ object Interpreter {
     1
   }
 
-  def interpretRefresh(refresh: Refresh): Int = { 1 }
+  def interpretRefresh(refresh: RefreshOptions): Int = { 1 }
 }
 
 case class ProjectRoot(
     root: AbsolutePath
 ) {
-  val bspRoot = root.resolve(root.filename)
-  val bspJson = bspRoot.resolve(".bsp").resolve("bloop.json")
+  val bspRoot: AbsolutePath = root.resolve(root.filename)
+  val bspJson: AbsolutePath = bspRoot.resolve(".bsp").resolve("bloop.json")
 }
 case class Project(
     name: String,
@@ -163,11 +82,11 @@ case class Project(
 object Project {
   def fromName(
       name: String,
-      common: Common
+      common: SharedOptions
   ): Option[Project] =
     fromCommon(common, _ == name).headOption
   def fromCommon(
-      common: Common,
+      common: SharedOptions,
       isEnabled: String => Boolean = _ => true
   ): List[Project] = {
     for {

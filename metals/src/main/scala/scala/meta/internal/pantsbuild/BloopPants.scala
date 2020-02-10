@@ -30,12 +30,27 @@ import scala.util.Properties
 import scala.util.Success
 import scala.util.Try
 import ujson.Value
+import metaconfig.cli.CliApp
+import metaconfig.cli.HelpCommand
+import metaconfig.cli.VersionCommand
 
 object BloopPants {
+  val app: CliApp = CliApp(
+    version = BuildInfo.metalsVersion,
+    binaryName = "fastpass",
+    commands = List(
+      HelpCommand,
+      VersionCommand,
+      CreateCommand,
+      RefreshCommand,
+      ListCommand,
+      InfoCommand
+    )
+  )
 
-  def main(argStrings: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = {
     MetalsLogger.updateDefaultFormat()
-    val exit = Interpreter.interpret(Args.parse(argStrings.toList))
+    val exit = app.run(args.toList)
     System.exit(exit)
   }
 
