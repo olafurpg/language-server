@@ -7,6 +7,7 @@ import metaconfig.ConfCodec
 case class InfoOptions(
     @Description("The name of the project to print out information about.")
     @ExtraName("remainingArgs")
+    @Hidden()
     names: List[String] = Nil,
     @Inline common: SharedOptions = SharedOptions()
 )

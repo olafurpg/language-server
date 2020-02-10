@@ -11,8 +11,6 @@ import scala.meta.io.AbsolutePath
 import metaconfig.{ConfDecoder, ConfEncoder}
 
 case class SharedOptions(
-    @Description("Print this help message.")
-    help: Boolean = false,
     @Description("The root directory of the Pants build.")
     workspace: Path = PathIO.workingDirectory.toNIO
 ) {

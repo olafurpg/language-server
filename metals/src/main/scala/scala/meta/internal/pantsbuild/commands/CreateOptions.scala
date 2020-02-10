@@ -4,13 +4,24 @@ import metaconfig.generic
 import metaconfig.annotation._
 import metaconfig.generic.Settings
 import metaconfig.{ConfDecoder, ConfEncoder}
+import scala.collection.immutable.Nil
+import scala.meta.internal.pantsbuild.PantsConfiguration
 
 case class CreateOptions(
-    name: String = "",
     @ExtraName("remainingArgs")
     targets: List[String] = Nil,
+    @Description(
+      "The name of the generated project that appears in the IntelliJ projects view. " +
+        "Should ideally be short, readable and easy to type. " +
+        "Defaults to an auto-generated name based on the --targets option."
+    )
+    name: Option[String] = None,
     @Inline common: SharedOptions = SharedOptions.default
-)
+) {
+  def actualName: String = name.getOrElse {
+    PantsConfiguration.outputFilename(targets)
+  }
+}
 
 object CreateOptions {
   val default: CreateOptions = CreateOptions()

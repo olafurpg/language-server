@@ -7,8 +7,11 @@ import scala.meta.internal.pantsbuild.Export
 
 object CreateCommand extends Command[CreateOptions]("create") {
   override def description: Doc = Doc.paragraph("Create a new project")
+  override def usage: Doc =
+    Doc.text("fastpass create [OPTIONS] [TARGETS ...]")
   def run(create: CreateOptions, app: CliApp): Int = {
-    Project.fromName(create.name, create.common) match {
+    val name = create.actualName
+    Project.fromName(name, create.common) match {
       case Some(value) =>
         app.error(
           s"project '${create.name}' already exists.\n\tDid you mean 'fastpass refresh ${create.name}'?"
@@ -18,11 +21,11 @@ object CreateCommand extends Command[CreateOptions]("create") {
         SharedCommand.interpretExport(
           Export().copy(
             workspace = create.common.workspace,
-            projectName = Some(create.name),
+            projectName = Some(name),
             targets = create.targets,
             out = create.common.home
-              .resolve(create.name)
-              .resolve(create.name)
+              .resolve(name)
+              .resolve(name)
               .toNIO
           )
         )
