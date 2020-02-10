@@ -13,7 +13,6 @@ import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.BloopPants
 import scala.meta.internal.pantsbuild.MessageOnlyException
 import scala.meta.internal.pantsbuild.IntelliJ
-import scala.meta.internal.pantsbuild.VSCode
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -47,6 +46,7 @@ object SharedCommand {
           }
           1
         case Success(count) =>
+          IntelliJ.writeBsp(export.project)
           scribe.info(s"time: exported ${count} Pants target(s) in $timer")
           scribe.info(s"output: ${export.root.bspRoot}")
           BloopPants.symlinkToOut(export)
@@ -69,6 +69,7 @@ case class ProjectRoot(
 ) {
   val bspRoot: AbsolutePath = root.resolve(root.filename)
   val bspJson: AbsolutePath = bspRoot.resolve(".bsp").resolve("bloop.json")
+  val bloopRoot: AbsolutePath = bspRoot.resolve(".bloop")
 }
 
 case class Project(

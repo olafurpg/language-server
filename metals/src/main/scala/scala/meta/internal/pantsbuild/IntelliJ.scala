@@ -49,8 +49,7 @@ object IntelliJ {
 
   /** The .bsp/bloop.json file is necessary for IntelliJ to automatically impor the project */
   def writeBsp(project: Project): Unit = {
-    val directory = project.root.bspRoot.toNIO
-    val bsp = Files.createDirectories(directory.resolve(".bsp"))
+    val bsp = Files.createDirectories(project.bspRoot.toNIO)
     val coursier = downloadCoursier(bsp.resolve("coursier"))
     val targetsJson = new JsonArray()
     project.targets.foreach { target =>

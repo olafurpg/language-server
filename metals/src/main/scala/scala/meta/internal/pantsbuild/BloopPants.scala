@@ -34,19 +34,26 @@ import ujson.Value
 import metaconfig.cli.CliApp
 import metaconfig.cli.HelpCommand
 import metaconfig.cli.VersionCommand
+import metaconfig.internal.TermInfo
+import org.typelevel.paiges.Doc
 
 object BloopPants {
-  val app: CliApp = CliApp(
+  lazy val app: CliApp = CliApp(
     version = BuildInfo.metalsVersion,
     binaryName = "fastpass",
     commands = List(
-      HelpCommand,
+      new HelpCommand(
+        screenWidth = screenWidth(),
+        appUsage = app => Doc.text(s"${app.binaryName} COMMAND [OPTIONS]"),
+        appExamples = app => Doc.empty
+      ),
       VersionCommand,
       CreateCommand,
       RefreshCommand,
       ListCommand,
       InfoCommand,
-      OpenCommand
+      OpenCommand,
+      LinkCommand
     )
   )
 
@@ -54,6 +61,26 @@ object BloopPants {
     MetalsLogger.updateDefaultFormat()
     val exit = app.run(args.toList)
     System.exit(exit)
+  }
+
+  private def screenWidth(): Int = {
+    math.min(120, math.max(40, tputsColumns() - 20))
+  }
+
+  private def tputsColumns(fallback: Int = 80): Int = {
+    import scala.sys.process._
+    val pathedTput =
+      if (new java.io.File("/usr/bin/tput").exists()) "/usr/bin/tput"
+      else "tput"
+    try {
+      val columns =
+        Seq("sh", "-c", s"$pathedTput cols 2> /dev/tty").!!.trim.toInt
+      columns.toInt
+    } catch {
+      case NonFatal(e) =>
+        e.printStackTrace()
+        fallback
+    }
   }
 
   def bloopAddOwnerOf(
@@ -197,27 +224,36 @@ object BloopPants {
     }
   }
 
-  def symlinkToOut(args: Export): Unit = {
-    val workspaceBloop = args.workspace.resolve(".bloop")
+  def symlinkToOut(project: Project): Unit = {
+    symlinkToOut(
+      project.common.workspace,
+      project.root.bspRoot.toNIO
+    )
+  }
+  def symlinkToOut(export: Export): Unit = {
+    symlinkToOut(export.workspace, export.out)
+  }
+  private def symlinkToOut(workspace: Path, out: Path): Unit = {
+    val workspaceBloop = workspace.resolve(".bloop")
 
     if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
-      val outBloop = args.out.resolve(".bloop")
+      val outBloop = out.resolve(".bloop")
       Files.deleteIfExists(workspaceBloop)
       Files.createSymbolicLink(workspaceBloop, outBloop)
     }
 
     val inScalafmt = {
-      val link = args.workspace.resolve(".scalafmt.conf")
+      val link = workspace.resolve(".scalafmt.conf")
       // Configuration file may be symbolic link.
       val relpath =
         if (Files.isSymbolicLink(link)) Files.readSymbolicLink(link)
         else link
       // Symbolic link may be relative to workspace directory.
       if (relpath.isAbsolute()) relpath
-      else args.workspace.resolve(relpath)
+      else workspace.resolve(relpath)
     }
-    val outScalafmt = args.out.resolve(".scalafmt.conf")
-    if (!args.out.startsWith(args.workspace) &&
+    val outScalafmt = out.resolve(".scalafmt.conf")
+    if (!out.startsWith(workspace) &&
       Files.exists(inScalafmt) && {
         !Files.exists(outScalafmt) ||
         Files.isSymbolicLink(outScalafmt)

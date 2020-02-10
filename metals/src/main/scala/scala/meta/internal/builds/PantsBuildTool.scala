@@ -18,9 +18,7 @@ import scala.meta.internal.metals.FutureCancelToken
 import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.PantsConfiguration
 import scala.meta.internal.pantsbuild.commands.SharedOptions
-import java.nio.file.OpenOption
 import scala.meta.internal.pantsbuild.commands.OpenOptions
-import scala.meta.internal.pantsbuild.commands.ProjectRoot
 import scala.meta.internal.pantsbuild.commands.Project
 
 case class PantsBuildTool(

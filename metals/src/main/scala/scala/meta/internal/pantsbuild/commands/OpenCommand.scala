@@ -8,13 +8,16 @@ import metaconfig.cli.Messages
 import scala.meta.internal.pantsbuild.VSCode
 
 object OpenCommand extends Command[OpenOptions]("open") {
+  override def description: Doc =
+    Doc.paragraph("Launch IntelliJ or VS Code with the given project.")
   override def usage: Doc =
-    Doc.text("fastpass open [OPTIONS] [PROJECT_NAME ...]")
+    Doc.paragraph("fastpass open [OPTIONS] [PROJECT_NAME ...]")
   override def options: Doc =
     Messages.options(OpenOptions())
   override def examples: Doc =
     Doc.text("fastpass open --intellij PROJECT_NAME")
   def run(open: OpenOptions, app: CliApp): Int = {
+    pprint.log(open)
     val exits: List[Int] = open.projects.map { projectName =>
       Project.fromName(projectName, open.common) match {
         case Some(project) =>

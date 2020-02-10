@@ -13,23 +13,29 @@ object CreateCommand extends Command[CreateOptions]("create") {
     Doc.text("fastpass create [OPTIONS] [TARGETS ...]")
   override def options: Doc = Messages.options(CreateOptions())
   override def examples: Doc =
-    Doc.text("fastpass create --name") /
-      Doc.text("")
+    Doc.intercalate(
+      Doc.line,
+      List(
+        "# Create project with custom name from two Pants targets",
+        "fastpass create --name PROJECT_NAME TARGETS1:: TARGETS2::",
+        "",
+        "# Create project with auto-generated name from one Pants targets",
+        "fastpass create TARGETS::"
+      ).map(Doc.text)
+    )
   def run(create: CreateOptions, app: CliApp): Int = {
     val name = create.actualName
-    val exit = Project.fromName(name, create.common) match {
+    Project.fromName(name, create.common) match {
       case Some(value) =>
         app.error(
-          s"project '${create.name}' already exists.\n\tDid you mean 'fastpass refresh ${create.name}'?"
+          s"project '${name}' already exists.\n\tDid you mean 'fastpass refresh ${name}'?"
         )
         1
       case None =>
         val project = Project.create(name, create.common, create.targets)
-        SharedCommand.interpretExport(Export(project, create.open, app))
+        SharedCommand.interpretExport(
+          Export(project, create.open, app).copy(export = create.export)
+        )
     }
-    if (exit == 0) {
-      OpenCommand
-    }
-    exit
   }
 }

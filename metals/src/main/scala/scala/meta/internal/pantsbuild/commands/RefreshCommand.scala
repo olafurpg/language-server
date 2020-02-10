@@ -9,6 +9,14 @@ import scala.meta.internal.pantsbuild.Export
 object RefreshCommand extends Command[RefreshOptions]("refresh") {
   override def description: Doc = Doc.paragraph("Refresh an existing project")
   override def options: Doc = Messages.options(RefreshOptions())
+  override def examples: Doc =
+    Doc.intercalate(
+      Doc.line,
+      List(
+        "# Refresh a project and launch IntelliJ after the refresh completes",
+        "fastpass refresh --intellij PROJECT_NAME"
+      ).map(Doc.text)
+    )
   def run(refresh: RefreshOptions, app: CliApp): Int = {
     if (refresh.names.isEmpty) {
       scribe.error("no projects to refresh")
@@ -19,6 +27,7 @@ object RefreshCommand extends Command[RefreshOptions]("refresh") {
           case Some(project) =>
             SharedCommand.interpretExport(
               Export(project, refresh.open, app).copy(
+                export = refresh.export,
                 isCache = refresh.update
               )
             )

@@ -13,6 +13,7 @@ case class OpenOptions(
     @ExtraName("remainingArgs")
     @Hidden()
     projects: List[String] = Nil,
+    @Hidden()
     @Inline common: SharedOptions = SharedOptions.default
 ) {
   def isEmpty: Boolean = !intellij && !vscode

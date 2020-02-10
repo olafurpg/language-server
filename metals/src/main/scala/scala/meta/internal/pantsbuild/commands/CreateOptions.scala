@@ -17,8 +17,9 @@ case class CreateOptions(
         "Defaults to an auto-generated name based on the --targets option."
     )
     name: Option[String] = None,
-    @Inline open: OpenOptions = OpenOptions.default,
-    @Inline common: SharedOptions = SharedOptions.default
+    @Hidden() @Inline export: ExportOptions = ExportOptions.default,
+    @Hidden() @Inline open: OpenOptions = OpenOptions.default,
+    @Hidden() @Inline common: SharedOptions = SharedOptions.default
 ) {
   def actualName: String = name.getOrElse {
     PantsConfiguration.outputFilename(targets)
