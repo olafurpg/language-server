@@ -1,4 +1,4 @@
-package scala.meta.internal.pantsbuild
+package scala.meta.internal.pantsbuild.commands
 
 import metaconfig.generic
 import scala.meta.internal.io.PathIO

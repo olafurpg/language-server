@@ -1,4 +1,4 @@
-package scala.meta.internal.pantsbuild
+package scala.meta.internal.pantsbuild.commands
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -9,6 +9,11 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.Time
 import scala.util.Failure
 import scala.util.Success
+import scala.meta.internal.pantsbuild.Export
+import scala.meta.internal.pantsbuild.BloopPants
+import scala.meta.internal.pantsbuild.VSCode
+import scala.meta.internal.pantsbuild.MessageOnlyException
+import scala.meta.internal.pantsbuild.IntelliJ
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {

@@ -1,9 +1,10 @@
-package scala.meta.internal.pantsbuild
+package scala.meta.internal.pantsbuild.commands
 
 import metaconfig.cli.Command
 import metaconfig.cli.CliApp
 import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
+import scala.meta.internal.pantsbuild.Export
 
 object RefreshCommand extends Command[RefreshOptions]("refresh") {
   override def description: Doc = Doc.paragraph("Refresh an existing project")

@@ -1,8 +1,9 @@
-package scala.meta.internal.pantsbuild
+package scala.meta.internal.pantsbuild.commands
 
 import metaconfig.cli.Command
 import metaconfig.cli.CliApp
 import org.typelevel.paiges.Doc
+import scala.meta.internal.pantsbuild.Export
 
 object CreateCommand extends Command[CreateOptions]("create") {
   override def description: Doc = Doc.paragraph("Create a new project")

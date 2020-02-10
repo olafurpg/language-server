@@ -1,4 +1,4 @@
-package scala.meta.internal.pantsbuild
+package scala.meta.internal.pantsbuild.commands
 
 import metaconfig.cli.Command
 import metaconfig.cli.CliApp
