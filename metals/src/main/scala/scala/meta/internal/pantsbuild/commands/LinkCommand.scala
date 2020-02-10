@@ -5,6 +5,7 @@ import metaconfig.cli.CliApp
 import scala.meta.internal.pantsbuild.BloopPants
 import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
+import fansi.Color
 
 object LinkCommand extends Command[LinkOptions]("link") {
   override def options: Doc = Messages.options(LinkOptions())
@@ -21,24 +22,15 @@ object LinkCommand extends Command[LinkOptions]("link") {
       ).map(Doc.text)
     )
   def run(link: LinkOptions, app: CliApp): Int = {
-    link.projects match {
-      case Nil =>
-        app.error("no projects to link")
-        1
-      case name :: Nil =>
-        Project.fromName(name, link.common) match {
-          case Some(project) =>
-            BloopPants.symlinkToOut(project)
-            scribe.info(s"linked ${project.name}")
-            0
-          case None =>
-            SharedCommand.noSuchProject(name)
-        }
-      case obtained =>
-        app.error(
-          s"can only link 1 project, obtained ${obtained.length} project '${obtained.mkString(" ")}'"
-        )
+    SharedCommand.withOneProject(
+      "link",
+      link.projects,
+      link.common,
+      app
+    ) { project =>
+      BloopPants.symlinkToOut(project)
+      app.out.println(s"${Color.LightBlue("info:")} linked ${project.name}")
+      0
     }
-    0
   }
 }

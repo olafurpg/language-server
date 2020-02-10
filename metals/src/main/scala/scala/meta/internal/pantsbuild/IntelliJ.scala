@@ -9,6 +9,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import java.net.URL
 import com.google.gson.JsonArray
 import scala.meta.internal.pantsbuild.commands.Project
+import java.nio.file.StandardOpenOption
 
 object IntelliJ {
   def launch(project: Project): Unit = {
@@ -49,15 +50,14 @@ object IntelliJ {
 
   /** The .bsp/bloop.json file is necessary for IntelliJ to automatically impor the project */
   def writeBsp(project: Project): Unit = {
-    val bsp = Files.createDirectories(project.bspRoot.toNIO)
-    val coursier = downloadCoursier(bsp.resolve("coursier"))
+    val bspJson = project.root.bspJson.toNIO
+    Files.createDirectories(bspJson.getParent)
+    val coursier = downloadCoursier(bspJson.resolveSibling("coursier"))
     val targetsJson = new JsonArray()
     project.targets.foreach { target =>
       targetsJson.add(target)
     }
-    Files.write(
-      bsp.resolve("bloop.json"),
-      s"""{
+    val newJson = s"""{
   "name": "Bloop",
   "version": "${V.bloopNightlyVersion}",
   "bspVersion": "${V.bspVersion}",
@@ -72,8 +72,15 @@ object IntelliJ {
   "timestamp": "${System.currentTimeMillis()}",
   "pantsTargets": ${targetsJson.toString()}
 }
-""".getBytes(StandardCharsets.UTF_8)
+"""
+    val out = Files.write(
+      bspJson,
+      newJson.getBytes(StandardCharsets.UTF_8),
+      StandardOpenOption.TRUNCATE_EXISTING,
+      StandardOpenOption.CREATE
     )
+    pprint.log(newJson)
+    pprint.log(out)
   }
 
   private def downloadCoursier(destination: Path): Path = {

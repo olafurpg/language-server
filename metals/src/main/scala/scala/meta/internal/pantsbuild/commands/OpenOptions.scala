@@ -10,12 +10,14 @@ case class OpenOptions(
     intellij: Boolean = false,
     @Description("Open VS Code in the given project")
     vscode: Boolean = false,
-    @ExtraName("remainingArgs")
     @Hidden()
+    @ExtraName("remainingArgs")
     projects: List[String] = Nil,
     @Hidden()
     @Inline common: SharedOptions = SharedOptions.default
 ) {
+  def withProject(project: Project): OpenOptions =
+    copy(projects = List(project.name))
   def isEmpty: Boolean = !intellij && !vscode
 }
 

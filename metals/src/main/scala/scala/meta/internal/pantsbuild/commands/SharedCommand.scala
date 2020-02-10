@@ -13,6 +13,8 @@ import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.BloopPants
 import scala.meta.internal.pantsbuild.MessageOnlyException
 import scala.meta.internal.pantsbuild.IntelliJ
+import metaconfig.cli.CliApp
+import metaconfig.internal.Levenshtein
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -50,14 +52,47 @@ object SharedCommand {
           scribe.info(s"time: exported ${count} Pants target(s) in $timer")
           scribe.info(s"output: ${export.root.bspRoot}")
           BloopPants.symlinkToOut(export)
-          OpenCommand.run(export.open, export.app)
+          OpenCommand.run(
+            export.open.withProject(export.project),
+            export.app
+          )
           0
       }
     }
   }
 
-  def noSuchProject(name: String): Int = {
-    scribe.error(s"no such project: ${name}")
+  def withOneProject(
+      action: String,
+      projects: List[String],
+      common: SharedOptions,
+      app: CliApp
+  )(fn: Project => Int): Int =
+    projects match {
+      case Nil =>
+        app.error(s"no projects to $action")
+        1
+      case name :: Nil =>
+        Project.fromName(name, common) match {
+          case Some(project) =>
+            fn(project)
+          case None =>
+            SharedCommand.noSuchProject(name, app, common)
+        }
+      case projects =>
+        app.error(
+          s"expected 1 project to $action but received ${projects.length} arguments '${projects.mkString(" ")}'"
+        )
+        1
+    }
+
+  def noSuchProject(name: String, app: CliApp, common: SharedOptions): Int = {
+    val candidates = Project.names(common)
+    val closest = Levenshtein.closestCandidate(name, candidates)
+    val didYouMean = closest match {
+      case Some(candidate) => s"\n\tDid you mean '$candidate'?"
+      case None => ""
+    }
+    app.error(s"project '$name' does not exist$didYouMean")
     1
   }
 
@@ -89,6 +124,8 @@ object Project {
   ): Project = {
     Project(common, name, targets, ProjectRoot(common.home.resolve(name)))
   }
+  def names(common: SharedOptions): List[String] =
+    fromCommon(common).map(_.name)
   def fromName(
       name: String,
       common: SharedOptions

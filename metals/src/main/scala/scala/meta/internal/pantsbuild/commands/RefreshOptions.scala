@@ -6,9 +6,8 @@ import metaconfig.generic.Settings
 import metaconfig.{ConfDecoder, ConfEncoder}
 
 case class RefreshOptions(
-    @ExtraName("remainingArgs")
-    @Hidden()
-    names: List[String] = Nil,
+    @Hidden() @ExtraName("remainingArgs")
+    projects: List[String] = Nil,
     @Hidden()
     update: Boolean = false,
     @Inline export: ExportOptions = ExportOptions.default,

@@ -1,7 +1,6 @@
 package scala.meta.internal.pantsbuild.commands
 
 import metaconfig.generic
-import scala.meta.internal.io.PathIO
 import java.nio.file.Path
 import scala.meta.internal.pantsbuild.Codecs._
 import metaconfig.annotation._
@@ -9,6 +8,7 @@ import metaconfig.generic.Settings
 import java.nio.file.Paths
 import scala.meta.io.AbsolutePath
 import metaconfig.{ConfDecoder, ConfEncoder}
+import scala.meta.internal.io.PathIO
 
 case class SharedOptions(
     @Description("The root directory of the Pants build.")

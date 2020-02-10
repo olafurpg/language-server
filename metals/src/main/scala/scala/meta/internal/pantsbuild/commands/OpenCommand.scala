@@ -17,21 +17,19 @@ object OpenCommand extends Command[OpenOptions]("open") {
   override def examples: Doc =
     Doc.text("fastpass open --intellij PROJECT_NAME")
   def run(open: OpenOptions, app: CliApp): Int = {
-    pprint.log(open)
-    val exits: List[Int] = open.projects.map { projectName =>
-      Project.fromName(projectName, open.common) match {
-        case Some(project) =>
-          if (open.intellij) {
-            IntelliJ.launch(project)
-          }
-          if (open.vscode) {
-            VSCode.launch(project)
-          }
-          0
-        case None =>
-          SharedCommand.noSuchProject(projectName)
+    SharedCommand.withOneProject(
+      "open",
+      open.projects,
+      open.common,
+      app
+    ) { project =>
+      if (open.intellij) {
+        IntelliJ.launch(project)
       }
+      if (open.vscode) {
+        VSCode.launch(project)
+      }
+      0
     }
-    exits.sum
   }
 }

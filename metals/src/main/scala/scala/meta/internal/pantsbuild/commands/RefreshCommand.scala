@@ -18,24 +18,18 @@ object RefreshCommand extends Command[RefreshOptions]("refresh") {
       ).map(Doc.text)
     )
   def run(refresh: RefreshOptions, app: CliApp): Int = {
-    if (refresh.names.isEmpty) {
-      scribe.error("no projects to refresh")
-      1
-    } else {
-      val errors: List[Int] = refresh.names.map { name =>
-        Project.fromName(name, refresh.common) match {
-          case Some(project) =>
-            SharedCommand.interpretExport(
-              Export(project, refresh.open, app).copy(
-                export = refresh.export,
-                isCache = refresh.update
-              )
-            )
-          case None =>
-            SharedCommand.noSuchProject(name)
-        }
-      }
-      errors.sum
+    SharedCommand.withOneProject(
+      "refresh",
+      refresh.projects,
+      refresh.common,
+      app
+    ) { project =>
+      SharedCommand.interpretExport(
+        Export(project, refresh.open, app).copy(
+          export = refresh.export,
+          isCache = refresh.update
+        )
+      )
     }
   }
 }

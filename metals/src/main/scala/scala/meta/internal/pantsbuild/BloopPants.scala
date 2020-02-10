@@ -34,26 +34,21 @@ import ujson.Value
 import metaconfig.cli.CliApp
 import metaconfig.cli.HelpCommand
 import metaconfig.cli.VersionCommand
-import metaconfig.internal.TermInfo
-import org.typelevel.paiges.Doc
 
 object BloopPants {
   lazy val app: CliApp = CliApp(
     version = BuildInfo.metalsVersion,
     binaryName = "fastpass",
     commands = List(
-      new HelpCommand(
-        screenWidth = screenWidth(),
-        appUsage = app => Doc.text(s"${app.binaryName} COMMAND [OPTIONS]"),
-        appExamples = app => Doc.empty
-      ),
+      HelpCommand,
       VersionCommand,
       CreateCommand,
       RefreshCommand,
       ListCommand,
       InfoCommand,
       OpenCommand,
-      LinkCommand
+      LinkCommand,
+      AmendCommand
     )
   )
 
@@ -61,26 +56,6 @@ object BloopPants {
     MetalsLogger.updateDefaultFormat()
     val exit = app.run(args.toList)
     System.exit(exit)
-  }
-
-  private def screenWidth(): Int = {
-    math.min(120, math.max(40, tputsColumns() - 20))
-  }
-
-  private def tputsColumns(fallback: Int = 80): Int = {
-    import scala.sys.process._
-    val pathedTput =
-      if (new java.io.File("/usr/bin/tput").exists()) "/usr/bin/tput"
-      else "tput"
-    try {
-      val columns =
-        Seq("sh", "-c", s"$pathedTput cols 2> /dev/tty").!!.trim.toInt
-      columns.toInt
-    } catch {
-      case NonFatal(e) =>
-        e.printStackTrace()
-        fallback
-    }
   }
 
   def bloopAddOwnerOf(
