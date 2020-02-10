@@ -114,9 +114,12 @@ object PantsConfiguration {
       .mkString("__")
     if (processed.isEmpty()) {
       MD5.compute(targets.mkString) // necessary for targets like "::/"
-    } else if (processed.length() > 30) {
+    } else if (processed.length() > 69) {
       // Avoid too long filename.
-      s"${processed.take(15)}...${processed.takeRight(15)}-${MD5.compute(targets.mkString)}"
+      val left = processed.take(30)
+      val right = processed.takeRight(15)
+      val md5 = MD5.compute(targets.mkString).take(12)
+      s"$left-$right-$md5"
     } else {
       processed
     }
