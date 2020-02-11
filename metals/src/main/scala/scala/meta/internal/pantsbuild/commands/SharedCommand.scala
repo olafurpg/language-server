@@ -53,7 +53,12 @@ object SharedCommand {
           export.app.info(
             s"exported ${targets} to project '${export.project.name}' in $timer"
           )
-          LinkCommand.symlinkToOut(export.project, export.common, export.app)
+          LinkCommand.runSymblinkOrWarn(
+            export.project,
+            export.common,
+            export.app,
+            isStrict = false
+          )
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)
           } else {

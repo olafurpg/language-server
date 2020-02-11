@@ -4,8 +4,8 @@ import metaconfig.cli.Command
 import metaconfig.cli.CliApp
 import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
-import fansi.Color
 import java.nio.file.Files
+import MetaconfigEnrichments._
 
 object LinkCommand extends Command[LinkOptions]("link") {
   override def options: Doc = Messages.options(LinkOptions())
@@ -22,22 +22,6 @@ object LinkCommand extends Command[LinkOptions]("link") {
       ).map(Doc.text)
     )
 
-  def warnBloopDirectory(
-      project: Project,
-      common: SharedOptions,
-      app: CliApp
-  ): Boolean = {
-    val bloopDirectory = common.bloopDirectory
-    if (Files.isDirectory(bloopDirectory)) {
-      app.error(
-        s"unable to link project '${project.name}' because '$bloopDirectory' is a directory. " +
-          s"\n\tTo fix this problem, run 'rm -rf $bloopDirectory' and run fastpass again."
-      )
-      true
-    } else {
-      false
-    }
-  }
   def run(link: LinkOptions, app: CliApp): Int = {
     SharedCommand.withOneProject(
       "link",
@@ -45,35 +29,50 @@ object LinkCommand extends Command[LinkOptions]("link") {
       link.common,
       app
     ) { project =>
-      symlinkToOut(project, link.common, app)
+      runSymblinkOrWarn(project, link.common, app, isStrict = true)
     }
   }
 
-  def symlinkToOut(
+  def runSymblinkOrWarn(
       project: Project,
       common: SharedOptions,
-      app: CliApp
+      app: CliApp,
+      isStrict: Boolean
   ): Int = {
-    if (warnBloopDirectory(project, common, app)) {
+    if (warnBloopDirectory(project, common, app, isStrict)) {
       1
     } else {
-      symlinkToOut(project, common)
-      app.out.println(
-        s"${Color.LightBlue("info:")} linked project '${project.name}'." +
-          "\n\tRun 'bloop projects' to see if all Pants targets have exported correctly."
-      )
-      0
+      val isUnchanged =
+        Files.isSymbolicLink(common.bloopDirectory) &&
+          Files.readSymbolicLink(common.bloopDirectory) ==
+            project.root.bloopRoot.toNIO
+      def runBloopProjects =
+        "to see the list of exported Pants targets run: bloop projects"
+      if (isUnchanged) {
+        if (isStrict) {
+          app.info(
+            s"project '${project.name}' is already linked, $runBloopProjects"
+          )
+        }
+        0
+      } else {
+        runSymlink(project, common)
+        app.info(s"linked project '${project.name}', $runBloopProjects")
+        0
+      }
     }
   }
 
-  private def symlinkToOut(project: Project, common: SharedOptions): Unit = {
+  private def runSymlink(
+      project: Project,
+      common: SharedOptions
+  ): Unit = {
     val workspace = common.workspace
     val workspaceBloop = common.bloopDirectory
     val out = project.root.bspRoot.toNIO
     val outBloop = project.root.bloopRoot.toNIO
 
     if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
-      val outBloop = out.resolve(".bloop")
       Files.deleteIfExists(workspaceBloop)
       Files.createSymbolicLink(workspaceBloop, outBloop)
     }
@@ -96,6 +95,28 @@ object LinkCommand extends Command[LinkOptions]("link") {
       }) {
       Files.deleteIfExists(outScalafmt)
       Files.createSymbolicLink(outScalafmt, inScalafmt)
+    }
+  }
+
+  private def warnBloopDirectory(
+      project: Project,
+      common: SharedOptions,
+      app: CliApp,
+      isError: Boolean
+  ): Boolean = {
+    val bloopDirectory = common.bloopDirectory
+    if (Files.isDirectory(bloopDirectory) &&
+      !Files.isSymbolicLink(bloopDirectory)) {
+      val relpath = app.workingDirectory.relativize(bloopDirectory)
+      val message = s"unable to link project '${project.name}' because '$bloopDirectory' is a directory. " +
+        s"To fix this problem, run: " +
+        s"\n\trm -rf $relpath" +
+        s"\n\tfastpass link ${project.name}"
+      if (isError) app.error(message)
+      else app.warn(message)
+      true
+    } else {
+      false
     }
   }
 }

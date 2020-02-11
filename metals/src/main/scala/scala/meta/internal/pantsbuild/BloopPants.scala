@@ -48,7 +48,8 @@ object BloopPants {
       InfoCommand,
       OpenCommand,
       LinkCommand,
-      AmendCommand
+      AmendCommand,
+      RemoveCommand
     )
   )
 
