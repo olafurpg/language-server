@@ -15,6 +15,7 @@ case class SharedOptions(
     workspace: Path = PathIO.workingDirectory.toNIO
 ) {
   val pants: AbsolutePath = AbsolutePath(workspace.resolve("pants"))
+  def bloopDirectory = workspace.resolve(".bloop")
   val home: AbsolutePath = AbsolutePath {
     Option(System.getenv("FASTPASS_HOME")) match {
       case Some(value) => Paths.get(value)

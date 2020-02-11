@@ -36,7 +36,7 @@ object AmendCommand extends Command[AmendOptions]("amend") {
           1
         case Some(editor) =>
           val tmp = Files.write(
-            Files.createTempFile("fastpass", project.name),
+            Files.createTempFile("fastpass", s"${project.name}.ini"),
             project.targets
               .mkString(
                 "",
@@ -48,7 +48,7 @@ object AmendCommand extends Command[AmendOptions]("amend") {
               .getBytes(StandardCharsets.UTF_8)
           )
           val exit = editFile(editor, tmp)
-          if (exit != 0) {
+          if (exit != 0 && !Files.isRegularFile(tmp)) {
             app.error(s"failed to amend '${project.name}'")
             exit
           } else {
@@ -67,15 +67,18 @@ object AmendCommand extends Command[AmendOptions]("amend") {
               val newProject = project.copy(targets = newTargets)
               if (newTargets != project.targets) {
                 IntelliJ.writeBsp(newProject)
-                pprint.log(Project.fromName(project.name, amend.common))
-                // RefreshCommand.run(
-                //   RefreshOptions(amend.projects, common = amend.common),
-                //   app
-                // )
+                RefreshCommand.run(
+                  RefreshOptions(
+                    projects = amend.projects,
+                    export = amend.export,
+                    open = amend.open
+                  ).withCommon(amend.common),
+                  app
+                )
                 0
               } else {
                 app.error(
-                  s"aborting amend operation since there is nothing to change. " +
+                  s"aborting amend operation since the target list is unchanged. " +
                     "\n\tTo refresh the project, run 'fastpass refresh ${project.name}'"
                 )
                 0
@@ -92,7 +95,7 @@ object AmendCommand extends Command[AmendOptions]("amend") {
       val proc = Runtime.getRuntime().exec("/bin/bash")
       val stdin = proc.getOutputStream()
       val pw = new PrintWriter(stdin)
-      pw.println(s"code -w $tmp < /dev/tty > /dev/tty")
+      pw.println(s"$editor $tmp < /dev/tty > /dev/tty")
       pw.close()
       proc.waitFor()
     } catch {

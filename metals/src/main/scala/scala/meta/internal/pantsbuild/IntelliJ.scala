@@ -73,14 +73,12 @@ object IntelliJ {
   "pantsTargets": ${targetsJson.toString()}
 }
 """
-    val out = Files.write(
+    Files.write(
       bspJson,
       newJson.getBytes(StandardCharsets.UTF_8),
       StandardOpenOption.TRUNCATE_EXISTING,
       StandardOpenOption.CREATE
     )
-    pprint.log(newJson)
-    pprint.log(out)
   }
 
   private def downloadCoursier(destination: Path): Path = {

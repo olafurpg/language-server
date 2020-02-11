@@ -13,7 +13,10 @@ case class RefreshOptions(
     @Inline export: ExportOptions = ExportOptions.default,
     @Inline open: OpenOptions = OpenOptions.default,
     @Inline common: SharedOptions = SharedOptions()
-)
+) {
+  def withCommon(common: SharedOptions): RefreshOptions =
+    copy(common = common, open = open.copy(common = common))
+}
 object RefreshOptions {
   val default: RefreshOptions = RefreshOptions()
   implicit lazy val surface: generic.Surface[RefreshOptions] =

@@ -199,45 +199,6 @@ object BloopPants {
     }
   }
 
-  def symlinkToOut(project: Project): Unit = {
-    symlinkToOut(
-      project.common.workspace,
-      project.root.bspRoot.toNIO
-    )
-  }
-  def symlinkToOut(export: Export): Unit = {
-    symlinkToOut(export.workspace, export.out)
-  }
-  private def symlinkToOut(workspace: Path, out: Path): Unit = {
-    val workspaceBloop = workspace.resolve(".bloop")
-
-    if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
-      val outBloop = out.resolve(".bloop")
-      Files.deleteIfExists(workspaceBloop)
-      Files.createSymbolicLink(workspaceBloop, outBloop)
-    }
-
-    val inScalafmt = {
-      val link = workspace.resolve(".scalafmt.conf")
-      // Configuration file may be symbolic link.
-      val relpath =
-        if (Files.isSymbolicLink(link)) Files.readSymbolicLink(link)
-        else link
-      // Symbolic link may be relative to workspace directory.
-      if (relpath.isAbsolute()) relpath
-      else workspace.resolve(relpath)
-    }
-    val outScalafmt = out.resolve(".scalafmt.conf")
-    if (!out.startsWith(workspace) &&
-      Files.exists(inScalafmt) && {
-        !Files.exists(outScalafmt) ||
-        Files.isSymbolicLink(outScalafmt)
-      }) {
-      Files.deleteIfExists(outScalafmt)
-      Files.createSymbolicLink(outScalafmt, inScalafmt)
-    }
-  }
-
   private def runPantsExport(
       args: Export,
       outputFile: Path

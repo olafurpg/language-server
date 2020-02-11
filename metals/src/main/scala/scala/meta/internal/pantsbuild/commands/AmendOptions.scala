@@ -8,6 +8,8 @@ import metaconfig.generic._
 case class AmendOptions(
     @Hidden() @ExtraName("remainingArgs")
     projects: List[String] = Nil,
+    @Inline open: OpenOptions = OpenOptions(),
+    @Inline export: ExportOptions = ExportOptions(),
     @Inline common: SharedOptions = SharedOptions()
 )
 

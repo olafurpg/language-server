@@ -16,6 +16,15 @@ object OpenCommand extends Command[OpenOptions]("open") {
     Messages.options(OpenOptions())
   override def examples: Doc =
     Doc.text("fastpass open --intellij PROJECT_NAME")
+  def onEmpty(project: Project, app: CliApp): Unit = {
+    import MetaconfigEnrichments._
+    app.info(
+      s"to open the project in IntelliJ run: fastpass open --intellij ${project.name}"
+    )
+    app.info(
+      s"to open the project in VS Code run:  fastpass open --vscode ${project.name}"
+    )
+  }
   def run(open: OpenOptions, app: CliApp): Int = {
     SharedCommand.withOneProject(
       "open",
@@ -23,13 +32,21 @@ object OpenCommand extends Command[OpenOptions]("open") {
       open.common,
       app
     ) { project =>
-      if (open.intellij) {
-        IntelliJ.launch(project)
+      if (open.strict && open.isEmpty) {
+        app.error(
+          s"can't open project '${project.name}' since no editor is provided"
+        )
+        onEmpty(project, app)
+        1
+      } else {
+        if (open.intellij) {
+          IntelliJ.launch(project)
+        }
+        if (open.vscode) {
+          VSCode.launch(project)
+        }
+        0
       }
-      if (open.vscode) {
-        VSCode.launch(project)
-      }
-      0
     }
   }
 }

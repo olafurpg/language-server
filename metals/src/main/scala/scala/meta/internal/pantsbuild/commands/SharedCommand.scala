@@ -4,7 +4,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.Time
 import scala.util.Failure
@@ -15,15 +14,15 @@ import scala.meta.internal.pantsbuild.MessageOnlyException
 import scala.meta.internal.pantsbuild.IntelliJ
 import metaconfig.cli.CliApp
 import metaconfig.internal.Levenshtein
+import MetaconfigEnrichments._
+import scala.meta.internal.pc.LogMessages
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
     if (!export.pants.isFile) {
-      scribe.error(
-        s"No Pants build detected, file '${export.pants}' does not exist."
-      )
-      scribe.error(
-        s"Is the working directory correct? (${PathIO.workingDirectory})"
+      export.app.error(
+        s"no Pants build detected, file '${export.pants}' does not exist. " +
+          s"To fix this problem, change the working directory to the root of a Pants build."
       )
       1
     } else if (export.isRegenerate) {
@@ -42,20 +41,27 @@ object SharedCommand {
         case Failure(exception) =>
           exception match {
             case MessageOnlyException(message) =>
-              scribe.error(message)
+              export.app.error(message)
             case _ =>
-              scribe.error(s"fastpass failed to run", exception)
+              export.app.error(s"fastpass failed to run")
+              exception.printStackTrace(export.app.out)
           }
           1
         case Success(count) =>
           IntelliJ.writeBsp(export.project)
-          scribe.info(s"time: exported ${count} Pants target(s) in $timer")
-          scribe.info(s"output: ${export.root.bspRoot}")
-          BloopPants.symlinkToOut(export)
-          OpenCommand.run(
-            export.open.withProject(export.project),
-            export.app
+          val targets = LogMessages.pluralName("Pants target", count)
+          export.app.info(
+            s"exported ${targets} to project '${export.project.name}' in $timer"
           )
+          LinkCommand.symlinkToOut(export.project, export.common, export.app)
+          if (export.open.isEmpty) {
+            OpenCommand.onEmpty(export.project, export.app)
+          } else {
+            OpenCommand.run(
+              export.open.withProject(export.project),
+              export.app
+            )
+          }
           0
       }
     }

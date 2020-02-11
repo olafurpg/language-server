@@ -14,6 +14,9 @@ case class OpenOptions(
     @ExtraName("remainingArgs")
     projects: List[String] = Nil,
     @Hidden()
+    @Description("If true, fails the command if no editor should be opened.")
+    strict: Boolean = true,
+    @Hidden()
     @Inline common: SharedOptions = SharedOptions.default
 ) {
   def withProject(project: Project): OpenOptions =
