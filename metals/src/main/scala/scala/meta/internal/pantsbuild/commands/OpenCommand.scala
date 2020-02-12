@@ -11,7 +11,7 @@ object OpenCommand extends Command[OpenOptions]("open") {
   override def description: Doc =
     Doc.paragraph("Launch IntelliJ or VS Code with the given project.")
   override def usage: Doc =
-    Doc.paragraph("fastpass open [OPTIONS] [PROJECT_NAME ...]")
+    Doc.text("fastpass open [OPTIONS] [PROJECT_NAME ...]")
   override def options: Doc =
     Messages.options(OpenOptions())
   override def examples: Doc =

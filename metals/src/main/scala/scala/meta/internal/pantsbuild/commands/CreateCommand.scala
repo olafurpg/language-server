@@ -19,8 +19,8 @@ object CreateCommand extends Command[CreateOptions]("create") {
         "# Create project with custom name from two Pants targets",
         "fastpass create --name PROJECT_NAME TARGETS1:: TARGETS2::",
         "",
-        "# Create project with auto-generated name from one Pants targets",
-        "fastpass create TARGETS::"
+        "# Create project with an auto-generated name and launch IntelliJ",
+        "fastpass create --intellij TARGETS::"
       ).map(Doc.text)
     )
   def run(create: CreateOptions, app: CliApp): Int = {
@@ -28,7 +28,8 @@ object CreateCommand extends Command[CreateOptions]("create") {
     Project.fromName(name, create.common) match {
       case Some(value) =>
         app.error(
-          s"project '${name}' already exists.\n\tDid you mean 'fastpass refresh ${name}'?"
+          s"can't create project named '${name}' because it already exists." +
+            s"\n\tTo refresh the project run: fastpass refresh ${name}"
         )
         1
       case None =>

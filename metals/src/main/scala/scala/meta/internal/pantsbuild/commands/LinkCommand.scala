@@ -10,7 +10,7 @@ import MetaconfigEnrichments._
 object LinkCommand extends Command[LinkOptions]("link") {
   override def options: Doc = Messages.options(LinkOptions())
   override def description: Doc =
-    Doc.text("Symlink the Bloop build into the workspace directory")
+    Doc.paragraph("Symlink the Bloop build into the workspace directory")
   override def usage: Doc = Doc.text("fastpass link PROJECT_NAME")
   override def examples: Doc =
     Doc.intercalate(
@@ -109,7 +109,7 @@ object LinkCommand extends Command[LinkOptions]("link") {
       !Files.isSymbolicLink(bloopDirectory)) {
       val relpath = app.workingDirectory.relativize(bloopDirectory)
       val message = s"unable to link project '${project.name}' because '$bloopDirectory' is a directory. " +
-        s"To fix this problem, run: " +
+        s"To fix this problem run: " +
         s"\n\trm -rf $relpath" +
         s"\n\tfastpass link ${project.name}"
       if (isError) app.error(message)

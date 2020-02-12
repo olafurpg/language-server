@@ -35,58 +35,76 @@ object AmendCommand extends Command[AmendOptions]("amend") {
           )
           1
         case Some(editor) =>
-          val tmp = Files.write(
-            Files.createTempFile("fastpass", s"${project.name}.ini"),
-            project.targets
-              .mkString(
-                "",
-                "\n",
-                "\n# Please add or remove targets from this list.\n" +
-                  "# When you're done, save the file and close the editor.\n" +
-                  "# Lines starting with '#' will be ignored."
-              )
-              .getBytes(StandardCharsets.UTF_8)
-          )
-          val exit = editFile(editor, tmp)
-          if (exit != 0 && !Files.isRegularFile(tmp)) {
-            app.error(s"failed to amend '${project.name}'")
-            exit
-          } else {
-            val newTargets = Files
-              .readAllLines(tmp)
-              .asScala
-              .flatMap { line =>
-                if (line.startsWith("#")) Nil
-                else line.split(" ").toList
-              }
-              .toList
-            if (newTargets.isEmpty) {
-              app.error("aborting amend since the new target list is empty.")
-              1
-            } else {
-              val newProject = project.copy(targets = newTargets)
-              if (newTargets != project.targets) {
-                IntelliJ.writeBsp(newProject)
-                RefreshCommand.run(
-                  RefreshOptions(
-                    projects = amend.projects,
-                    export = amend.export,
-                    open = amend.open
-                  ).withCommon(amend.common),
-                  app
-                )
-                0
-              } else {
-                app.error(
-                  s"aborting amend operation since the target list is unchanged. " +
-                    "\n\tTo refresh the project, run 'fastpass refresh ${project.name}'"
-                )
-                0
-              }
-            }
-          }
+          runAmend(amend, app, editor, project)
       }
     }
+
+  }
+
+  private def runAmend(
+      amend: AmendOptions,
+      app: CliApp,
+      editor: String,
+      project: Project
+  ): Int = {
+    val tmp = newTemporaryAmendFile(project)
+    val exit = editFile(editor, tmp)
+    if (exit != 0 && !Files.isRegularFile(tmp)) {
+      app.error(s"failed to amend '${project.name}'")
+      exit
+    } else {
+      val newTargets = Files
+        .readAllLines(tmp)
+        .asScala
+        .flatMap { line =>
+          if (line.startsWith("#")) Nil
+          else line.split(" ").toList
+        }
+        .toList
+      Files.deleteIfExists(tmp)
+      if (newTargets.isEmpty) {
+        app.error(
+          "aborting amend operating because the new target list is empty." +
+            s"\n\tTo delete the project run: fastpass remove ${project.name}"
+        )
+        1
+      } else {
+        val newProject = project.copy(targets = newTargets)
+        if (newTargets != project.targets) {
+          IntelliJ.writeBsp(newProject)
+          RefreshCommand.run(
+            RefreshOptions(
+              projects = amend.projects,
+              export = amend.export,
+              open = amend.open
+            ).withCommon(amend.common),
+            app
+          )
+          0
+        } else {
+          app.error(
+            "aborting amend operation because the target list is unchanged." +
+              s"\n\tTo refresh the project run: fastpass refresh ${project.name}"
+          )
+          1
+        }
+      }
+    }
+  }
+
+  def newTemporaryAmendFile(project: Project): Path = {
+    Files.write(
+      Files.createTempFile("fastpass", s"${project.name}.ini"),
+      project.targets
+        .mkString(
+          "",
+          "\n",
+          "\n# Please add or remove targets from this list.\n" +
+            "# When you're done, save the file and close the editor.\n" +
+            "# Lines starting with '#' will be ignored."
+        )
+        .getBytes(StandardCharsets.UTF_8)
+    )
   }
 
   private def editFile(editor: String, tmp: Path): Int = {
