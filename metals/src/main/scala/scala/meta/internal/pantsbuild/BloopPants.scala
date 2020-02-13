@@ -129,7 +129,7 @@ object BloopPants {
         args.workspace.resolve(".pants.d").resolve("metals")
       )
       val outputFilename = PantsConfiguration.outputFilename(args.targets)
-      val outputFile = cacheDir.resolve(s"$outputFilename.json")
+      val outputFile = cacheDir.resolve(s"$outputFilename-export.json")
       val bloopDir = args.out.resolve(".bloop")
       if (Files.isSymbolicLink(bloopDir)) {
         Files.delete(bloopDir)
@@ -204,16 +204,15 @@ object BloopPants {
       args: Export,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
-    val command = List[Option[String]](
-      Some(args.workspace.resolve("pants").toString()),
-      Some("--concurrent"),
-      Some(s"--no-quiet"),
-      if (args.isSources) Some(s"--export-libraries-sources")
-      else None,
-      Some(s"--export-output-file=$outputFile"),
-      Some(s"export-classpath"),
-      Some(s"export")
-    ).flatten ++ args.targets
+    val noSources = if (args.isSources) "" else "no-"
+    val command = List[String](
+      args.workspace.resolve("pants").toString(),
+      "--concurrent",
+      s"--no-quiet",
+      s"--${noSources}export-dep-as-jar-sources",
+      s"--export-dep-as-jar-output-file=$outputFile",
+      s"export-dep-as-jar"
+    ) ++ args.targets
     val shortName = "pants export-classpath export"
     SystemProcess.run(
       shortName,
@@ -417,10 +416,7 @@ private class BloopPants(
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
       else {
-        if (target.name.endsWith("global:global")) {
-          pprint.log(target.roots.roots)
-        }
-        target.roots.roots ::: {
+        target.roots.sourceRoots ::: {
           target.globs.staticPaths(workspace) match {
             case Some(paths) => paths
             case _ => Nil // filemap.forTarget(target.name).toList
@@ -468,7 +464,7 @@ private class BloopPants(
     } yield acyclicDependency.name
 
     val libraries: List[PantsLibrary] = for {
-      dependency <- transitiveDependencies
+      dependency <- target :: transitiveDependencies
       libraryName <- dependency.libraries
       // The "$ORGANIZATION:$ARTIFACT" part of Maven library coordinates.
       module = {
@@ -620,6 +616,7 @@ private class BloopPants(
       target.name, {
         val classpathFile =
           exportClasspathDir.resolve(target.id + "-classpath.txt")
+        pprint.log(classpathFile)
         if (classpathFile.isFile) {
           val classpath =
             Classpath(classpathFile.readText.trim()).entries.map(_.toNIO)

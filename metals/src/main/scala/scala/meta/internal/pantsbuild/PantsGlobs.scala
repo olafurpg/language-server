@@ -12,6 +12,7 @@ case class PantsGlobs(
 ) {
   def isStatic: Boolean =
     exclude.isEmpty && include.forall(_.indexOf('*') < 0)
+
   def staticPaths(workspace: Path): Option[List[Path]] =
     if (isStatic) {
       Some(include.map(relpath => workspace.resolve(relpath)))
