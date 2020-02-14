@@ -32,8 +32,10 @@ import scala.util.Success
 import scala.util.Try
 import ujson.Value
 import metaconfig.cli.CliApp
+import metaconfig.cli.TabCompleteCommand
 import metaconfig.cli.HelpCommand
 import metaconfig.cli.VersionCommand
+import java.io.PrintStream
 
 object BloopPants {
   lazy val app: CliApp = CliApp(
@@ -49,11 +51,15 @@ object BloopPants {
       OpenCommand,
       SwitchCommand,
       AmendCommand,
-      RemoveCommand
+      RemoveCommand,
+      TabCompleteCommand
     )
   )
 
   def main(args: Array[String]): Unit = {
+    val out = new PrintStream(Files.newOutputStream(Paths.get("log.txt")))
+    out.println(pprint.tokenize(args).mkString)
+    out.println(System.getenv("CURRENT"))
     MetalsLogger.updateDefaultFormat()
     val exit = app.run(args.toList)
     System.exit(exit)
@@ -129,7 +135,7 @@ object BloopPants {
         args.workspace.resolve(".pants.d").resolve("metals")
       )
       val outputFilename = PantsConfiguration.outputFilename(args.targets)
-      val outputFile = cacheDir.resolve(s"$outputFilename.json")
+      val outputFile = cacheDir.resolve(s"$outputFilename-export.json")
       val bloopDir = args.out.resolve(".bloop")
       if (Files.isSymbolicLink(bloopDir)) {
         Files.delete(bloopDir)
@@ -204,16 +210,15 @@ object BloopPants {
       args: Export,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
-    val command = List[Option[String]](
-      Some(args.workspace.resolve("pants").toString()),
-      Some("--concurrent"),
-      Some(s"--no-quiet"),
-      if (args.isSources) Some(s"--export-libraries-sources")
-      else None,
-      Some(s"--export-output-file=$outputFile"),
-      Some(s"export-classpath"),
-      Some(s"export")
-    ).flatten ++ args.targets
+    val noSources = if (args.isSources) "" else "no-"
+    val command = List[String](
+      args.workspace.resolve("pants").toString(),
+      "--concurrent",
+      s"--no-quiet",
+      s"--${noSources}export-dep-as-jar-sources",
+      s"--export-dep-as-jar-output-file=$outputFile",
+      s"export-dep-as-jar"
+    ) ++ args.targets
     val shortName = "pants export-classpath export"
     SystemProcess.run(
       shortName,
@@ -225,14 +230,15 @@ object BloopPants {
   }
 
   private val nonAlphanumeric = "[^a-zA-Z0-9]".r
-  def makeFilename(target: String): String = {
-    nonAlphanumeric.replaceAllIn(target, "")
-  }
   def makeJsonFilename(target: String): String = {
     makeReadableFilename(target) + ".json"
   }
   def makeReadableFilename(target: String): String = {
     nonAlphanumeric.replaceAllIn(target, "-")
+  }
+  def makeClassesDirFilename(target: String): String = {
+    // Prepend "_" to separate it from the JSON files.
+    "z_" + makeReadableFilename(target)
   }
 
 }
@@ -271,7 +277,7 @@ private class BloopPants(
       // runner in Pants. Most importantly, it automatically registers
       // org.scalatest.junit.JUnitRunner even if there is no `@RunWith`
       // annotation.
-      Dependency.of("com.geirsson", "junit-interface", "0.11.10")
+      Dependency.of("org.scalameta", "junit-interface", "0.5.2")
     ).flatMap(fetchDependency)
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
@@ -360,6 +366,12 @@ private class BloopPants(
               withBinaryResolution.sources.iterator,
               children.iterator.flatMap(_.sources.iterator)
             ).flatten.distinctBy(identity)
+            val newSourcesGlobs = Iterator(
+              withBinaryResolution.sourcesGlobs.iterator.flatMap(_.iterator),
+              children.iterator.flatMap(
+                _.sourcesGlobs.iterator.flatMap(_.iterator)
+              )
+            ).flatten.distinctBy(identity)
             val newClasspath = Iterator(
               withBinaryResolution.classpath.iterator,
               children.iterator.flatMap(_.classpath.iterator)
@@ -372,6 +384,9 @@ private class BloopPants(
               .distinctBy(identity)
             withBinaryResolution.copy(
               sources = newSources,
+              sourcesGlobs =
+                if (newSourcesGlobs.isEmpty) None
+                else Some(newSourcesGlobs),
               classpath = newClasspath,
               dependencies = newDependencies
             )
@@ -406,12 +421,40 @@ private class BloopPants(
     val baseDirectory: Path = target.baseDirectory(workspace)
 
     val sources: List[Path] =
-      if (target.targetType.isResource) Nil
+      if (target.targetType.isResourceOrTestResource) Nil
+      else if (!target.globs.isStatic) Nil
+      else if (target.isGeneratedTarget) target.roots.sourceRoots
       else {
-        target.globs.sourceDirectory(workspace) match {
-          case Some(dir) => List(dir)
-          case _ => filemap.forTarget(target.name).toList
+        target.globs.staticPaths(workspace) match {
+          case Some(paths) => paths
+          case _ => Nil // filemap.forTarget(target.name).toList
         }
+      }
+    val sourcesGlobs: Option[List[C.SourcesGlobs]] =
+      if (target.targetType.isResourceOrTestResource) None
+      else if (target.globs.isStatic) None
+      else {
+        val prefix = AbsolutePath(baseDirectory)
+          .toRelative(AbsolutePath(workspace))
+          .toURI(true)
+          .toString()
+        def relativizeGlob(glob: String): String = {
+          val pattern = glob
+            .stripPrefix(prefix)
+            // NOTE(olafur) Pants globs don't match
+            .replaceAllLiterally("**/*", "**")
+          s"glob:$pattern"
+        }
+        Some(
+          List(
+            C.SourcesGlobs(
+              baseDirectory,
+              None,
+              target.globs.include.map(relativizeGlob),
+              target.globs.exclude.map(relativizeGlob)
+            )
+          )
+        )
       }
 
     val transitiveDependencies: List[PantsTarget] = (for {
@@ -425,11 +468,11 @@ private class BloopPants(
       acyclicDependencyName = cycles.acyclicDependency(dependency.name)
       if acyclicDependencyName != target.name
       acyclicDependency = export.targets(acyclicDependencyName)
-      if acyclicDependency.isTargetRoot && !acyclicDependency.targetType.isResourceOrTestResource
+      if acyclicDependency.isTargetRoot
     } yield acyclicDependency.name
 
     val libraries: List[PantsLibrary] = for {
-      dependency <- transitiveDependencies
+      dependency <- target :: transitiveDependencies
       libraryName <- dependency.libraries
       // The "$ORGANIZATION:$ARTIFACT" part of Maven library coordinates.
       module = {
@@ -451,11 +494,6 @@ private class BloopPants(
         .flatMap(export.targets.get)
         .getOrElse(dependency)
     } yield acyclicDependency.classesDir(bloopDir))
-    classpath ++= (for {
-      dependency <- transitiveDependencies
-      if !dependency.isTargetRoot
-      entry <- exportClasspath(dependency)
-    } yield entry)
     classpath ++= libraries.iterator.flatMap(_.nonSources)
     classpath ++= allScalaJars
     if (target.targetType.isTest) {
@@ -465,30 +503,27 @@ private class BloopPants(
     binaryDependencySources ++= libraries.flatMap(_.sources)
 
     val out: Path = bloopDir.resolve(target.directoryName)
-    val classDirectory: Path = target.classesDir(bloopDir)
+    val classesDir: Path = target.classesDir(bloopDir)
     val javaHome: Option[Path] =
       Option(System.getProperty("java.home")).map(Paths.get(_))
 
-    val resources: List[Path] = for {
-      dependency <- transitiveDependencies
-      if dependency.targetType.isResourceOrTestResource
-      entry <- exportClasspath(dependency)
-    } yield entry
-
-    // NOTE(olafur): we put resources on the classpath instead of under "resources"
-    // due to an issue how the IntelliJ BSP integration interprets resources.
-    classpath ++= resources
+    val resources: Option[List[Path]] =
+      if (!target.targetType.isResourceOrTestResource) None
+      else {
+        Some(List(baseDirectory))
+      }
 
     C.Project(
       name = target.name,
       directory = baseDirectory,
       workspaceDir = Some(workspace),
-      sources,
+      sources = sources,
+      sourcesGlobs = sourcesGlobs,
       dependencies = dependencies,
       classpath = classpath.toList,
       out = out,
-      classesDir = classDirectory,
-      resources = None,
+      classesDir = classesDir,
+      resources = resources,
       scala = bloopScala,
       java = Some(C.Java(Nil)),
       sbt = None,
@@ -511,8 +546,8 @@ private class BloopPants(
   // Returns a Bloop project that has no source code. This project only exists
   // to control for example how the project view is displayed in IntelliJ.
   private def toEmptyBloopProject(name: String, directory: Path): C.Project = {
-    val directoryName = BloopPants.makeFilename(name)
-    val classDirectory: Path = Files.createDirectories(
+    val directoryName = BloopPants.makeClassesDirFilename(name)
+    val classesDir: Path = Files.createDirectories(
       bloopDir.resolve(directoryName).resolve("classes")
     )
     C.Project(
@@ -520,10 +555,11 @@ private class BloopPants(
       directory = directory,
       workspaceDir = Some(workspace),
       sources = Nil,
+      sourcesGlobs = None,
       dependencies = Nil,
       classpath = Nil,
       out = bloopDir.resolve(directoryName),
-      classesDir = classDirectory,
+      classesDir = classesDir,
       // NOTE(olafur): we generate a fake resource directory so that IntelliJ
       // displays this directory in the "Project files tree" view. This needs to
       // be a resource directory instead of a source directory to prevent Bloop
@@ -579,6 +615,7 @@ private class BloopPants(
       target.name, {
         val classpathFile =
           exportClasspathDir.resolve(target.id + "-classpath.txt")
+        pprint.log(classpathFile)
         if (classpathFile.isFile) {
           val classpath =
             Classpath(classpathFile.readText.trim()).entries.map(_.toNIO)
@@ -619,7 +656,7 @@ private class BloopPants(
     Some(
       C.Test(
         frameworks = List(
-          C.TestFramework(List("com.geirsson.junit.PantsFramework"))
+          C.TestFramework(List("munit.internal.junitinterface.PantsFramework"))
         ),
         options = C.TestOptions(
           excludes = Nil,

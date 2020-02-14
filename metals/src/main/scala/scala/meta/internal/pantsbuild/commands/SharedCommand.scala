@@ -15,6 +15,9 @@ import scala.meta.internal.pantsbuild.IntelliJ
 import metaconfig.cli.CliApp
 import metaconfig.internal.Levenshtein
 import scala.meta.internal.pc.LogMessages
+import metaconfig.cli.TabCompletionContext
+import metaconfig.cli.TabCompletionItem
+import java.nio.file.Paths
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -106,7 +109,21 @@ object SharedCommand {
     1
   }
 
-  def interpretRefresh(refresh: RefreshOptions): Int = { 1 }
+  def complete(context: TabCompletionContext): List[TabCompletionItem] = {
+    context.setting match {
+      case None =>
+        val workspace = context.arguments
+          .sliding(2)
+          .collectFirst {
+            case List("--workspace", workspace) => Paths.get(workspace)
+          }
+          .getOrElse(context.app.workingDirectory)
+        Project
+          .fromCommon(SharedOptions(workspace))
+          .map(project => TabCompletionItem(project.name))
+      case Some(_) => Nil
+    }
+  }
 }
 
 case class ProjectRoot(
@@ -159,4 +176,5 @@ object Project {
       root
     )
   }
+
 }
