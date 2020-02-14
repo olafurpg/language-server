@@ -407,16 +407,36 @@ private class BloopPants(
 
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
-      else if (target.targetType.isResource) Nil
       else {
+        target.roots
         target.globs.staticPaths(workspace) match {
           case Some(paths) => paths
-          case _ => List(baseDirectory) // filemap.forTarget(target.name).toList
+          case _ => Nil // filemap.forTarget(target.name).toList
         }
       }
-    val sourcesGlobs: Option[C.SourcesGlobs] =
+    val sourcesGlobs: Option[List[C.SourcesGlobs]] =
       if (target.globs.isStatic) None
-      else Some(C.SourcesGlobs(target.globs.include, target.globs.exclude))
+      else {
+        val prefix = AbsolutePath(baseDirectory)
+          .toRelative(AbsolutePath(workspace))
+          .toURI(true)
+          .toString()
+        def relativizeGlob(glob: String): String =
+          glob
+            .stripPrefix(prefix)
+            // NOTE(olafur) Pants globs don't match
+            .replaceAllLiterally("**/*", "**")
+        Some(
+          List(
+            C.SourcesGlobs(
+              baseDirectory,
+              None,
+              target.globs.include.map(relativizeGlob),
+              target.globs.exclude.map(relativizeGlob)
+            )
+          )
+        )
+      }
 
     val transitiveDependencies: List[PantsTarget] = (for {
       dependency <- target.transitiveDependencies
