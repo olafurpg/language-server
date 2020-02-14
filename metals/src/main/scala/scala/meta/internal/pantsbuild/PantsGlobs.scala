@@ -10,6 +10,14 @@ case class PantsGlobs(
     include: List[String],
     exclude: List[String]
 ) {
+  def isStatic: Boolean =
+    exclude.isEmpty && include.forall(_.indexOf('*') < 0)
+  def staticPaths(workspace: Path): Option[List[Path]] =
+    if (isStatic) {
+      Some(include.map(relpath => workspace.resolve(relpath)))
+    } else {
+      None
+    }
 
   /** Returns a source directory if this target uses rglobs("*.scala") */
   def sourceDirectory(workspace: Path): Option[Path] = include match {

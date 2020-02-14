@@ -407,12 +407,16 @@ private class BloopPants(
 
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
+      else if (target.targetType.isResource) Nil
       else {
-        target.globs.sourceDirectory(workspace) match {
-          case Some(dir) => List(dir)
-          case _ => filemap.forTarget(target.name).toList
+        target.globs.staticPaths(workspace) match {
+          case Some(paths) => paths
+          case _ => List(baseDirectory) // filemap.forTarget(target.name).toList
         }
       }
+    val sourcesGlobs: Option[C.SourcesGlobs] =
+      if (target.globs.isStatic) None
+      else Some(C.SourcesGlobs(target.globs.include, target.globs.exclude))
 
     val transitiveDependencies: List[PantsTarget] = (for {
       dependency <- target.transitiveDependencies
@@ -483,7 +487,8 @@ private class BloopPants(
       name = target.name,
       directory = baseDirectory,
       workspaceDir = Some(workspace),
-      sources,
+      sources = sources,
+      sourcesGlobs = sourcesGlobs,
       dependencies = dependencies,
       classpath = classpath.toList,
       out = out,
@@ -520,6 +525,7 @@ private class BloopPants(
       directory = directory,
       workspaceDir = Some(workspace),
       sources = Nil,
+      sourcesGlobs = None,
       dependencies = Nil,
       classpath = Nil,
       out = bloopDir.resolve(directoryName),
