@@ -14,7 +14,8 @@ case class PantsTarget(
     isPantsTargetRoot: Boolean,
     targetType: TargetType,
     pantsTargetType: PantsTargetType,
-    globs: PantsGlobs
+    globs: PantsGlobs,
+    roots: PantsRoots
 ) {
 
   def isTargetRoot: Boolean =

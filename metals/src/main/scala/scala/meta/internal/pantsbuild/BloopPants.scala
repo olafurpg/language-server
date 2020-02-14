@@ -360,6 +360,12 @@ private class BloopPants(
               withBinaryResolution.sources.iterator,
               children.iterator.flatMap(_.sources.iterator)
             ).flatten.distinctBy(identity)
+            val newSourcesGlobs = Iterator(
+              withBinaryResolution.sourcesGlobs.iterator.flatMap(_.iterator),
+              children.iterator.flatMap(
+                _.sourcesGlobs.iterator.flatMap(_.iterator)
+              )
+            ).flatten.distinctBy(identity)
             val newClasspath = Iterator(
               withBinaryResolution.classpath.iterator,
               children.iterator.flatMap(_.classpath.iterator)
@@ -372,6 +378,9 @@ private class BloopPants(
               .distinctBy(identity)
             withBinaryResolution.copy(
               sources = newSources,
+              sourcesGlobs =
+                if (newSourcesGlobs.isEmpty) None
+                else Some(newSourcesGlobs),
               classpath = newClasspath,
               dependencies = newDependencies
             )
@@ -408,10 +417,14 @@ private class BloopPants(
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
       else {
-        target.roots
-        target.globs.staticPaths(workspace) match {
-          case Some(paths) => paths
-          case _ => Nil // filemap.forTarget(target.name).toList
+        if (target.name.endsWith("global:global")) {
+          pprint.log(target.roots.roots)
+        }
+        target.roots.roots ::: {
+          target.globs.staticPaths(workspace) match {
+            case Some(paths) => paths
+            case _ => Nil // filemap.forTarget(target.name).toList
+          }
         }
       }
     val sourcesGlobs: Option[List[C.SourcesGlobs]] =

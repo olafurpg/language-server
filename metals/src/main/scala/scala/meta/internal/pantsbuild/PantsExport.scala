@@ -89,7 +89,8 @@ object PantsExport {
           isPantsTargetRoot = isPantsTargetRoot,
           targetType = targetType,
           pantsTargetType = pantsTargetType,
-          globs = PantsGlobs.fromJson(value)
+          globs = PantsGlobs.fromJson(value),
+          roots = PantsRoots.fromJson(value)
         )
     }.toMap
 
