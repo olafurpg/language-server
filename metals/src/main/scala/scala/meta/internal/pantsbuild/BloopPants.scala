@@ -434,11 +434,13 @@ private class BloopPants(
           .toRelative(AbsolutePath(workspace))
           .toURI(true)
           .toString()
-        def relativizeGlob(glob: String): String =
-          glob
+        def relativizeGlob(glob: String): String = {
+          val pattern = glob
             .stripPrefix(prefix)
             // NOTE(olafur) Pants globs don't match
             .replaceAllLiterally("**/*", "**")
+          s"glob:$pattern"
+        }
         Some(
           List(
             C.SourcesGlobs(
