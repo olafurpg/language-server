@@ -224,14 +224,15 @@ object BloopPants {
   }
 
   private val nonAlphanumeric = "[^a-zA-Z0-9]".r
-  def makeFilename(target: String): String = {
-    nonAlphanumeric.replaceAllIn(target, "")
-  }
   def makeJsonFilename(target: String): String = {
     makeReadableFilename(target) + ".json"
   }
   def makeReadableFilename(target: String): String = {
     nonAlphanumeric.replaceAllIn(target, "-")
+  }
+  def makeClassesDirFilename(target: String): String = {
+    // Prepend "_" to separate it from the JSON files.
+    "z_" + makeReadableFilename(target)
   }
 
 }
@@ -414,7 +415,7 @@ private class BloopPants(
     val baseDirectory: Path = target.baseDirectory(workspace)
 
     val sources: List[Path] =
-      if (target.targetType.isResource) Nil
+      if (target.targetType.isResourceOrTestResource) Nil
       else if (!target.globs.isStatic) Nil
       else if (target.isGeneratedTarget) target.roots.sourceRoots
       else {
@@ -424,7 +425,8 @@ private class BloopPants(
         }
       }
     val sourcesGlobs: Option[List[C.SourcesGlobs]] =
-      if (target.globs.isStatic) None
+      if (target.targetType.isResourceOrTestResource) None
+      else if (target.globs.isStatic) None
       else {
         val prefix = AbsolutePath(baseDirectory)
           .toRelative(AbsolutePath(workspace))
@@ -460,7 +462,7 @@ private class BloopPants(
       acyclicDependencyName = cycles.acyclicDependency(dependency.name)
       if acyclicDependencyName != target.name
       acyclicDependency = export.targets(acyclicDependencyName)
-      if acyclicDependency.isTargetRoot && !acyclicDependency.targetType.isResourceOrTestResource
+      if acyclicDependency.isTargetRoot
     } yield acyclicDependency.name
 
     val libraries: List[PantsLibrary] = for {
@@ -486,11 +488,6 @@ private class BloopPants(
         .flatMap(export.targets.get)
         .getOrElse(dependency)
     } yield acyclicDependency.classesDir(bloopDir))
-    classpath ++= (for {
-      dependency <- transitiveDependencies
-      if !dependency.isTargetRoot
-      entry <- exportClasspath(dependency)
-    } yield entry)
     classpath ++= libraries.iterator.flatMap(_.nonSources)
     classpath ++= allScalaJars
     if (target.targetType.isTest) {
@@ -500,18 +497,15 @@ private class BloopPants(
     binaryDependencySources ++= libraries.flatMap(_.sources)
 
     val out: Path = bloopDir.resolve(target.directoryName)
-    val classDirectory: Path = target.classesDir(bloopDir)
+    val classesDir: Path = target.classesDir(bloopDir)
     val javaHome: Option[Path] =
       Option(System.getProperty("java.home")).map(Paths.get(_))
 
-    val resources: List[Path] = for {
-      dependency <- transitiveDependencies
-      if dependency.targetType.isResourceOrTestResource
-    } yield dependency.baseDirectory(workspace)
-
-    // NOTE(olafur): we put resources on the classpath instead of under "resources"
-    // due to an issue how the IntelliJ BSP integration interprets resources.
-    classpath ++= resources
+    val resources: Option[List[Path]] =
+      if (!target.targetType.isResourceOrTestResource) None
+      else {
+        Some(List(baseDirectory))
+      }
 
     C.Project(
       name = target.name,
@@ -522,8 +516,8 @@ private class BloopPants(
       dependencies = dependencies,
       classpath = classpath.toList,
       out = out,
-      classesDir = classDirectory,
-      resources = None,
+      classesDir = classesDir,
+      resources = resources,
       scala = bloopScala,
       java = Some(C.Java(Nil)),
       sbt = None,
@@ -546,8 +540,8 @@ private class BloopPants(
   // Returns a Bloop project that has no source code. This project only exists
   // to control for example how the project view is displayed in IntelliJ.
   private def toEmptyBloopProject(name: String, directory: Path): C.Project = {
-    val directoryName = BloopPants.makeFilename(name)
-    val classDirectory: Path = Files.createDirectories(
+    val directoryName = BloopPants.makeClassesDirFilename(name)
+    val classesDir: Path = Files.createDirectories(
       bloopDir.resolve(directoryName).resolve("classes")
     )
     C.Project(
@@ -559,7 +553,7 @@ private class BloopPants(
       dependencies = Nil,
       classpath = Nil,
       out = bloopDir.resolve(directoryName),
-      classesDir = classDirectory,
+      classesDir = classesDir,
       // NOTE(olafur): we generate a fake resource directory so that IntelliJ
       // displays this directory in the "Project files tree" view. This needs to
       // be a resource directory instead of a source directory to prevent Bloop

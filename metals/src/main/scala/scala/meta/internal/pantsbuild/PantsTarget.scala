@@ -22,7 +22,7 @@ case class PantsTarget(
     isPantsTargetRoot &&
       !pantsTargetType.isFiles
   def isGeneratedTarget: Boolean = name.startsWith(".pants.d")
-  val directoryName: String = BloopPants.makeReadableFilename(name)
+  val directoryName: String = BloopPants.makeClassesDirFilename(name)
   def baseDirectory(workspace: Path): Path =
     PantsConfiguration
       .baseDirectory(AbsolutePath(workspace), name)
