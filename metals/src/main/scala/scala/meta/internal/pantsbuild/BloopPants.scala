@@ -270,7 +270,7 @@ private class BloopPants(
       // runner in Pants. Most importantly, it automatically registers
       // org.scalatest.junit.JUnitRunner even if there is no `@RunWith`
       // annotation.
-      Dependency.of("com.geirsson", "junit-interface", "0.11.10")
+      Dependency.of("org.scalameta", "junit-interface", "0.5.2")
     ).flatMap(fetchDependency)
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
@@ -415,12 +415,12 @@ private class BloopPants(
 
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
+      else if (!target.globs.isStatic) Nil
+      else if (target.isGeneratedTarget) target.roots.sourceRoots
       else {
-        target.roots.sourceRoots ::: {
-          target.globs.staticPaths(workspace) match {
-            case Some(paths) => paths
-            case _ => Nil // filemap.forTarget(target.name).toList
-          }
+        target.globs.staticPaths(workspace) match {
+          case Some(paths) => paths
+          case _ => Nil // filemap.forTarget(target.name).toList
         }
       }
     val sourcesGlobs: Option[List[C.SourcesGlobs]] =
@@ -507,8 +507,7 @@ private class BloopPants(
     val resources: List[Path] = for {
       dependency <- transitiveDependencies
       if dependency.targetType.isResourceOrTestResource
-      entry <- exportClasspath(dependency)
-    } yield entry
+    } yield dependency.baseDirectory(workspace)
 
     // NOTE(olafur): we put resources on the classpath instead of under "resources"
     // due to an issue how the IntelliJ BSP integration interprets resources.
@@ -657,7 +656,7 @@ private class BloopPants(
     Some(
       C.Test(
         frameworks = List(
-          C.TestFramework(List("com.geirsson.junit.PantsFramework"))
+          C.TestFramework(List("munit.internal.junitinterface.PantsFramework"))
         ),
         options = C.TestOptions(
           excludes = Nil,
