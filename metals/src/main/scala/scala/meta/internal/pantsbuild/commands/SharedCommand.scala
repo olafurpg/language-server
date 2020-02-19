@@ -109,14 +109,19 @@ object SharedCommand {
     1
   }
 
-  def complete(context: TabCompletionContext): List[TabCompletionItem] = {
+  def complete(
+      context: TabCompletionContext,
+      maxPositionalCount: Int = 1
+  ): List[TabCompletionItem] = {
     context.setting match {
       case None =>
         val workspace = context.arguments
           .sliding(2)
           .collectFirst {
-            case List("--workspace", workspace) => Paths.get(workspace)
+            case List("--workspace", workspace) =>
+              Try(Paths.get(workspace)).toOption
           }
+          .flatten
           .getOrElse(context.app.workingDirectory)
         Project
           .fromCommon(SharedOptions(workspace))
@@ -164,9 +169,9 @@ object Project {
   ): List[Project] = {
     for {
       project <- common.home.list.toBuffer[AbsolutePath].toList
-      if (isEnabled(project.filename))
+      if isEnabled(project.filename)
       root = ProjectRoot(project)
-      if (root.bspJson.isFile)
+      if root.bspJson.isFile
       json <- Try(ujson.read(root.bspJson.readText)).toOption
       targets <- json.obj.get("pantsTargets")
     } yield Project(

@@ -52,21 +52,9 @@ class PantsLspSuite extends BaseImportSuite("pants") {
     cleanWorkspace()
     val pants = BuildTool.copyFromResource(workspace.toNIO, "pants")
     pants.toFile().setExecutable(true)
-    val exit = List(pants.toString(), "generate-pants-ini").!
-    require(exit == 0, "failed to generate pants.ini")
-    Files.write(
-      workspace.resolve("pants.ini").toNIO,
-      """|[scala]
-         |version: custom
-         |suffix_version: 2.12
-         |strict_deps: False
-         |scala_repl: //:scala-repl
-         |""".stripMargin.getBytes(),
-      StandardOpenOption.APPEND
-    )
-    Files.write(
-      workspace.resolve("BUILD.tools").toNIO,
-      s"""|SCALA_VERSION='${BuildInfo.scala212}'
+    FileLayout.fromString(
+      s"""|/BUILD.tools
+          |SCALA_VERSION='${BuildInfo.scala212}'
           |jar_library(
           |  name = 'scalac',
           |  jars = [
@@ -79,7 +67,17 @@ class PantsLspSuite extends BaseImportSuite("pants") {
           |jar_library(name = 'scala-library', jars = [jar(org = 'org.scala-lang', name = 'scala-library', rev = SCALA_VERSION)], scope='force')
           |jar_library(name = 'scala-reflect', jars = [jar(org = 'org.scala-lang', name = 'scala-reflect', rev = SCALA_VERSION, intransitive=True)])
           |target(name = 'scala-repl', dependencies=[ ':scalac', ':scala-reflect', ':scala-library'])
-          |""".stripMargin.getBytes()
+          |
+          |/pants.ini
+          |[GLOBAL]
+          |pants_version: 1.24.0rc1
+          |[scala]
+          |version: custom
+          |suffix_version: 2.12
+          |strict_deps: False
+          |scala_repl: //:scala-repl
+          |""".stripMargin,
+      root = workspace
     )
   }
 
