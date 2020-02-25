@@ -34,6 +34,7 @@ import metaconfig.cli.VersionCommand
 import java.{util => ju}
 import java.nio.file.FileSystems
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.zipkin._
 
 object BloopPants {
   lazy val app: CliApp = CliApp(
@@ -55,6 +56,7 @@ object BloopPants {
   )
 
   def main(args: Array[String]): Unit = {
+    pprint.log(ZipkinUrls.url)
     MetalsLogger.updateDefaultFormat()
     val exit = app.run(args.toList)
     System.exit(exit)
