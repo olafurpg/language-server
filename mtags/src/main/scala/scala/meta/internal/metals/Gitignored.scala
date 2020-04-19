@@ -1,7 +1,8 @@
 package scala.meta.internal.metals
 
 import scala.meta.internal.metals.HasTry._
-import scala.util.{Try => _, _}
+import scala.util._
+import scala.util.{Try => _}
 
 object HasTry {
   object Try {
