@@ -2,12 +2,12 @@ package tests
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.CompressedPackageIndex
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.CompressedPackageIndex
 
 object TestingWorkspaceSymbolProvider {
   def apply(

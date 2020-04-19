@@ -1,9 +1,9 @@
 package tests
 
-import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.pc.CancelToken
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.pc.CancelToken
 import scala.util.control.NonFatal
 
 abstract class BaseCodeActionSuite extends BasePCSuite {

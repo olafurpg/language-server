@@ -1,12 +1,12 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Files
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.io.FileIO
 import scala.meta.io.AbsolutePath
-import MetalsEnrichments._
-import java.nio.file.Files
 import scala.util.control.NonFatal
 import scala.xml.XML
+import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * Responsible for disabling unsupported compiler plugins.

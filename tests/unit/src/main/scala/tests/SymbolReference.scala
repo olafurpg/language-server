@@ -1,8 +1,8 @@
 package tests
 
-import org.eclipse.{lsp4j => l}
-import scala.{meta => m}
 import scala.meta.internal.metals.PositionSyntax._
+import scala.{meta => m}
+import org.eclipse.{lsp4j => l}
 
 case class SymbolReference(
     symbol: String,

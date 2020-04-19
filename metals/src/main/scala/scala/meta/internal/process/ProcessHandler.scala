@@ -3,10 +3,10 @@ package scala.meta.internal.process
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import com.zaxxer.nuprocess.NuAbstractProcessHandler
-import com.zaxxer.nuprocess.NuProcess
 import scala.concurrent.Promise
 import scala.meta.internal.ansi.LineListener
+import com.zaxxer.nuprocess.NuAbstractProcessHandler
+import com.zaxxer.nuprocess.NuProcess
 
 object ProcessHandler {
   def apply(

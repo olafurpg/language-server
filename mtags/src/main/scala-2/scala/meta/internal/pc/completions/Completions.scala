@@ -1,20 +1,16 @@
 package scala.meta.internal.pc.completions
 
 import java.util.logging.Level
-
-import org.eclipse.{lsp4j => l}
-
+import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.pc.IdentifierComparator
+import scala.meta.internal.pc.MemberOrdering
+import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
 import scala.util.control.NonFatal
-import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{
-  IdentifierComparator,
-  MetalsGlobal,
-  MemberOrdering
-}
+import org.eclipse.{lsp4j => l}
 
 /**
  * Utility methods for completions.

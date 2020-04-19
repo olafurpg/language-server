@@ -1,7 +1,6 @@
 package tests
 
 import org.eclipse.lsp4j.Position
-
 import scala.concurrent.Future
 
 class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {

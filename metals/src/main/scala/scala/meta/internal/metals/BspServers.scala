@@ -1,8 +1,5 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BspConnectionDetails
-import com.google.gson.Gson
-import io.github.soc.directories.ProjectDirectories
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -14,6 +11,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import ch.epfl.scala.bsp4j.BspConnectionDetails
+import com.google.gson.Gson
+import io.github.soc.directories.ProjectDirectories
 
 /**
  * Implements BSP server discovery, named "BSP Connection Protocol" in the spec.

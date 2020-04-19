@@ -1,7 +1,6 @@
 package tests.pc
 
 import org.eclipse.{lsp4j => l}
-
 import tests.BaseCodeActionSuite
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits

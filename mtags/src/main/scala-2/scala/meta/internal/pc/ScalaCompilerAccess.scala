@@ -1,11 +1,11 @@
 package scala.meta.internal.pc
 
 import java.util.concurrent.ScheduledExecutorService
-import scala.tools.nsc.reporters.StoreReporter
-import scala.tools.nsc.interactive.ShutdownReq
-import scala.util.control.NonFatal
-import scala.meta.pc.PresentationCompilerConfig
 import scala.concurrent.ExecutionContextExecutor
+import scala.meta.pc.PresentationCompilerConfig
+import scala.tools.nsc.interactive.ShutdownReq
+import scala.tools.nsc.reporters.StoreReporter
+import scala.util.control.NonFatal
 
 class ScalaCompilerWrapper(global: MetalsGlobal)
     extends CompilerWrapper[StoreReporter, MetalsGlobal] {

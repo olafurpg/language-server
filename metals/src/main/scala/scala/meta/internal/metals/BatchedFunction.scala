@@ -6,8 +6,8 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.util.control.NonFatal
 import scala.meta.internal.async.ConcurrentQueue
+import scala.util.control.NonFatal
 
 /**
  * Helper to batch multiple asynchronous requests and ensure only one request is active at a time.

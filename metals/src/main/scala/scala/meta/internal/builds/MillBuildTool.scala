@@ -1,9 +1,9 @@
 package scala.meta.internal.builds
+import java.nio.file.Files
+import java.nio.file.Path
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.Properties
-import java.nio.file.Files
-import java.nio.file.Path
 
 case class MillBuildTool(userConfig: () => UserConfiguration)
     extends BloopPluginBuildTool {

@@ -1,11 +1,11 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Path
-import MetalsEnrichments._
 import java.nio.file.Files
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
-import scala.meta.internal.semanticdb.TextDocuments
+import java.nio.file.Path
 import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.semanticdb.TextDocuments
+import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import scala.meta.internal.metals.MetalsEnrichments._
 
 class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,

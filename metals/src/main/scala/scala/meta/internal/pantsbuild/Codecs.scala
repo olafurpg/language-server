@@ -1,12 +1,12 @@
 package scala.meta.internal.pantsbuild
 
-import scala.meta.internal.io.PathIO
-import metaconfig.ConfDecoder
-import metaconfig.ConfEncoder
 import java.nio.file.Path
-import metaconfig.Configured
+import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
 import metaconfig.Conf.Str
+import metaconfig.ConfDecoder
+import metaconfig.ConfEncoder
+import metaconfig.Configured
 
 object Codecs {
   val workingDirectory = PathIO.workingDirectory

@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 

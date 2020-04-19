@@ -105,6 +105,7 @@ inThisBuild(
         url("https://github.com/tgodzik")
       )
     ),
+    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.1.0-SNAPSHOT",
     testFrameworks := List(),
     resolvers += Resolver.sonatypeRepo("public"),
     dependencyOverrides += V.guava,

@@ -4,10 +4,6 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import java.util.concurrent.TimeUnit
-import org.eclipse.lsp4j.debug.Capabilities
-import org.eclipse.lsp4j.debug.OutputEventArguments
-import org.eclipse.lsp4j.debug.SetBreakpointsResponse
-import org.eclipse.lsp4j.debug.StoppedEventArguments
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -15,9 +11,13 @@ import scala.concurrent.TimeoutException
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import tests.DapTestEnrichments._
 import scala.util.Failure
 import scala.util.Success
+import org.eclipse.lsp4j.debug.Capabilities
+import org.eclipse.lsp4j.debug.OutputEventArguments
+import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.StoppedEventArguments
+import tests.DapTestEnrichments._
 
 final class TestDebugger(
     connect: RemoteServer.Listener => Debugger,

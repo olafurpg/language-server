@@ -1,12 +1,12 @@
 package scala.meta.internal.pc.completions
 
-import org.eclipse.{lsp4j => l}
-import java.nio.file.Paths
 import java.net.URI
-
+import java.nio.file.Paths
 import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{CompletionFuzzy, MetalsGlobal}
+import scala.meta.internal.pc.CompletionFuzzy
+import scala.meta.internal.pc.MetalsGlobal
 import scala.util.control.NonFatal
+import org.eclipse.{lsp4j => l}
 
 trait FilenameCompletions { this: MetalsGlobal =>
 

@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
-import scala.{meta => m}
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.{meta => m}
 
 /**
  * File template which allows specifying the cursor position using @@

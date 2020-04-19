@@ -1,13 +1,13 @@
 package tests.pc
 
-import tests.BasePCSuite
-import tests.RangeReplace
-import tests.TestHovers
+import java.nio.file.Paths
+import scala.meta.XtensionSyntax
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
 import munit.Location
-import java.nio.file.Paths
-import scala.meta.XtensionSyntax
+import tests.BasePCSuite
+import tests.RangeReplace
+import tests.TestHovers
 
 abstract class BaseHoverSuite
     extends BasePCSuite

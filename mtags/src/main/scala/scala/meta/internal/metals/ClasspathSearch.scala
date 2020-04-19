@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 import java.util.PriorityQueue
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.internal.mtags.MtagsEnrichments._
 
 class ClasspathSearch(
     val packages: Array[CompressedPackageIndex]

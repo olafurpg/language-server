@@ -12,10 +12,10 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.SlowTaskConfig
 import scala.util.control.NonFatal
 import munit.Ignore
 import munit.Location

@@ -1,9 +1,9 @@
 package docs
 
-import mdoc.Reporter
-import mdoc.StringModifier
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.BuildInfo
+import mdoc.Reporter
+import mdoc.StringModifier
 
 class RequirementsModifier extends StringModifier {
   override val name: String = "requirements"

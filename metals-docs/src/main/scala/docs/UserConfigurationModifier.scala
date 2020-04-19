@@ -1,9 +1,9 @@
 package docs
 
-import mdoc.Reporter
-import mdoc.StringModifier
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.UserConfiguration
+import mdoc.Reporter
+import mdoc.StringModifier
 
 class UserConfigurationModifier extends StringModifier {
   val name = "user-config"

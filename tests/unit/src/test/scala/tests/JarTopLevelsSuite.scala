@@ -1,7 +1,6 @@
 package tests
 
 import scala.collection.concurrent.TrieMap
-
 import java.nio.file.{Path, Files}
 import scala.meta.internal.io.FileIO
 import scala.meta.io.AbsolutePath

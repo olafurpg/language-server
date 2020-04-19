@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
-
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest

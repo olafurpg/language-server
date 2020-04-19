@@ -1,14 +1,10 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.file.Paths
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
-import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.io.FileIO
@@ -18,6 +14,10 @@ import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.{lsp4j => l}
 
 /**
  * Produces SemanticDBs on-demand by using the presentation compiler.

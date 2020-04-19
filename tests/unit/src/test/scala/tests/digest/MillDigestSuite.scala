@@ -3,7 +3,6 @@ package digest
 
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.MillDigest
-
 import scala.meta.internal.metals.{BuildInfo => V}
 
 class MillDigestSuite extends BaseDigestSuite {
