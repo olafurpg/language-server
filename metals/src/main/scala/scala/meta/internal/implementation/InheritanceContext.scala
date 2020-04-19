@@ -1,6 +1,7 @@
 package scala.meta.internal.implementation
 
 import java.nio.file.Path
+
 import scala.collection.mutable
 import scala.meta.internal.semanticdb.SymbolInformation
 

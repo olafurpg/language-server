@@ -2,9 +2,11 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
+
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams

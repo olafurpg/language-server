@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Messages.CheckDoctor
@@ -9,6 +10,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.ExecuteCommandParams
 
 /**

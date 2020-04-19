@@ -3,6 +3,7 @@ package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
+
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._

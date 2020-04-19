@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters
@@ -32,6 +33,7 @@ import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
+
 import ch.epfl.scala.{bsp4j => b}
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier

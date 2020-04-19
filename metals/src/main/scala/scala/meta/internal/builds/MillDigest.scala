@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 import java.nio.file.Paths
 import java.security.MessageDigest
+
 import scala.collection.mutable
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath

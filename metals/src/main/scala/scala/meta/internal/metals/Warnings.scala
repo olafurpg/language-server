@@ -6,6 +6,7 @@ import scala.meta.internal.metals.MetalsLogger.{silentInTests => logger}
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 /**

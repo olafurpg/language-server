@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.lang
 import java.util.concurrent.CompletionStage
+
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

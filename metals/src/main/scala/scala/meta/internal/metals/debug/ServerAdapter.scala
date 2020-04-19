@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.metals.Cancelable
+
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage

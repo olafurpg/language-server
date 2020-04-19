@@ -5,6 +5,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams

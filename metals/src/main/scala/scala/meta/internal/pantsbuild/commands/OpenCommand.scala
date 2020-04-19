@@ -2,6 +2,7 @@ package scala.meta.internal.pantsbuild.commands
 
 import scala.meta.internal.pantsbuild.IntelliJ
 import scala.meta.internal.pantsbuild.VSCode
+
 import metaconfig.cli.CliApp
 import metaconfig.cli.Command
 import metaconfig.cli.Messages

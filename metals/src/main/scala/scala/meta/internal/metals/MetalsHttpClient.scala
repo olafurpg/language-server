@@ -7,12 +7,14 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+
 import scala.concurrent.CancellationException
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem

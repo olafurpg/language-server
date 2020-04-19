@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.Collections
 import java.{util => ju}
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.inputs.Input
@@ -17,6 +18,7 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentPositionParams

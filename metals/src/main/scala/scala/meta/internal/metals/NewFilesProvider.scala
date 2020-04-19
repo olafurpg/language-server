@@ -1,16 +1,18 @@
 package scala.meta.internal.metals
 
 import java.net.URI
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.Messages.NewScalaFile
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Range
-import scala.meta.internal.metals.MetalsEnrichments._
 
 class NewFilesProvider(
     workspace: AbsolutePath,

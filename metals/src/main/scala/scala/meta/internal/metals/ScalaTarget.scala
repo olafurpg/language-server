@@ -2,8 +2,10 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 import java.{util => ju}
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaBuildTarget

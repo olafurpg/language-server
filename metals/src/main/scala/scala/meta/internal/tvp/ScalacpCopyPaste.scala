@@ -1,6 +1,7 @@
 package scala.meta.internal.tvp
 
 import java.{util => ju}
+
 import scala.collection.mutable
 import scala.collection.mutable
 import scala.meta.internal.scalacp._

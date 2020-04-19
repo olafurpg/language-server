@@ -6,6 +6,7 @@ import scala.meta.internal.pantsbuild.commands.Project
 import scala.meta.io.AbsolutePath
 import scala.sys.process._
 import scala.util.control.NonFatal
+
 import ujson.Obj
 import ujson.Str
 

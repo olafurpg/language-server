@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -25,14 +26,15 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
+import scala.meta.internal.worksheets.MdocEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Position
-import scala.meta.internal.worksheets.MdocEnrichments._
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.

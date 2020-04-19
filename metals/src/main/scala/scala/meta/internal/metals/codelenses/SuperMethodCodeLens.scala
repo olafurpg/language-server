@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
+
 import scala.collection.{mutable => m}
 import scala.meta.internal.implementation.ClassHierarchyItem
 import scala.meta.internal.implementation.ImplementationProvider
@@ -15,6 +16,7 @@ import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.LensGoSuperCach
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+
 import org.eclipse.{lsp4j => l}
 
 final class SuperMethodCodeLens(

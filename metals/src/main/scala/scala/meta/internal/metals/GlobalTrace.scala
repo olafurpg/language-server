@@ -3,9 +3,11 @@ package scala.meta.internal.metals
 import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+
 import io.github.soc.directories.ProjectDirectories
 
 /**

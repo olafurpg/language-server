@@ -5,10 +5,12 @@ import java.time.Clock
 import java.time.format.DateTimeFormatter
 import java.util.Collections
 import java.util.function.Consumer
+
 import scala.meta.internal.metals.debug.EndpointLogger.Direction
 import scala.meta.internal.metals.debug.EndpointLogger.Received
 import scala.meta.internal.metals.debug.EndpointLogger.Sent
 import scala.meta.internal.metals.debug.EndpointLogger.time
+
 import com.google.gson.GsonBuilder
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.json.DebugMessageJsonHandler

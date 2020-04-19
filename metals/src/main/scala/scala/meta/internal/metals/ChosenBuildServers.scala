@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.sql.Connection
 import java.sql.Timestamp
+
 import scala.meta.internal.metals.JdbcEnrichments._
 
 class ChosenBuildServers(conn: () => Connection, time: Time) {

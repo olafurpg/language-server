@@ -3,6 +3,7 @@ package scala.meta.internal.builds
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+
 import scala.concurrent.Future
 import scala.meta.internal.metals.BloopInstallResult
 import scala.meta.internal.metals.BuildTargets

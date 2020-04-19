@@ -2,7 +2,9 @@ package scala.meta.internal.pantsbuild
 
 import java.nio.file.Files
 import java.nio.file.Paths
+
 import scala.collection.mutable
+
 import ujson.Obj
 
 case class PantsExport(

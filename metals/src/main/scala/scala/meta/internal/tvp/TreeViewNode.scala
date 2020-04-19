@@ -2,6 +2,7 @@ package scala.meta.internal.tvp
 
 import java.{util => ju}
 import javax.annotation.Nullable
+
 import scala.meta.internal.metals._
 import scala.meta.internal.pc.IdentifierComparator
 

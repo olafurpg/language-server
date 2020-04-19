@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Files
 import java.nio.file.Path
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -11,6 +12,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.util.control.NonFatal
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}

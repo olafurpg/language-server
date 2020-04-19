@@ -1,7 +1,9 @@
 package scala.meta.internal.pantsbuild
 
 import java.nio.file.Path
+
 import scala.meta.io.AbsolutePath
+
 import bloop.config.{Config => C}
 import ujson.Arr
 import ujson.Obj

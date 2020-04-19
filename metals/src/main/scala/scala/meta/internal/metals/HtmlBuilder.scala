@@ -1,7 +1,9 @@
 package scala.meta.internal.metals
 
 import java.lang.StringBuilder
+
 import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 

@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.io.FileIO
@@ -11,6 +12,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.gson.Gson
 import io.github.soc.directories.ProjectDirectories

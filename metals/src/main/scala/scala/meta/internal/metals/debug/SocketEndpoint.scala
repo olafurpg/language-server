@@ -4,7 +4,9 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.net.Socket
 import java.util.Collections
+
 import scala.meta.internal.metals.debug.SocketEndpoint._
+
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.json.DebugMessageJsonHandler
 import org.eclipse.lsp4j.jsonrpc.json.StreamMessageConsumer

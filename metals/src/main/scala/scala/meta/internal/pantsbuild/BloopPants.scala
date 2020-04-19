@@ -9,6 +9,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.{util => ju}
+
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -27,6 +28,7 @@ import scala.util.Properties
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
+
 import bloop.config.Tag
 import bloop.config.{Config => C}
 import coursierapi.Dependency

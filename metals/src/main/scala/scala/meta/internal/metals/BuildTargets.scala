@@ -5,6 +5,7 @@ import java.net.URLClassLoader
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.{util => ju}
+
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -16,6 +17,7 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.util.Try
 import scala.util.control.NonFatal
+
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaBuildTarget

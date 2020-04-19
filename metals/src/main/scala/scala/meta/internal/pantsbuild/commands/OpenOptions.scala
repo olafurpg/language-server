@@ -1,6 +1,7 @@
 package scala.meta.internal.pantsbuild.commands
 
 import java.nio.file.Path
+
 import metaconfig.ConfDecoder
 import metaconfig.ConfEncoder
 import metaconfig.annotation._

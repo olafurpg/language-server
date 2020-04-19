@@ -2,8 +2,10 @@ package scala.meta.internal.pantsbuild
 
 import java.nio.file.Path
 import java.nio.file.Paths
+
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.BuildInfo
+
 import coursierapi.Dependency
 import coursierapi.Fetch
 import ujson.Value

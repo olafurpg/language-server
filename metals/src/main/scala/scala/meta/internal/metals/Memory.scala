@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
 import java.text.DecimalFormat
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+
 import com.google.common.hash.BloomFilter
 import org.openjdk.jol.info.GraphLayout
 

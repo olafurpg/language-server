@@ -2,9 +2,11 @@ package scala.meta.internal.pantsbuild.commands
 
 import java.nio.file.Path
 import java.nio.file.Paths
+
 import scala.meta.internal.zipkin.ZipkinProperties
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+
 import ujson.Obj
 import ujson.Str
 

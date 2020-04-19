@@ -2,6 +2,7 @@ package scala.meta.internal.builds
 
 import java.nio.file.Files
 import java.util.Properties
+
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._

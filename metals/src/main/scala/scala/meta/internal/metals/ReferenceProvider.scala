@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
@@ -18,6 +19,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location

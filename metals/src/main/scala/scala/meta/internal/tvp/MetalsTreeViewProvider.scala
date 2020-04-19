@@ -4,6 +4,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -12,6 +13,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
 

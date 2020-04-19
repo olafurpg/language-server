@@ -1,9 +1,11 @@
 package scala.meta.internal.metals
 
-import scala.util.{Try => _, _}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future => Try}
+import scala.util._
+import scala.util.{Try => _}
 
 object Gitignored {
-  Try.successful(42)
+  Try(42)
   Failure(new Exception())
 }

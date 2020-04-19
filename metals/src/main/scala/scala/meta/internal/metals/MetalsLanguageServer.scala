@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.{util => ju}
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
@@ -46,6 +47,7 @@ import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 import scala.util.Success
 import scala.util.control.NonFatal
+
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement

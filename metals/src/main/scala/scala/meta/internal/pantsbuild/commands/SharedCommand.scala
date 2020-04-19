@@ -2,6 +2,7 @@ package scala.meta.internal.pantsbuild.commands
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
 import scala.meta.internal.metals.BuildInfo
@@ -21,6 +22,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
+
 import bloop.bloopgun.core.Shell
 import bloop.launcher.LauncherMain
 import metaconfig.cli.CliApp

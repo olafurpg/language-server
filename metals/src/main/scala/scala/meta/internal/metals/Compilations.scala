@@ -8,6 +8,7 @@ import scala.meta.io.AbsolutePath
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+
 import ch.epfl.scala.{bsp4j => b}
 
 final class Compilations(

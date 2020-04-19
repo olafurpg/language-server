@@ -2,9 +2,11 @@ package scala.meta.internal.pantsbuild.commands
 
 import java.nio.file.Path
 import java.nio.file.Paths
+
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.pantsbuild.Codecs._
 import scala.meta.io.AbsolutePath
+
 import metaconfig.ConfDecoder
 import metaconfig.ConfEncoder
 import metaconfig.annotation._

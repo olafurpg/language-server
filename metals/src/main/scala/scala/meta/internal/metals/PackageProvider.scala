@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit

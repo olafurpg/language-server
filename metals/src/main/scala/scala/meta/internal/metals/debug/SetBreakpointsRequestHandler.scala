@@ -7,6 +7,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source

@@ -7,6 +7,7 @@ import scala.meta.internal.metals.BuildTargetClasses.Classes
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+
 import ch.epfl.scala.{bsp4j => b}
 
 /**

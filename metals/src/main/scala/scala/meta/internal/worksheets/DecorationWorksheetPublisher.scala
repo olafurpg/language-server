@@ -7,13 +7,14 @@ import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.pc.HoverMarkup
+import scala.meta.internal.worksheets.MdocEnrichments._
 import scala.meta.io.AbsolutePath
+
 import mdoc.interfaces.EvaluatedWorksheet
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.Position
-import scala.meta.internal.worksheets.MdocEnrichments._
 
 class DecorationWorksheetPublisher() extends WorksheetPublisher {
 

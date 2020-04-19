@@ -4,6 +4,7 @@ import java.nio.file.Paths
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
+
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.inputs.Position
@@ -18,6 +19,7 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.util.Try
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget

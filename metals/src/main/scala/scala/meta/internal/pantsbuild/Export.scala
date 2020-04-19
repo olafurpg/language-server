@@ -6,6 +6,7 @@ import scala.meta.internal.pantsbuild.commands.OpenOptions
 import scala.meta.internal.pantsbuild.commands.Project
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+
 import metaconfig.cli.CliApp
 
 /**

@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.debug
 
 import java.net.URI
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.Cancelable

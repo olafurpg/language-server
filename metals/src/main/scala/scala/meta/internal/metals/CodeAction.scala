@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.pc.CancelToken
+
 import org.eclipse.{lsp4j => l}
 
 trait CodeAction {

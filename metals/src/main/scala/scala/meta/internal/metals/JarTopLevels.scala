@@ -6,6 +6,7 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Statement
 import java.util.zip.ZipError
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._

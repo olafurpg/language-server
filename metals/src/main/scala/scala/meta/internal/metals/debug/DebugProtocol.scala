@@ -4,6 +4,7 @@ import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 import scala.reflect.ClassTag
 import scala.util.Failure
 import scala.util.Try
+
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments

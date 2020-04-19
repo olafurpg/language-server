@@ -5,6 +5,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -12,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
+
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 

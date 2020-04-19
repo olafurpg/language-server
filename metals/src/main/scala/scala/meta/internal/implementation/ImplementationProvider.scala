@@ -3,6 +3,7 @@ package scala.meta.internal.implementation
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.collection.mutable
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
@@ -26,6 +27,7 @@ import scala.meta.internal.semanticdb.TypeSignature
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
 

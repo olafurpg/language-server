@@ -2,6 +2,7 @@ package scala.meta.internal.pantsbuild
 
 import java.nio.file.Files
 import java.nio.file.Path
+
 import scala.meta.io.AbsolutePath
 
 case class PantsTarget(

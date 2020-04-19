@@ -1,7 +1,9 @@
 package scala.meta.internal.metals
 
 import javax.annotation.Nullable
+
 import scala.util.matching.Regex
+
 import ch.epfl.scala.{bsp4j => b}
 
 /**

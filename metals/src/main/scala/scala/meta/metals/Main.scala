@@ -2,12 +2,14 @@ package scala.meta.metals
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
+
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.util.control.NonFatal
+
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
 object Main {

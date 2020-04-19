@@ -7,6 +7,7 @@ import java.net.URI
 import java.util.Collections.singletonList
 import java.util.concurrent.TimeUnit
 import java.{util => ju}
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -26,6 +27,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.util.Failure
 import scala.util.Try
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
 import ch.epfl.scala.{bsp4j => b}

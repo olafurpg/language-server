@@ -6,8 +6,10 @@ import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.{util => ju}
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.methvin.watcher.DirectoryChangeListener

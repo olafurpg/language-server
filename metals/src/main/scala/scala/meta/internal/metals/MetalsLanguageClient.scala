@@ -2,9 +2,11 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
+
 import scala.meta.internal.decorations.DecorationClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
+
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType

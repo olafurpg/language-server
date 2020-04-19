@@ -5,9 +5,12 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.charset.StandardCharsets
 import java.util.Collections
+
 import scala.collection.mutable
 import scala.meta.internal.io.InputStreamIO
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.control.NonFatal
+
 import io.undertow.Handlers.path
 import io.undertow.Handlers.websocket
 import io.undertow.Undertow
@@ -24,7 +27,6 @@ import io.undertow.websockets.core.WebSocketChannel
 import io.undertow.websockets.core.WebSockets
 import io.undertow.websockets.spi.WebSocketHttpExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
-import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * Http server

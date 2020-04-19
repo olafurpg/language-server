@@ -1,10 +1,12 @@
 package scala.meta.internal.pantsbuild.commands
 
 import java.io.File
+
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pantsbuild.Export
 import scala.meta.io.AbsolutePath
+
 import metaconfig.cli.CliApp
 import metaconfig.cli.Command
 import metaconfig.cli.Messages

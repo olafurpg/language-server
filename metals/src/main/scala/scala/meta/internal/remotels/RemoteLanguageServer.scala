@@ -1,6 +1,7 @@
 package scala.meta.internal.remotels
 
 import java.{util => ju}
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -17,6 +18,7 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.Location

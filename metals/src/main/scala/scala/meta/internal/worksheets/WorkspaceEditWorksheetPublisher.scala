@@ -6,7 +6,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.pc.HoverMarkup
 import scala.meta.internal.worksheets.MdocEnrichments.truncatify
+import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher._
 import scala.meta.io.AbsolutePath
+
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
@@ -18,7 +20,6 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
-import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher._
 
 class WorkspaceEditWorksheetPublisher(buffers: Buffers)
     extends WorksheetPublisher {

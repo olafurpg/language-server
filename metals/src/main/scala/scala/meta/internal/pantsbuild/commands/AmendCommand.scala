@@ -4,9 +4,11 @@ import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+
 import scala.collection.JavaConverters._
 import scala.meta.internal.pantsbuild.IntelliJ
 import scala.util.control.NonFatal
+
 import metaconfig.cli.CliApp
 import metaconfig.cli.Command
 import metaconfig.cli.Messages

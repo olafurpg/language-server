@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.meta.internal.classpath.ClasspathIndex

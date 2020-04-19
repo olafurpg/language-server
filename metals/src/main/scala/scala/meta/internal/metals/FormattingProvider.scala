@@ -10,6 +10,7 @@ import java.nio.file.Paths
 import java.util
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -17,6 +18,7 @@ import scala.meta._
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import org.scalafmt.interfaces.PositionException

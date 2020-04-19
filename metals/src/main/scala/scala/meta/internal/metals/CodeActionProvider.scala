@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.codeactions._
 import scala.meta.pc.CancelToken
+
 import org.eclipse.{lsp4j => l}
 
 final class CodeActionProvider(

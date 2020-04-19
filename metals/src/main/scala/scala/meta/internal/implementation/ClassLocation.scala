@@ -1,6 +1,7 @@
 package scala.meta.internal.implementation
 
 import java.nio.file.Path
+
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scope

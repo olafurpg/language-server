@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
+
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise

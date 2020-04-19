@@ -1,6 +1,7 @@
 package scala.meta.internal.process
 
 import java.nio.file.Path
+
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer

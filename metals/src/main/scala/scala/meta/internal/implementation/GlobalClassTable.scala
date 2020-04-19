@@ -1,5 +1,6 @@
 package scala.meta.internal.implementation
 import java.nio.file.Path
+
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.meta.internal.metals.BuildTargets
@@ -7,6 +8,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 final class GlobalClassTable(

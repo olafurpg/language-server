@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.builds.BuildTool
@@ -12,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.ProcessHandler
 import scala.meta.io.AbsolutePath
+
 import com.zaxxer.nuprocess.NuProcessBuilder
 
 /**

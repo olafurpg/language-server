@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
+
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargetClasses
@@ -13,6 +14,7 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.semanticdb.TextDocument
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement

@@ -1,10 +1,12 @@
 package scala.meta.internal.pantsbuild
 
 import java.net.URI
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement

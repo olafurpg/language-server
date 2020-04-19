@@ -1,6 +1,7 @@
 package scala.meta.internal.rename
 
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.Buffers
@@ -18,6 +19,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType

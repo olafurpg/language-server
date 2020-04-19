@@ -2,6 +2,7 @@ package scala.meta.internal.pantsbuild.commands
 
 import scala.collection.immutable.Nil
 import scala.meta.internal.pantsbuild.PantsConfiguration
+
 import metaconfig.ConfDecoder
 import metaconfig.ConfEncoder
 import metaconfig.annotation._

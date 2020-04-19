@@ -3,10 +3,12 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.sql.Connection
 import java.sql.DriverManager
+
 import scala.meta.internal.builds.Digests
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
 

@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicReference
 import java.{util => ju}
+
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.meta.inputs.Input
@@ -10,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.io.AbsolutePath
 import scala.{meta => m}
+
 import ch.epfl.scala.bsp4j
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Diagnostic

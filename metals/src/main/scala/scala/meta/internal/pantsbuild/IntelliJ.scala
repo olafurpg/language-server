@@ -6,11 +6,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
+
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.pantsbuild.commands.OpenOptions
 import scala.meta.internal.pantsbuild.commands.Project
 import scala.meta.internal.pantsbuild.commands.RefreshCommand
 import scala.sys.process._
+
 import bloop.data.WorkspaceSettings
 import bloop.io.AbsolutePath
 import bloop.logging.NoopLogger

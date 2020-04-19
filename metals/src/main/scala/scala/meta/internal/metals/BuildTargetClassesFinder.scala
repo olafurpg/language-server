@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+
 import ch.epfl.scala.{bsp4j => b}
 
 class BuildTargetClassesFinder(

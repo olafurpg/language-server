@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 import java.{util => ju}
+
 import scala.collection.mutable
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -12,6 +13,7 @@ import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearchVisitor
+
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
