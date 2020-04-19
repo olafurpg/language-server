@@ -1,8 +1,13 @@
 package scala.meta.internal.metals
 
-import scala.concurrent.{Future => Try}
-import scala.util._
-import scala.util.{Try => _}
+import scala.meta.internal.metals.HasTry._
+import scala.util.{Try => _, _}
+
+object HasTry {
+  object Try {
+    def successful(n: Int): Int = n
+  }
+}
 
 object Gitignored {
   Try.successful(42)
