@@ -6,6 +6,7 @@ import scala.collection.mutable.ListBuffer
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc
 import scala.meta.pc.SymbolDocumentation
+
 import org.eclipse.{lsp4j => l}
 
 trait Signatures { this: MetalsGlobal =>

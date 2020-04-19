@@ -2,6 +2,7 @@ package scala.meta.internal.pc.completions
 
 import scala.collection.immutable.Nil
 import scala.meta.internal.pc.MetalsGlobal
+
 import org.eclipse.{lsp4j => l}
 
 trait ArgCompletions { this: MetalsGlobal =>

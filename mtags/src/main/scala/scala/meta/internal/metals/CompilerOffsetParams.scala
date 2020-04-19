@@ -1,10 +1,11 @@
 package scala.meta.internal.metals
 
 import java.net.URI
+
 import scala.meta.inputs.Position
+import scala.meta.internal.inputs.XtensionInputSyntaxStructure
 import scala.meta.pc.CancelToken
 import scala.meta.pc.OffsetParams
-import scala.meta.internal.inputs.XtensionInputSyntaxStructure
 
 case class CompilerOffsetParams(
     uri: URI,

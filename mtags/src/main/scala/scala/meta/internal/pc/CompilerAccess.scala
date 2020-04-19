@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.Level
 import java.util.logging.Logger
+
 import scala.concurrent.ExecutionContextExecutor
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig

@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.logging.Logger
 import java.{util => ju}
+
 import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
@@ -30,6 +31,7 @@ import scala.meta.pc.VirtualFileParams
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
+
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic

@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.{util => ju}
+
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 

@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util
+
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.docstrings.MarkdownGenerator
@@ -11,6 +12,7 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.pc.SymbolDocumentation
 import scala.util.control.NonFatal
+
 import com.thoughtworks.qdox.model.JavaAnnotatedElement
 import com.thoughtworks.qdox.model.JavaClass
 import com.thoughtworks.qdox.model.JavaConstructor

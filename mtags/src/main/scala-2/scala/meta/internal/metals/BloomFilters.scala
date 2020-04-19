@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.charset.StandardCharsets
+
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 

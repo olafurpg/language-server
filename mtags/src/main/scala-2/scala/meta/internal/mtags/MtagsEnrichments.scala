@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import java.net.URI
 import java.nio.file.Paths
 import java.util.concurrent.CancellationException
+
 import scala.collection.mutable
 import scala.meta.XtensionTokenizeInputLike
 import scala.meta.inputs.Input
@@ -15,6 +16,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.OffsetParams
 import scala.{meta => m}
+
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 

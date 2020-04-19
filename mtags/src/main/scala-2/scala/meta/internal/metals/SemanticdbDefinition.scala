@@ -10,6 +10,7 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
+
 import org.eclipse.{lsp4j => l}
 
 /**

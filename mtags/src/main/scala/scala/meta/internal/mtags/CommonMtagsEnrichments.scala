@@ -8,6 +8,7 @@ import java.util
 import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
+
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
 import scala.meta.inputs.Input
@@ -20,6 +21,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.util.control.NonFatal
 import scala.{meta => m}
+
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import geny.Generator

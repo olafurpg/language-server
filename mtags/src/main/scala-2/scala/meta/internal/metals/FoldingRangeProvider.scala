@@ -4,9 +4,11 @@ import java.net.URI
 import java.nio.file.Paths
 import java.util
 import java.util.Collections
+
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.FoldingRangeProvider._
+
 import org.eclipse.lsp4j.FoldingRange
 
 final class FoldingRangeProvider(

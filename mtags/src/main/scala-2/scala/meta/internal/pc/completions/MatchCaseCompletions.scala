@@ -7,6 +7,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
+
 import org.eclipse.{lsp4j => l}
 
 trait MatchCaseCompletions { this: MetalsGlobal =>

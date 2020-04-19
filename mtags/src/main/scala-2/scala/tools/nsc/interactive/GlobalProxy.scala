@@ -1,6 +1,7 @@
 package scala.tools.nsc.interactive
 
 import java.util.logging.Level
+
 import scala.meta.internal.pc.MetalsGlobal
 import scala.util.control.NonFatal
 

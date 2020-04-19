@@ -1,10 +1,12 @@
 package scala.meta.internal.pc
 
 import java.{util => ju}
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
+
 import org.eclipse.lsp4j.Location
 
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {

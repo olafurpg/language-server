@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.util.zip.ZipError
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO

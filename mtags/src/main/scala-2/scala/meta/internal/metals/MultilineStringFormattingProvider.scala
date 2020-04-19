@@ -6,6 +6,7 @@ import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Constant
 import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
+
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.Position

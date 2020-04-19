@@ -3,6 +3,7 @@ package scala.meta.internal.docstrings
 import scala.annotation.tailrec
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.matching.Regex
+
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Entities.EscapeMode

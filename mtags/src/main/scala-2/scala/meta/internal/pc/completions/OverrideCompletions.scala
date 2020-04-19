@@ -6,6 +6,7 @@ import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+
 import org.eclipse.{lsp4j => l}
 
 trait OverrideCompletions { this: MetalsGlobal =>

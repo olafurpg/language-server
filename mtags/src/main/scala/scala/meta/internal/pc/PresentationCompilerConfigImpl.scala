@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.util
 import java.util.Optional
 import java.util.concurrent.TimeUnit
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat

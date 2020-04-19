@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
+
 import com.google.protobuf.CodedInputStream
 import com.google.protobuf.CodedOutputStream
 

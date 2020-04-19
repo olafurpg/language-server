@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.net.URI
+
 import scala.meta.pc.CancelToken
 import scala.meta.pc.VirtualFileParams
 

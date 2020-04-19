@@ -1,6 +1,7 @@
 package scala.meta.internal.pc.completions
 
 import java.util.logging.Level
+
 import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.meta.internal.jdk.CollectionConverters._
@@ -10,6 +11,7 @@ import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
 import scala.util.control.NonFatal
+
 import org.eclipse.{lsp4j => l}
 
 /**

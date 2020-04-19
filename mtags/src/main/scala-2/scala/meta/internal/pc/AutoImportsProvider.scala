@@ -4,6 +4,7 @@ import scala.collection.mutable
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.OffsetParams
+
 import org.eclipse.lsp4j.TextEdit
 
 final class AutoImportsProvider(

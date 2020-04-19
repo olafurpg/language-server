@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.Optional
 import java.util.logging.Level
 import java.util.logging.Logger
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.GlobalSymbolIndex

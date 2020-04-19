@@ -1,10 +1,12 @@
 package scala.meta.internal.metals
 
 import java.util.logging.Logger
+
 import scala.annotation.tailrec
 import scala.meta.Token
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
+
 import difflib._
 import difflib.myers.Equalizer
 import org.eclipse.{lsp4j => l}

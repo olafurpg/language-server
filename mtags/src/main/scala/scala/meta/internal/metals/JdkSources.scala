@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 import java.nio.file.Paths
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath

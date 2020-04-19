@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.util
 import java.util.logging.Logger
 import java.{util => ju}
+
 import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -20,6 +21,7 @@ import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
+
 import org.eclipse.{lsp4j => l}
 
 class MetalsGlobal(
