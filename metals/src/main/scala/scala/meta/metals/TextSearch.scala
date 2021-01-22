@@ -56,7 +56,6 @@ object TextSearch {
       val queryTimer = new Timer(Time.system)
       val files = new AtomicInteger()
       val hits = new AtomicInteger()
-      //   val paths =
       buckets.par.foreach { bucket =>
         val bloom = bucket.bloom
         if (bloom.mightContain(query)) {
@@ -98,10 +97,7 @@ object TextSearch {
   }
 
   object TextIndex {
-    def fromDirectory(
-        cwd: AbsolutePath,
-        isSilent: Boolean = true
-    ): TextIndex = {
+    def fromDirectory(cwd: AbsolutePath): TextIndex = {
       val indexTimer = new Timer(Time.system)
       val index = TextIndex(cwd)
       val files = Process(
@@ -137,7 +133,7 @@ object TextSearch {
               }
             )
             val i = counter.incrementAndGet()
-            if (!isSilent && i % 10000 == 0) {
+            if (i % 10000 == 0) {
               println(f"[$i%3s/${files.size}] $indexTimer")
             }
           }
@@ -156,7 +152,7 @@ object TextSearch {
       case head :: _ => AbsolutePath(head)
     }
     val indexTimer = new Timer(Time.system)
-    val index = TextIndex.fromDirectory(cwd, isSilent = false)
+    val index = TextIndex.fromDirectory(cwd)
     pprint.log(indexTimer)
     Memory.printFootprint(index)
     if (index.buckets.nonEmpty) {
