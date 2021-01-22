@@ -20,6 +20,7 @@ import scala.collection.concurrent.TrieMap
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.ArrayBuffer
 
 object TextSearch {
   case class WordCharacter(start: Int, end: Int) {
@@ -45,76 +46,48 @@ object TextSearch {
     }
   }
 
+  case class Bucket(bloom: StringBloomFilter, paths: Array[AbsolutePath])
+
   case class TextIndex(
       cwd: AbsolutePath,
-      cache: ConcurrentHashMap[Path, StringBloomFilter] =
-        new ConcurrentHashMap()
+      buckets: ArrayBuffer[Bucket] = ArrayBuffer.empty
   ) {
-    lazy val keys = cache.keys().asScala.toArray.par
-    def put(path: AbsolutePath): Unit = {
-      try {
-        val attr =
-          Files.readAttributes(path.toNIO, classOf[BasicFileAttributes])
-        if (!attr.isRegularFile()) return
-        if (attr.size() > 1000000L) return // Skip files with size over 1mb
-        val text = path.readText
-        val words = ListBuffer.empty[WordCharacter]
-        foreachWord(
-          text,
-          onWordComplete = word => {
-            words += word
-          }
-        )
-        val sizeEstimate = words.foldLeft(0) { case (accum, next) =>
-          accum + (next.end - next.start)
-        }
-        val bloom = new StringBloomFilter(sizeEstimate)
-        words.foreach { word =>
-          bloom.reset()
-          word.start.until(word.end).foreach { i =>
-            bloom.putCharIncrementally(text.charAt(i))
-          }
-        }
-        cache.put(path.toNIO, bloom)
-      } catch {
-        case NonFatal(e) =>
-          println(s"error: $path\n$e")
-          e.printStackTrace()
-      }
-    }
     def search(query: String): Unit = {
       val queryTimer = new Timer(Time.system)
       val files = new AtomicInteger()
       val hits = new AtomicInteger()
-      keys.foreach { key =>
-        val bloom = cache.get(key)
+      //   val paths =
+      buckets.par.foreach { bucket =>
+        val bloom = bucket.bloom
         if (bloom.mightContain(query)) {
-          val text = AbsolutePath(key)(cwd).readText
-          val input = Input.VirtualFile(key.toString(), text)
-          val out = new StringBuilder()
-          out.append(key.toString()).append("\n")
-          var fileHits = 0
-          foreachWord(
-            text,
-            _ => (),
-            word => {
-              if (
-                text.regionMatches(false, word.start, query, 0, query.length())
-              ) {
-                fileHits += 1
-                val pos = Position.Range(input, word.start, word.end)
-                out
-                  .append(pos.startLine)
-                  .append(": ")
-                  .append(pos.lineContent)
-                  .append("\n")
+          bucket.paths.foreach { path =>
+            val text = path.readText
+            val input = Input.VirtualFile(path.toString(), text)
+            val out = new StringBuilder()
+            out.append(input.path).append("\n")
+            var fileHits = 0
+            foreachWord(
+              text,
+              _ => (),
+              word => {
+                val isMatch = text
+                  .regionMatches(false, word.start, query, 0, query.length())
+                if (isMatch) {
+                  fileHits += 1
+                  val pos = Position.Range(input, word.start, word.end)
+                  out
+                    .append(pos.startLine)
+                    .append(": ")
+                    .append(pos.lineContent)
+                    .append("\n")
+                }
               }
+            )
+            if (fileHits > 0) {
+              files.incrementAndGet()
+              hits.addAndGet(fileHits)
+              println(out)
             }
-          )
-          if (fileHits > 0) {
-            files.incrementAndGet()
-            hits.addAndGet(fileHits)
-            println(out)
           }
         }
       }
@@ -123,32 +96,74 @@ object TextSearch {
       )
     }
   }
+
+  object TextIndex {
+    def fromDirectory(
+        cwd: AbsolutePath,
+        isSilent: Boolean = true
+    ): TextIndex = {
+      val indexTimer = new Timer(Time.system)
+      val index = TextIndex(cwd)
+      val files = Process(
+        "git ls-files",
+        cwd = Some(cwd.toFile)
+      ).!!.linesIterator.toArray
+      val counter = new AtomicInteger()
+      val paths = ArrayBuffer.empty[AbsolutePath]
+      val bucketSize = 10000
+      val fpr = 0.01
+      var bloom = new StringBloomFilter(bucketSize)
+      def flush(): Unit = {
+        if (paths.nonEmpty) {
+          index.buckets += Bucket(bloom, paths.toArray)
+          bloom = new StringBloomFilter(bucketSize)
+          paths.clear()
+        }
+      }
+      files.foreach { file =>
+        if (bloom.bloom.expectedFpp() > fpr) {
+          flush()
+        }
+        val path = AbsolutePath(file)(cwd)
+        try {
+          if (path.isFile && Files.size(path.toNIO) < 1000000L) {
+            paths += path
+            val text = path.readText
+            foreachWord(
+              text,
+              onWordCharacter = { word =>
+                if (word.isStart) bloom.reset()
+                bloom.putCharIncrementally(text.charAt(word.end))
+              }
+            )
+            val i = counter.incrementAndGet()
+            if (!isSilent && i % 10000 == 0) {
+              println(f"[$i%3s/${files.size}] $indexTimer")
+            }
+          }
+        } catch {
+          case NonFatal(_) =>
+        }
+      }
+      flush()
+      index
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     val cwd = args.toList match {
       case Nil => PathIO.workingDirectory
       case head :: _ => AbsolutePath(head)
     }
-    val index = TextIndex(cwd)
     val indexTimer = new Timer(Time.system)
-    val files = Process(
-      "git ls-files",
-      cwd = Some(cwd.toFile)
-    ).!!.linesIterator.toArray.par
-    val counter = new AtomicInteger()
-    files.foreach { file =>
-      val i = counter.incrementAndGet()
-      if (i % 10000 == 0) {
-        println(f"[$i%3s/${files.size}] $indexTimer")
-      }
-      index.put(AbsolutePath(file)(cwd))
-    }
+    val index = TextIndex.fromDirectory(cwd, isSilent = false)
     pprint.log(indexTimer)
     Memory.printFootprint(index)
-    val triemap = TrieMap[Path, StringBloomFilter]() ++= index.cache.asScala
-    if (triemap.nonEmpty) {
-      val (path, bloom) = triemap.maxBy(_._2.bloom.expectedFpp())
+    if (index.buckets.nonEmpty) {
+      val bucket = index.buckets.maxBy(_.bloom.bloom.expectedFpp())
       println(
-        s"file $path has expected false positive ratio ${bloom.bloom.expectedFpp()}"
+        s"worst bucket has expected false positive ratio " +
+          s"${bucket.bloom.bloom.expectedFpp()}:\n${bucket.paths.mkString("\n")}"
       )
     }
     val scanner = new Scanner(System.in)
